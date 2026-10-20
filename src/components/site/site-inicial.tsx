@@ -1,10 +1,11 @@
 "use client";
 
-import { Building2, Car, CircleHelp, Layers, ListOrdered, LogIn, Menu, Tag, UserPlus } from "lucide-react";
+import { Building2, Car, ChevronRight, CircleHelp, Layers, ListOrdered, LogIn, Menu, Tag, UserPlus } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 import { Gaveta } from "@/components/gaveta";
+import { lerPerfilEscolhido, salvarPerfilEscolhido } from "@/lib/perfil-escolhido";
 import { Marca } from "@/components/ui";
 import { ACOES_PERFIL, BotaoPerfil } from "./escolha-perfil";
 
@@ -28,7 +29,12 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
   const [menu, setMenu] = useState(false);
 
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("para") === "motorista") setPerfil("motorista");
+    const daUrl = new URLSearchParams(location.search).get("para");
+    const inicial = daUrl === "motorista" || daUrl === "locador" ? daUrl : lerPerfilEscolhido();
+    if (inicial) {
+      setPerfil(inicial);
+      salvarPerfilEscolhido(inicial);
+    }
     const aoRolar = () => setRolou(window.scrollY > 24);
     aoRolar();
     window.addEventListener("scroll", aoRolar, { passive: true });
@@ -37,6 +43,7 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
 
   function trocar(p: Perfil) {
     setPerfil(p);
+    salvarPerfilEscolhido(p);
     const url = new URL(location.href);
     if (p === "motorista") url.searchParams.set("para", "motorista");
     else url.searchParams.delete("para");
@@ -79,7 +86,7 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
 
       <footer className="border-t border-borda bg-cartao pb-28">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center">
-          <Marca className="scale-90" />
+          <Marca className="text-base" />
           <p className="text-xs text-suave">© {new Date().getFullYear()} Aluguei · Locação de carros para motoristas de aplicativo</p>
         </div>
       </footer>
@@ -104,31 +111,40 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
       <Gaveta aberta={menu} aoFechar={() => setMenu(false)} lado="direita" escura rotulo="Menu do site">
         <div className="flex flex-1 flex-col px-5 pt-5 pb-6">
           <Link href="/" onClick={() => setMenu(false)} className="w-fit"><Marca inverso /></Link>
-          <nav className="mt-8 flex flex-col gap-1" aria-label="Seções">
+          <nav className="mt-7 flex flex-col gap-0.5" aria-label="Seções">
             {SECOES.map(({ href, rotulo, icone: Icone }) => (
               <a key={href} href={href} onClick={() => setMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 font-semibold text-white/85 hover:bg-white/[0.07]">
                 <Icone size={20} className="text-[#7dd3fc]" /> {rotulo}
               </a>
             ))}
           </nav>
-          <div className="mt-auto flex flex-col gap-5 pt-8">
+          <div className="mt-8 flex flex-col gap-6">
             {([["criar", "Criar conta", UserPlus], ["entrar", "Já tenho conta", LogIn]] as const).map(([tipo, titulo, Icone]) => (
               <div key={tipo}>
                 <p className="mb-2 flex items-center gap-2 px-1 text-[0.7rem] font-semibold tracking-[0.12em] text-white/50 uppercase"><Icone size={14} /> {titulo}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {ACOES_PERFIL[tipo].map(({ href, rotulo, icone: I }) => (
+                <div className="flex flex-col gap-2">
+                  {ACOES_PERFIL[tipo].map(({ href, rotulo, detalhe, icone: I }) => (
                     <Link
                       key={href}
                       href={href as Route}
-                      className={`flex flex-col items-center gap-2 rounded-2xl p-4 text-center text-sm font-semibold ${tipo === "criar" ? "bg-white text-[#0b2a6b]" : "bg-white/10 text-white ring-1 ring-white/15"}`}
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${tipo === "criar" ? "bg-white text-[#0b2a6b]" : "bg-white/[0.08] text-white ring-1 ring-white/12"}`}
                     >
-                      <I size={22} /> {rotulo}
+                      <I size={20} className={tipo === "criar" ? "text-[#1f56e8]" : "text-[#7dd3fc]"} />
+                      <span className="flex-1">
+                        <span className="block text-sm font-semibold">{rotulo}</span>
+                        <span className={`block text-xs ${tipo === "criar" ? "text-[#5b6880]" : "text-white/55"}`}>{detalhe}</span>
+                      </span>
+                      <ChevronRight size={18} className="opacity-50" />
                     </Link>
                   ))}
                 </div>
               </div>
             ))}
           </div>
+          <footer className="mt-auto border-t border-white/10 pt-5 text-center">
+            <Marca inverso className="text-sm" />
+            <p className="mt-1.5 text-[0.7rem] text-white/45">© {new Date().getFullYear()} Aluguei · Locação para motoristas de app</p>
+          </footer>
         </div>
       </Gaveta>
     </div>

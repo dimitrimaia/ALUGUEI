@@ -52,14 +52,14 @@ export function Gaveta({
         tabIndex={aberta ? 0 : -1}
         aria-label="Fechar menu"
         onClick={aoFechar}
-        className={`absolute inset-0 bg-[#040b1a]/55 backdrop-blur-[2px] transition-opacity duration-300 ${aberta ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-[#040b1a]/45 backdrop-blur-[3px] transition-opacity duration-300 ease-out ${aberta ? "opacity-100" : "opacity-0"}`}
       />
       <div
         ref={painel}
         role="dialog"
         aria-modal="true"
         aria-label={rotulo}
-        className={`absolute inset-y-0 flex w-[min(20rem,86vw)] flex-col overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-flutuante transition-transform duration-300 ease-out ${lado === "esquerda" ? "left-0" : "right-0"} ${escura ? "fundo-navy" : "bg-cartao text-texto"} ${aberta ? "translate-x-0" : lado === "esquerda" ? "-translate-x-full" : "translate-x-full"}`}
+        className={`absolute inset-y-0 flex w-[min(20rem,86vw)] flex-col overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-flutuante transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${lado === "esquerda" ? "left-0" : "right-0"} ${escura ? "fundo-navy" : "bg-cartao text-texto"} ${aberta ? "translate-x-0 opacity-100" : lado === "esquerda" ? "-translate-x-6 opacity-0" : "translate-x-6 opacity-0"}`}
       >
         <button
           tabIndex={aberta ? 0 : -1}

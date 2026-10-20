@@ -220,33 +220,22 @@ export function DadoRotulado({ rotulo, children }: { rotulo: string; children: R
   );
 }
 
-/** Símbolo da marca: um "A" que é uma estrada, com a faixa central tracejada. */
-export function Simbolo({ className = "size-9" }: { className?: string }) {
+/** Símbolo da marca: um "A" que é uma estrada, com a faixa central tracejada. Usa a cor do texto. */
+export function Simbolo({ className = "size-7" }: { className?: string }) {
   return (
-    <span className={`grid shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#3b74ff] to-[#1641b8] text-white shadow-marca ${className}`}>
-      <svg viewBox="0 0 24 24" className="size-[62%]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M4.5 20 11 4.5h2L19.5 20" />
-        <path d="M12 10.5v1.6M12 14.6v1.6M12 18.7V20" strokeWidth="2" />
-      </svg>
-    </span>
+    <svg viewBox="0 0 24 24" className={`shrink-0 ${className}`} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3.5 21 10.6 3.5h2.8L20.5 21" />
+      <path d="M12 9.6v1.9M12 14.4v1.9M12 19.2V21" strokeWidth="2.1" />
+    </svg>
   );
 }
 
+/** Logo: símbolo e nome na mesma cor (azul da marca, ou branco sobre fundo escuro). */
 export function Marca({ className = "", inverso = false }: { className?: string; inverso?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-2.5 text-[1.05rem] font-extrabold tracking-[0.08em] ${inverso ? "text-white" : "text-texto"} ${className}`} aria-label="Aluguei">
+    <span className={`inline-flex items-center gap-2 text-[1.15rem] font-extrabold tracking-[0.1em] ${inverso ? "text-white" : "text-marca"} ${className}`} aria-label="Aluguei">
       <Simbolo />
       <span aria-hidden>ALUGUEI</span>
-    </span>
-  );
-}
-
-export function Avatar({ nome, tamanho = "md" }: { nome: string; tamanho?: "md" | "lg" }) {
-  const p = nome.trim().split(/\s+/);
-  const letras = ((p[0]?.[0] ?? "") + (p.length > 1 ? (p.at(-1)?.[0] ?? "") : "")).toUpperCase();
-  return (
-    <span className={`grid shrink-0 place-items-center rounded-full bg-marca-suave font-bold text-marca ${tamanho === "lg" ? "size-14 text-lg" : "size-10 text-sm"}`} aria-hidden>
-      {letras}
     </span>
   );
 }
@@ -259,6 +248,16 @@ export function Placa({ placa, tamanho = "md" }: { placa: string; tamanho?: "sm"
     <span className={`inline-flex shrink-0 flex-col overflow-hidden rounded-md border-[1.5px] border-[#1b2a44] bg-white text-center font-mono leading-none font-bold tracking-wider text-[#111827] shadow-sm ${t}`} aria-label={`Placa ${texto}`}>
       <span className="bg-[#1f4bb8] py-[2px] text-[0.42em] font-sans font-bold tracking-[0.2em] text-white">BRASIL</span>
       <span className="py-[0.28em]">{texto}</span>
+    </span>
+  );
+}
+
+export function Avatar({ nome, tamanho = "md" }: { nome: string; tamanho?: "md" | "lg" }) {
+  const p = nome.trim().split(/\s+/);
+  const letras = ((p[0]?.[0] ?? "") + (p.length > 1 ? (p.at(-1)?.[0] ?? "") : "")).toUpperCase();
+  return (
+    <span className={`grid shrink-0 place-items-center rounded-full bg-marca-suave font-bold text-marca ${tamanho === "lg" ? "size-14 text-lg" : "size-10 text-sm"}`} aria-hidden>
+      {letras}
     </span>
   );
 }

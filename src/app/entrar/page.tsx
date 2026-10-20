@@ -1,7 +1,9 @@
-import { ArrowLeft, CalendarCheck, Camera, FileSignature, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, Building2, CalendarCheck, Camera, Car, FileSignature, ShieldCheck, Wallet } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { Marca } from "@/components/ui";
 import { FormularioEntrar } from "./formulario";
+import { LembrarPerfil } from "./lembrar";
 
 const PERFIS = {
   locador: {
@@ -40,33 +42,45 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   const padrao = tipo === "locador" ? "/painel" : tipo === "motorista" ? "/m" : "/inicio";
   const destino = voltar?.startsWith("/") && !voltar.startsWith("//") ? voltar : padrao;
   const p = PERFIS[tipo];
+  // Motorista: visual claro, igual ao site na visão do motorista. Locador (e geral): azul.
+  const claro = tipo === "motorista";
+  const site = tipo === "geral" ? "/" : `/?para=${tipo}`;
 
   return (
-    <main className="min-h-dvh bg-cartao lg:grid lg:grid-cols-2">
-      <section className="fundo-marca relative overflow-hidden px-6 pt-10 pb-24 lg:flex lg:flex-col lg:justify-between lg:p-14">
-        <div className="grade-sutil absolute inset-0 [mask-image:radial-gradient(70%_70%_at_30%_20%,black,transparent)]" aria-hidden />
+    <main className={`min-h-dvh bg-cartao lg:grid lg:grid-cols-2 ${claro ? "tema-claro" : ""}`}>
+      {tipo !== "geral" && <LembrarPerfil perfil={tipo} />}
+      <section
+        className={`relative overflow-hidden px-6 pt-8 pb-24 lg:flex lg:flex-col lg:justify-between lg:p-14 ${claro ? "bg-gradient-to-b from-[#e6efff] via-[#f2f6ff] to-[#f8faff] text-[#0b1630] lg:border-r lg:border-borda" : "fundo-marca"}`}
+      >
+        {!claro && <div className="grade-sutil absolute inset-0 [mask-image:radial-gradient(70%_70%_at_30%_20%,black,transparent)]" aria-hidden />}
         <div className="relative flex items-center justify-between">
-          <Link href="/" aria-label="Aluguei, início"><Marca inverso /></Link>
-          <Link href="/" className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/20">
+          <Link href={site as Route} aria-label="Aluguei, início"><Marca inverso={!claro} /></Link>
+          <Link
+            href={site as Route}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold ${claro ? "bg-white text-[#0b1630] shadow-cartao ring-1 ring-borda hover:bg-cartao-2" : "bg-white/10 ring-1 ring-white/20 hover:bg-white/20"}`}
+          >
             <ArrowLeft size={16} /> Voltar ao site
           </Link>
         </div>
         <div className="relative mt-10 lg:mt-0">
-          <h1 className="text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl lg:text-5xl">{p.titulo}</h1>
-          <p className="mt-3 max-w-md text-white/80 lg:text-lg">{p.texto}</p>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${claro ? "bg-marca-suave text-marca" : "bg-white/12 ring-1 ring-white/20"}`}>
+            {tipo === "motorista" ? <Car size={14} /> : <Building2 size={14} />} {tipo === "motorista" ? "Motorista" : tipo === "locador" ? "Locador" : "Aluguei"}
+          </span>
+          <h1 className="mt-4 text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl lg:text-5xl">{p.titulo}</h1>
+          <p className={`mt-3 max-w-md lg:text-lg ${claro ? "text-[#5b6880]" : "text-white/80"}`}>{p.texto}</p>
           <ul className="mt-10 hidden flex-col gap-4 lg:flex">
             {p.itens.map(({ icone: Icone, texto }) => (
-              <li key={texto} className="flex items-center gap-3 text-white/90">
-                <span className="grid size-10 place-items-center rounded-xl bg-white/12 ring-1 ring-white/20"><Icone size={20} /></span>
+              <li key={texto} className={`flex items-center gap-3 ${claro ? "" : "text-white/90"}`}>
+                <span className={`grid size-10 place-items-center rounded-xl ${claro ? "bg-white text-marca shadow-cartao ring-1 ring-borda" : "bg-white/12 ring-1 ring-white/20"}`}><Icone size={20} /></span>
                 {texto}
               </li>
             ))}
           </ul>
         </div>
-        <p className="relative hidden text-sm text-white/60 lg:block">© {new Date().getFullYear()} Aluguei</p>
+        <p className={`relative hidden text-sm lg:block ${claro ? "text-[#5b6880]" : "text-white/60"}`}>© {new Date().getFullYear()} Aluguei</p>
       </section>
       <section className="relative -mt-14 px-4 pb-10 lg:mt-0 lg:grid lg:place-items-center lg:p-14">
-        <div className="mx-auto w-full max-w-sm rounded-[1.5rem] border border-borda bg-cartao p-6 shadow-flutuante lg:border-0 lg:p-0 lg:shadow-none">
+        <div className={`mx-auto w-full max-w-sm rounded-[1.5rem] border bg-cartao p-6 shadow-flutuante lg:border-0 lg:p-0 lg:shadow-none ${claro ? "border-marca/25" : "border-borda"}`}>
           <h2 className="text-xl font-extrabold tracking-tight">{tipo === "locador" ? "Entrar ou criar conta" : "Entrar"}</h2>
           <p className="mt-1 mb-6 text-sm text-suave">Vamos enviar um código de 6 dígitos para confirmar que é você.</p>
           {tipo === "motorista" && novo && (
@@ -77,9 +91,9 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
           <FormularioEntrar destino={destino} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um código novo." : undefined} />
           <p className="mt-6 text-center text-sm text-suave">
             {tipo === "motorista" ? (
-              <>É locador? <Link href="/entrar?perfil=locador" className="font-semibold text-marca">Entre aqui</Link></>
+              <>É locador? <Link href="/entrar?perfil=locador" className="font-semibold text-marca">Entre pela área do locador</Link></>
             ) : (
-              <>É motorista? <Link href="/entrar?perfil=motorista" className="font-semibold text-marca">Entre aqui</Link></>
+              <>É motorista? <Link href="/entrar?perfil=motorista" className="font-semibold text-marca">Entre pela área do motorista</Link></>
             )}
           </p>
         </div>
