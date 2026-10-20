@@ -1,0 +1,7 @@
+export * from "./tenancy";
+export * from "./pessoas";
+export * from "./frota";
+export * from "./contratos";
+export * from "./financeiro";
+export * from "./evidencias";
+export * from "./comunicacao";

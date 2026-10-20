@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  --fundo: #f7f7f5;
+  --texto: #1b1b1a;
+  --suave: #6b6b66;
+  --marca: #0f766e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #141413;
+    --texto: #ededea;
+    --suave: #a3a39d;
+    --marca: #2dd4bf;
+  }
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+}
