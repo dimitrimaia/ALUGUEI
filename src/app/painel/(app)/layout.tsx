@@ -5,6 +5,7 @@ const MENU = [
   { href: "/painel", rotulo: "Visão geral" },
   { href: "/painel/veiculos", rotulo: "Veículos" },
   { href: "/painel/motoristas", rotulo: "Motoristas" },
+  { href: "/painel/contratos", rotulo: "Contratos" },
 ] as const;
 
 export default async function LayoutPainel({ children }: { children: React.ReactNode }) {

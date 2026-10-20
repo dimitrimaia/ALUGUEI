@@ -1,14 +1,15 @@
 import type { Route } from "next";
 import { BotaoLink, Cartao, Selo, Suave } from "@/components/ui";
 import { exigirUsuario } from "@/lib/sessao";
-import { cadastrosDoMotorista } from "@/lib/motorista";
+import { cadastrosDoMotorista, contratosDoMotorista } from "@/lib/motorista";
 import { STATUS_LOCATARIO } from "@/lib/rotulos";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /** Tela inicial do motorista (RF-121). Pagamento, km e check-in aparecem quando houver contrato. */
 export default async function Motorista() {
   const usuario = await exigirUsuario("/m");
-  const cadastros = await cadastrosDoMotorista(usuario.id);
+  const [cadastros, contratos] = await Promise.all([cadastrosDoMotorista(usuario.id), contratosDoMotorista(usuario.id)]);
+  const paraAssinar = contratos.filter((c) => c.status === "aguardando_assinatura");
   const orgs = cadastros.length
     ? (await supabaseAdmin().from("organizacoes").select("id, nome").in("id", cadastros.map((c) => c.organizacao_id))).data ?? []
     : [];
@@ -22,6 +23,14 @@ export default async function Motorista() {
           <button className="text-sm underline" style={{ color: "var(--suave)" }}>Sair</button>
         </form>
       </div>
+
+      {paraAssinar.map((c) => (
+        <Cartao key={c.id} className="flex flex-col gap-3">
+          <p className="font-medium">Seu contrato está pronto</p>
+          <Suave>Leia o resumo e assine pelo celular.</Suave>
+          <BotaoLink href={`/m/contrato/${c.id}` as Route}>Ver e assinar</BotaoLink>
+        </Cartao>
+      ))}
 
       {!cadastros.length && (
         <Cartao>
@@ -45,7 +54,14 @@ export default async function Motorista() {
               </>
             )}
             {c.status === "em_analise" && <Suave>Recebemos seu cadastro. O locador vai analisar e você será avisado.</Suave>}
-            {c.status === "aprovado" && <Suave>Cadastro aprovado! O próximo passo é assinar o contrato.</Suave>}
+            {c.status === "aprovado" && !contratos.some((k) => k.locatario_id === c.id) && (
+              <Suave>Cadastro aprovado! O locador vai preparar o contrato.</Suave>
+            )}
+            {contratos
+              .filter((k) => k.locatario_id === c.id && k.status !== "aguardando_assinatura")
+              .map((k) => (
+                <BotaoLink key={k.id} variante="secundario" href={`/m/contrato/${k.id}` as Route}>Ver meu contrato</BotaoLink>
+              ))}
             {c.status === "recusado" && <Suave>O locador não aprovou o cadastro desta vez.</Suave>}
           </Cartao>
         );

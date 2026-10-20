@@ -23,3 +23,15 @@ export async function cadastroDoMotorista(usuarioId: string, locatarioId: string
     .maybeSingle();
   return data;
 }
+
+/** Contratos do motorista: só os dos cadastros ligados ao usuário logado. */
+export async function contratosDoMotorista(usuarioId: string) {
+  const ids = (await cadastrosDoMotorista(usuarioId)).map((c) => c.id);
+  if (!ids.length) return [];
+  const { data } = await supabaseAdmin().from("contratos").select("*").in("locatario_id", ids).order("criado_em", { ascending: false });
+  return data ?? [];
+}
+
+export async function contratoDoMotorista(usuarioId: string, contratoId: string) {
+  return (await contratosDoMotorista(usuarioId)).find((c) => c.id === contratoId) ?? null;
+}

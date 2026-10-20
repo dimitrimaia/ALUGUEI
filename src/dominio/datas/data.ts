@@ -75,3 +75,10 @@ export function formatarData(d: DataISO): string {
   const [a, m, dia] = d.split("-");
   return `${dia}/${m}/${a}`;
 }
+
+/** Meses inteiros de `de` até `ate` (21/04 → 21/07 = 3). */
+export function mesesEntre(de: DataISO, ate: DataISO): number {
+  let meses = 0;
+  while (somarMeses(de, meses + 1) <= ate) meses++;
+  return meses;
+}

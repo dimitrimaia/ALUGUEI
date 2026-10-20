@@ -7,6 +7,7 @@
 | 20/10/2026 | Asaas (pagamentos e split) e ZapSign (assinatura) | — |
 | 20/10/2026 | Mensalidade de R$ 250 por carro **com contrato ativo**; carro parado não paga | Alinha o incentivo: a plataforma ganha quando o carro está rodando |
 | 20/10/2026 | A mensalidade é cobrada por split em cada aluguel pago, proporcional aos dias (R$ 250 × 12 / 365 por dia = R$ 57,53/semana) | O locador não recebe fatura separada; semanas incompletas ficam corretas |
+| 20/10/2026 | Assinatura eletrônica simples no próprio app (aceite + hash do PDF + IP + dispositivo), sem ZapSign por enquanto | Foco no produto; a Lei 14.063 aceita entre particulares. ZapSign pode entrar depois pela porta `ProvedorAssinatura` |
 | 20/10/2026 | O app faz o papel do administrador do contrato (cláusula 1.2): rotina automática, decisão drástica humana | Ver "O app como administrador" abaixo |
 
 ## Split: regras

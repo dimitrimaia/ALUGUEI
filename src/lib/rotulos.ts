@@ -25,3 +25,18 @@ export const PENDENCIAS: Record<Pendencia, string> = {
   cnh_sem_ear: "CNH sem a observação EAR",
   sem_comprovante_app: "Sem comprovante do Uber/99",
 };
+
+export const STATUS_CONTRATO: Record<Linha<"contratos">["status"], { rotulo: string; tom: Tom }> = {
+  rascunho: { rotulo: "Rascunho", tom: "neutro" },
+  aguardando_assinatura: { rotulo: "Aguardando assinatura", tom: "alerta" },
+  assinado: { rotulo: "Assinado · falta a vistoria", tom: "marca" },
+  ativo: { rotulo: "Ativo", tom: "ok" },
+  encerrado: { rotulo: "Encerrado", tom: "neutro" },
+  rescindido: { rotulo: "Rescindido", tom: "perigo" },
+};
+
+export const TIPO_OBRIGACAO: Record<Linha<"obrigacoes">["tipo"], string> = {
+  aluguel: "Aluguel",
+  caucao_parcela: "Parcela da caução",
+  checkin: "Check-in semanal",
+};

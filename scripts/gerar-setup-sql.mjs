@@ -13,12 +13,14 @@ const partes = [
   "create table if not exists drizzle.__drizzle_migrations (id serial primary key, hash text not null, created_at bigint);",
 ];
 
-for (const entrada of journal.entries) {
+for (const [indice, entrada] of journal.entries.entries()) {
   const sql = readFileSync(`drizzle/${entrada.tag}.sql`, "utf8");
   const hash = createHash("sha256").update(sql).digest("hex");
   const corpo = sql.replaceAll("--> statement-breakpoint", "");
   const registro = `insert into drizzle.__drizzle_migrations (hash, created_at) values ('${hash}', ${entrada.when});`;
   partes.push(`\n-- Migração ${entrada.tag}`, corpo, registro);
+  // As políticas de RLS dependem das tabelas da 1ª migração, e as migrações seguintes podem depender delas.
+  if (indice === 0) partes.push("\n-- Políticas de acesso (supabase/rls.sql)", readFileSync("supabase/rls.sql", "utf8"));
 
   // Arquivo avulso por migração, para aplicar só o que falta num banco já criado.
   mkdirSync("supabase/migracoes", { recursive: true });
@@ -28,6 +30,6 @@ for (const entrada of journal.entries) {
   );
 }
 
-partes.push("\n-- Políticas de acesso (supabase/rls.sql)", readFileSync("supabase/rls.sql", "utf8"), "commit;\n");
+partes.push("commit;\n");
 writeFileSync("supabase/setup.sql", partes.join("\n"));
 console.log("supabase/setup.sql e supabase/migracoes/ gerados");

@@ -3,10 +3,22 @@
 import { useState } from "react";
 import { Botao, classeEntrada } from "@/components/ui";
 
-export function CompartilharConvite({ link, telefone, nome, locador }: { link: string; telefone: string; nome: string; locador: string }) {
+export function CompartilharConvite({
+  link,
+  telefone,
+  nome,
+  locador,
+  mensagem = "Para alugar o carro, faça seu cadastro por este link:",
+}: {
+  link: string;
+  telefone: string;
+  nome: string;
+  locador: string;
+  mensagem?: string;
+}) {
   const [copiado, setCopiado] = useState(false);
   const primeiroNome = nome.split(" ")[0];
-  const texto = `Olá, ${primeiroNome}! Aqui é ${locador}. Para alugar o carro, faça seu cadastro por este link: ${link}`;
+  const texto = `Olá, ${primeiroNome}! Aqui é ${locador}. ${mensagem} ${link}`;
   const whatsapp = `https://wa.me/${telefone.replace(/\D/g, "")}?text=${encodeURIComponent(texto)}`;
 
   return (

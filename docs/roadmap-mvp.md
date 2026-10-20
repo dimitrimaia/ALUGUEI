@@ -25,27 +25,27 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 
 ## Semanas 2–4: pessoas, frota e entrada do motorista
 
-- [ ] Locador, equipe e papéis Dono/Operador (RF-002).
-- [ ] Veículos: cadastro, status e ficha com histórico (RF-010, RF-012, RF-013).
-- [ ] Convite por link no WhatsApp com a oferta: valor, caução, franquia e prazo (RF-023, RF-020).
-- [ ] Cadastro do motorista: dados, CNH, documento e print do app (RF-003, RF-005).
-- [ ] Consentimentos LGPD por finalidade (RF-006).
-- [ ] Pré-análise automática: idade, 1ª habilitação, validade e EAR (RF-004).
-- [ ] Fila de análise com decisão e motivo (RF-022).
+- [x] Conta do locador com papel Dono (RF-002). Convidar operador: falta.
+- [x] Veículos: cadastro, status e ficha com histórico de km (RF-010, RF-012; RF-013 cresce com contratos e manutenção).
+- [x] Convite por link no WhatsApp com a oferta: valor, caução, franquia e prazo (RF-023, RF-020).
+- [x] Cadastro do motorista: dados, CNH, documento e print do app (RF-003, RF-005).
+- [x] Consentimentos LGPD por finalidade (RF-006).
+- [x] Pré-análise automática: idade, 1ª habilitação, validade e EAR (RF-004).
+- [x] Fila de análise com decisão e motivo (RF-022).
 - [ ] Importação de contrato em andamento.
 
 ## Semanas 5–6: contrato e entrega
 
-- [ ] Modelo versionado, parâmetros congelados na assinatura (RF-030, RF-033).
-- [ ] PDF gerado do modelo, com extenso automático e numeração automática (RF-031).
-- [ ] Resumo "sem juridiquês" antes de assinar (RNF-041).
-- [ ] Assinatura via ZapSign e guarda do PDF e da trilha no cofre (RF-032, RNF-011, RNF-012).
-- [ ] Cofre de provas: upload com hash, hora do servidor, geolocalização e dispositivo (RNF-010).
+- [x] Modelo versionado, parâmetros congelados na assinatura (RF-030, RF-033).
+- [x] PDF gerado do modelo, com extenso automático e numeração automática (RF-031).
+- [x] Resumo "sem juridiquês" antes de assinar (RNF-041).
+- [x] Assinatura eletrônica no próprio app, com aceite, hash do PDF, IP e dispositivo no cofre (RF-032, RNF-011, RNF-012). ZapSign fica como opção depois.
+- [x] Cofre de provas: upload com hash, hora do servidor, geolocalização e dispositivo (RNF-010).
 - [ ] Vistoria de entrega guiada: checklist, fotos, odômetro, combustível e aceite (RF-040 a RF-043).
 
 ## Semanas 7–9: dinheiro e régua
 
-- [ ] Agenda de obrigações gerada na assinatura (já implementada em `gerarAgenda`).
+- [x] Agenda de obrigações gerada na assinatura (já implementada em `gerarAgenda`).
 - [ ] Cobrança semanal Pix na subconta do locador, com split da mensalidade (RF-050, RF-051 só Pix, RF-062).
 - [ ] Webhook com deduplicação, baixa automática e conciliação diária (RF-052, RNF-033).
 - [ ] Multa, juros (já implementados) e correção monetária (RF-054).

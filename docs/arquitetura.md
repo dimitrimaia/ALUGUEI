@@ -42,6 +42,16 @@ drizzle/          migrações geradas
 Dependências só apontam para dentro: `app` e `jobs` usam `dominio` e
 `integracoes`, e `dominio` não importa nada de fora.
 
+## Acesso a dados
+
+- **Equipe do locador:** cliente Supabase com a sessão do usuário. O RLS garante o isolamento.
+- **Motorista:** não é membro de nenhum locador. O servidor usa a chave secreta e
+  **sempre** filtra por `locatarios.usuario_id = usuário logado` (`src/lib/motorista.ts`).
+- **Convite público:** lido pelo token, com a chave secreta, mostrando só o necessário.
+- Tipos do banco: `pnpm db:tipos` gera `src/db/tipos.ts` a partir do schema Drizzle.
+- Mudou o schema: `pnpm db:generate`, `pnpm db:tipos`, `pnpm db:setup-sql` e aplicar
+  `supabase/migracoes/<nova>.sql` no SQL Editor.
+
 ## Convenções
 
 - Dinheiro em centavos (`integer`), percentuais em pontos-base (1% = 100 bps),

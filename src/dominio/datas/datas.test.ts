@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ehDiaUtil, pascoa, somarDiasUteis } from "./calendario";
-import { data, diaDaSemana, hoje, proximoDiaDaSemana, somarMeses } from "./data";
+import { data, diaDaSemana, hoje, mesesEntre, proximoDiaDaSemana, somarMeses } from "./data";
 
 describe("data", () => {
   it("rejeita datas inexistentes", () => {
@@ -46,5 +46,13 @@ describe("calendário", () => {
   it("conta dias úteis pulando fim de semana e feriado", () => {
     // Sexta 30/10/2026 + 2 úteis: pula fim de semana e Finados (02/11).
     expect(somarDiasUteis(data("2026-10-30"), 2)).toBe("2026-11-04");
+  });
+});
+
+describe("mesesEntre", () => {
+  it("conta meses inteiros", () => {
+    expect(mesesEntre(data("2026-04-21"), data("2026-07-21"))).toBe(3);
+    expect(mesesEntre(data("2026-04-21"), data("2026-07-20"))).toBe(2);
+    expect(mesesEntre(data("2026-01-31"), data("2026-02-28"))).toBe(1);
   });
 });

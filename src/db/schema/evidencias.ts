@@ -32,7 +32,12 @@ export const evidencias = pgTable(
     enviadoPor: uuid("enviado_por").notNull(),
     metadados: jsonb("metadados"),
   },
-  (t) => [uniqueIndex("evidencias_sha256").on(t.organizacaoId, t.sha256), index("evidencias_contrato").on(t.contratoId)],
+  // O mesmo arquivo pode servir a duas finalidades (ex.: um PDF com CNH e comprovante).
+  (t) => [
+    uniqueIndex("evidencias_sha256").on(t.organizacaoId, t.finalidade, t.sha256),
+    index("evidencias_contrato").on(t.contratoId),
+    index("evidencias_locatario").on(t.locatarioId),
+  ],
 );
 
 export const tipoVistoria = pgEnum("tipo_vistoria", ["entrega", "devolucao"]);

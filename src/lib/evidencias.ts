@@ -8,6 +8,7 @@ const TIPOS_ACEITOS: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "application/pdf": "pdf",
+  "application/json": "json", // aceites e registros gerados pelo sistema
 };
 const TAMANHO_MAXIMO = 8 * 1024 * 1024;
 
@@ -17,17 +18,19 @@ export class ArquivoInvalido extends Error {}
  * Guarda um arquivo no cofre de provas (RNF-010): hash SHA-256, hora do
  * servidor, IP e dispositivo. O mesmo arquivo enviado duas vezes vira um só.
  */
-export async function guardarEvidencia(arquivo: File, dados: {
+export async function guardarEvidencia(arquivo: File | Blob, dados: {
   organizacaoId: string;
   enviadoPor: string;
   finalidade: string;
+  /** foto | video | pdf | aceite. Sem valor, é deduzido do tipo do arquivo. */
+  tipo?: string;
   locatarioId?: string;
   contratoId?: string;
   veiculoId?: string;
   latitude?: number;
   longitude?: number;
   capturadoEm?: Date;
-}): Promise<string> {
+}): Promise<{ id: string; sha256: string; caminho: string }> {
   const extensao = TIPOS_ACEITOS[arquivo.type];
   if (!extensao) throw new ArquivoInvalido("Envie uma foto (JPG, PNG) ou PDF.");
   if (arquivo.size > TAMANHO_MAXIMO) throw new ArquivoInvalido("Arquivo maior que 8 MB.");
@@ -40,11 +43,12 @@ export async function guardarEvidencia(arquivo: File, dados: {
     .from("evidencias")
     .select("id")
     .eq("organizacao_id", dados.organizacaoId)
+    .eq("finalidade", dados.finalidade)
     .eq("sha256", sha256)
     .maybeSingle();
-  if (existente) return existente.id;
-
   const caminho = `${dados.organizacaoId}/${dados.finalidade.replaceAll(".", "/")}/${sha256}.${extensao}`;
+  if (existente) return { id: existente.id, sha256, caminho };
+
   const { error: erroUpload } = await admin.storage.from("evidencias").upload(caminho, bytes, { contentType: arquivo.type, upsert: false });
   if (erroUpload && !/exists|duplicate/i.test(erroUpload.message)) throw new Error(`Falha no upload: ${erroUpload.message}`);
 
@@ -56,7 +60,7 @@ export async function guardarEvidencia(arquivo: File, dados: {
       locatario_id: dados.locatarioId ?? null,
       contrato_id: dados.contratoId ?? null,
       veiculo_id: dados.veiculoId ?? null,
-      tipo: arquivo.type === "application/pdf" ? "pdf" : "foto",
+      tipo: dados.tipo ?? (arquivo.type === "application/pdf" ? "pdf" : "foto"),
       finalidade: dados.finalidade,
       caminho_storage: caminho,
       sha256,
@@ -72,5 +76,11 @@ export async function guardarEvidencia(arquivo: File, dados: {
     .select("id")
     .single();
   if (error || !data) throw new Error(`Falha ao registrar evidência: ${error?.message}`);
-  return data.id;
+  return { id: data.id, sha256, caminho };
+}
+
+/** Link temporário (10 min) para abrir um arquivo do cofre. Chame só depois de checar o acesso. */
+export async function linkTemporario(caminho: string): Promise<string | null> {
+  const { data } = await supabaseAdmin().storage.from("evidencias").createSignedUrl(caminho, 600);
+  return data?.signedUrl ?? null;
 }

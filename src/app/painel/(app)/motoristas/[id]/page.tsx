@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import { Botao, Cartao, Selo, Suave, Titulo } from "@/components/ui";
+import { Botao, BotaoLink, Cartao, Selo, Suave, Titulo } from "@/components/ui";
 import type { Oferta } from "@/db/schema/pessoas";
 import { formatarCpf, formatarPlaca } from "@/dominio/cadastro/documentos";
 import type { Pendencia } from "@/dominio/cadastro/elegibilidade";
 import { data, formatarData } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { FINALIDADES } from "@/lib/consentimentos";
 import { exigirEquipe } from "@/lib/sessao";
 import { PENDENCIAS, STATUS_LOCATARIO } from "@/lib/rotulos";
 import { urlDoSite } from "@/lib/site";
@@ -87,12 +88,15 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
         )}
 
         {m.status === "aprovado" || m.status === "recusado" ? (
-          <Cartao className="lg:col-span-2">
+          <Cartao className="flex flex-col items-start gap-2 lg:col-span-2">
             <p className="font-medium">Decisão</p>
             <Suave>
               {status.rotulo} em {m.decidido_em ? new Date(m.decidido_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"}
               {m.motivo_decisao ? ` · Motivo: ${m.motivo_decisao}` : ""}
             </Suave>
+            {m.status === "aprovado" && (
+              <BotaoLink href={`/painel/contratos/novo?locatario=${m.id}`}>Gerar contrato</BotaoLink>
+            )}
           </Cartao>
         ) : null}
 
@@ -138,7 +142,7 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
           {consentimentos?.length ? (
             consentimentos.map((c) => (
               <Suave key={c.finalidade}>
-                {c.finalidade} · {new Date(c.aceito_em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} · v{c.versao_texto}
+                {FINALIDADES.find((f) => f.id === c.finalidade)?.titulo ?? c.finalidade} · {new Date(c.aceito_em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} · v{c.versao_texto}
               </Suave>
             ))
           ) : (
