@@ -100,10 +100,11 @@ export function BotaoLink({
   icone: Icone,
   className = "",
   children,
+  href,
   ...props
-}: ComponentProps<typeof Link> & { variante?: Variante; tamanho?: Tamanho; icone?: LucideIcon }) {
+}: Omit<ComponentProps<typeof Link>, "href"> & { href: string; variante?: Variante; tamanho?: Tamanho; icone?: LucideIcon }) {
   return (
-    <Link {...props} className={classeBotao(variante, tamanho, className)}>
+    <Link {...props} href={href as Route} className={classeBotao(variante, tamanho, className)}>
       {Icone && <Icone size={18} aria-hidden />}
       {children}
     </Link>

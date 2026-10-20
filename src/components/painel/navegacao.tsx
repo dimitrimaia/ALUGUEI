@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, ChevronDown, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Menu, Plus, UserPlus, Users, X } from "lucide-react";
+import { Car, ChevronDown, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle, Plus, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,16 +14,21 @@ const GESTAO = [
   { href: "/painel/motoristas", rotulo: "Motoristas", icone: Users },
   { href: "/painel/contratos", rotulo: "Contratos", icone: FileText },
 ] as const;
+const BUSCA = [
+  { href: "/painel/anuncios", rotulo: "Anúncios", icone: Megaphone },
+  { href: "/painel/conversas", rotulo: "Conversas", icone: MessageCircle },
+] as const;
 const DINHEIRO = [
   { href: "/painel/financeiro", rotulo: "Financeiro", icone: CircleDollarSign },
   { href: "/painel/recebimentos", rotulo: "Recebimentos", icone: Landmark },
 ] as const;
 const ABAS_MOVEIS = [GESTAO[0], GESTAO[2]] as const;
 const ABAS_MOVEIS_DIREITA = [DINHEIRO[0]] as const;
-const MAIS = [GESTAO[1], GESTAO[3], DINHEIRO[1]] as const; // marcam a aba "Mais" como ativa
+const MAIS = [GESTAO[1], GESTAO[3], DINHEIRO[1], BUSCA[0], BUSCA[1]] as const; // marcam a aba "Mais" como ativa
 
 const ACOES = [
   { href: "/painel/veiculos/novo", rotulo: "Cadastrar veículo", detalhe: "Placa, modelo e km", icone: Car },
+  { href: "/painel/anuncios", rotulo: "Anunciar um carro", detalhe: "Aparece na busca de motoristas", icone: Megaphone },
   { href: "/painel/motoristas/convidar", rotulo: "Convidar motorista", detalhe: "Link pelo WhatsApp", icone: UserPlus },
 ] as const;
 
@@ -42,11 +47,13 @@ export function NavegacaoPainel({
   usuario,
   pendentes,
   recebimentosAtivos,
+  naoLidas = 0,
 }: {
   organizacao: string;
   usuario: string;
   pendentes: number;
   recebimentosAtivos: boolean;
+  naoLidas?: number;
 }) {
   const caminho = usePathname();
   const [acoesAbertas, setAcoesAbertas] = useState(false);
@@ -82,7 +89,7 @@ export function NavegacaoPainel({
           </div>
         </div>
 
-        {([["Gestão", GESTAO], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
+        {([["Gestão", GESTAO], ["Busca de carros", BUSCA], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
           <div key={titulo}>
             <p className="mt-7 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{titulo}</p>
             <nav className="flex flex-col gap-1" aria-label={titulo}>
@@ -98,6 +105,7 @@ export function NavegacaoPainel({
                     <Icone size={20} aria-hidden className={atual ? "text-[#1f56e8]" : ""} />
                     <span className="flex-1">{rotulo}</span>
                     {href === "/painel/motoristas" && <Contador n={pendentes} />}
+                    {href === "/painel/conversas" && <Contador n={naoLidas} />}
                   </Link>
                 );
               })}
@@ -203,7 +211,7 @@ export function NavegacaoPainel({
               <p className="truncate text-xs text-white/55">{usuario}</p>
             </div>
           </div>
-          {([["Gestão", GESTAO], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
+          {([["Gestão", GESTAO], ["Busca de carros", BUSCA], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
             <div key={titulo}>
               <p className="mt-6 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{titulo}</p>
               <nav className="flex flex-col gap-1" aria-label={titulo}>
@@ -214,6 +222,8 @@ export function NavegacaoPainel({
                       <Icone size={20} className={atual ? "text-[#1f56e8]" : ""} />
                       <span className="flex-1">{rotulo}</span>
                       {href === "/painel/motoristas" && <Contador n={pendentes} />}
+                      {href === "/painel/conversas" && <Contador n={naoLidas} />}
+                    {href === "/painel/conversas" && <Contador n={naoLidas} />}
                     </Link>
                   );
                 })}

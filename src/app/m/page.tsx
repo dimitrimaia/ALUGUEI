@@ -1,4 +1,4 @@
-import { CalendarClock, Camera, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, UserRoundPen, Wallet, XCircle } from "lucide-react";
+import { CalendarClock, Camera, ChevronRight, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, UserRoundPen, Wallet, XCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { MenuMotorista } from "@/components/motorista/menu";
@@ -91,8 +91,8 @@ export default async function Motorista() {
 
       <div className="relative -mt-4 flex flex-col gap-4 px-4">
         {!cadastros.length && (
-          <Vazio icone={Inbox} titulo="Nenhum convite por aqui" acao={<BotaoLink href="/bem-vindo" variante="secundario" tamanho="sm">Sou locador</BotaoLink>}>
-            Para alugar, peça ao locador o link de convite e abra neste celular. Você entrou como {usuario.email ?? usuario.telefone}.
+          <Vazio icone={Inbox} titulo="Procurando um carro?" acao={<BotaoLink href="/carros">Buscar carros na minha cidade</BotaoLink>}>
+            Encontre um carro, converse com o locador pelo app e combine o aluguel. Se já recebeu um convite, abra o link dele neste celular.
           </Vazio>
         )}
 
@@ -123,7 +123,7 @@ export default async function Motorista() {
         )}
 
         {veiculo && (
-          <Cartao className="flex items-center gap-4">
+          <Link href="/m/carro" className="flex items-center gap-4 rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao transition-colors active:bg-cartao-2">
             <Placa placa={veiculo.placa} />
             <div className="min-w-0 flex-1">
               <p className="line-clamp-2 leading-snug font-bold">{veiculo.modelo}</p>
@@ -132,7 +132,8 @@ export default async function Motorista() {
                 <span className="truncate text-xs text-suave">{nomeOrg(contrato!.organizacao_id)}</span>
               </div>
             </div>
-          </Cartao>
+            <ChevronRight size={18} className="shrink-0 text-suave" />
+          </Link>
         )}
 
         {ativo && (

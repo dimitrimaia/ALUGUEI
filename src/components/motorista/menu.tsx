@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck, FileText, Globe, Home, LogOut, Menu, Receipt } from "lucide-react";
+import { Car, ClipboardCheck, FileText, Globe, Home, LogOut, Menu, MessageCircle, Receipt, Search } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,6 +10,9 @@ import { Marca } from "@/components/ui";
 
 const ITENS = [
   { href: "/m", rotulo: "Início", icone: Home },
+  { href: "/m/carro", rotulo: "Meu carro", icone: Car },
+  { href: "/m/conversas", rotulo: "Conversas", icone: MessageCircle },
+  { href: "/carros", rotulo: "Buscar carros", icone: Search },
   { href: "/m/extrato", rotulo: "Extrato", icone: Receipt },
   { href: "/m/meu-contrato", rotulo: "Meu contrato", icone: FileText },
   { href: "/m/minha-vistoria", rotulo: "Vistoria do carro", icone: ClipboardCheck },

@@ -5,3 +5,4 @@ export * from "./contratos";
 export * from "./financeiro";
 export * from "./evidencias";
 export * from "./comunicacao";
+export * from "./marketplace";

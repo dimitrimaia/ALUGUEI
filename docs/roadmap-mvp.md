@@ -76,3 +76,14 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 
 **Risco de prazo:** as semanas 7–9 e 10–11 estão cheias. Se atrasar, o
 primeiro corte é a renovação e o alerta de área,.
+
+## Antecipado: busca de carros e chat
+
+Ver [marketplace-chat.md](marketplace-chat.md).
+
+- [x] Anúncios com fotos, cidade e condições; pausar e reativar (RF-020).
+- [x] Busca pública por cidade em /carros e página do anúncio (RF-021).
+- [x] "Tenho interesse" abre conversa; chat em tempo real dos dois lados (RF-113).
+- [x] "Enviar convite" na conversa, já ligado à conta do motorista.
+- [ ] Notificação de mensagem nova (push e WhatsApp).
+- [ ] Filtros por preço e categoria; denúncia e moderação.
