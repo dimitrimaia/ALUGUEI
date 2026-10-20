@@ -1,4 +1,5 @@
 import { ArrowRight, BellRing, Building2, Camera, Car, Check, ChevronDown, ClipboardCheck, FileSignature, Gauge, Landmark, Lock, Receipt, ShieldCheck, Smartphone, UserCheck, Wallet } from "lucide-react";
+import { CabecalhoSite } from "@/components/site/cabecalho";
 import { BotaoLink, Marca, Placa } from "@/components/ui";
 
 const RECURSOS = [
@@ -57,19 +58,7 @@ export default function Inicio() {
     <div className="min-h-dvh bg-cartao">
       <div className="fundo-marca relative overflow-hidden">
         <div className="grade-sutil absolute inset-0 [mask-image:radial-gradient(80%_70%_at_70%_30%,black,transparent)]" aria-hidden />
-        <header className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-          <Marca inverso />
-          <div className="flex items-center gap-2">
-            <nav className="mr-2 hidden items-center gap-6 text-sm font-semibold text-white/80 md:flex" aria-label="Seções">
-              <a href="#como-funciona" className="hover:text-white">Como funciona</a>
-              <a href="#recursos" className="hover:text-white">Recursos</a>
-              <a href="#preco" className="hover:text-white">Preço</a>
-              <a href="#duvidas" className="hover:text-white">Dúvidas</a>
-            </nav>
-            <BotaoLink href="/entrar?perfil=motorista" variante="vidro" tamanho="sm" className="hidden sm:inline-flex">Sou motorista</BotaoLink>
-            <BotaoLink href="/entrar?perfil=locador" variante="claro" tamanho="sm">Entrar</BotaoLink>
-          </div>
-        </header>
+        <CabecalhoSite />
 
         <section className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-8 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-14 lg:pb-28">
           <div className="animar-entrada">

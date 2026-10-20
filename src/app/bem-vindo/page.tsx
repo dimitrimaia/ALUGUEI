@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, Car, Smartphone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Car, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { Marca } from "@/components/ui";
 import { exigirUsuario } from "@/lib/sessao";
@@ -9,7 +9,10 @@ export default async function BemVindo() {
   return (
     <main className="min-h-dvh bg-fundo px-4 py-10">
       <div className="mx-auto max-w-2xl">
-        <Marca className="mb-10" />
+        <div className="mb-10 flex items-center justify-between">
+          <Link href="/" aria-label="Aluguei, início"><Marca /></Link>
+          <Link href="/" className="inline-flex items-center gap-1 text-sm font-semibold text-suave hover:text-texto"><ArrowLeft size={16} /> Site</Link>
+        </div>
         <h1 className="text-3xl font-extrabold tracking-tight">Como você vai usar o Aluguei?</h1>
         <p className="mt-2 text-suave">Você entrou como <strong className="text-texto">{usuario.email ?? usuario.telefone}</strong>.</p>
 

@@ -1,6 +1,7 @@
-import { CalendarClock, Camera, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, LogOut, UserRoundPen, Wallet, XCircle } from "lucide-react";
+import { CalendarClock, Camera, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, UserRoundPen, Wallet, XCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { MenuMotorista } from "@/components/motorista/menu";
 import { BotaoLink, Cartao, Marca, Placa, Selo, Suave, Vazio } from "@/components/ui";
 import type { Linha } from "@/db/tipos";
 import { nomeDiaDaSemana } from "@/dominio/contrato/variaveis";
@@ -51,10 +52,8 @@ export default async function Motorista() {
       <section className="fundo-marca relative overflow-hidden rounded-b-[2rem] px-5 pt-4 pb-8">
         <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(80%_80%_at_90%_0%,black,transparent)]" aria-hidden />
         <div className="relative flex items-center justify-between">
-          <Marca inverso className="text-base" />
-          <form action="/sair" method="post">
-            <button className="grid size-10 place-items-center rounded-full bg-white/10 ring-1 ring-white/15" aria-label="Sair"><LogOut size={18} /></button>
-          </form>
+          <Link href="/m"><Marca inverso /></Link>
+          <MenuMotorista claro />
         </div>
         <p className="relative mt-6 text-sm text-white/75">Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
 

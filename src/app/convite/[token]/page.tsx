@@ -1,4 +1,5 @@
 import { Car, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { BotaoLink, Cartao, Marca, Suave } from "@/components/ui";
 import type { Oferta } from "@/db/schema/pessoas";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
@@ -21,7 +22,7 @@ export default async function Convite({ params }: { params: Promise<{ token: str
   if (!valido) {
     return (
       <main className="mx-auto max-w-md px-4 py-10">
-        <Marca className="mb-8" />
+        <Link href="/" className="mb-8 block w-fit"><Marca /></Link>
         <h1 className="mb-2 text-2xl font-bold tracking-tight">Convite inválido</h1>
         <Suave>Este link venceu ou já foi usado. Peça um novo ao locador.</Suave>
       </main>
@@ -39,7 +40,7 @@ export default async function Convite({ params }: { params: Promise<{ token: str
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 px-4 pt-5 pb-10">
-      <Marca className="mb-2" />
+      <Link href="/" className="mb-2 block w-fit"><Marca /></Link>
       <div>
         <Suave>Convite de {org?.nome}{org ? ` · ${org.cidade}/${org.uf}` : ""}</Suave>
         <h1 className="text-3xl font-extrabold tracking-tight">Olá, {l.nome.split(" ")[0]}!</h1>

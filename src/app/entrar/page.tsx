@@ -1,4 +1,4 @@
-import { CalendarCheck, Camera, FileSignature, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Camera, FileSignature, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Marca } from "@/components/ui";
 import { FormularioEntrar } from "./formulario";
@@ -45,7 +45,12 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
     <main className="min-h-dvh bg-cartao lg:grid lg:grid-cols-2">
       <section className="fundo-marca relative overflow-hidden px-6 pt-10 pb-24 lg:flex lg:flex-col lg:justify-between lg:p-14">
         <div className="grade-sutil absolute inset-0 [mask-image:radial-gradient(70%_70%_at_30%_20%,black,transparent)]" aria-hidden />
-        <Link href="/" className="relative w-fit"><Marca inverso /></Link>
+        <div className="relative flex items-center justify-between">
+          <Link href="/" aria-label="Aluguei, início"><Marca inverso /></Link>
+          <Link href="/" className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/20">
+            <ArrowLeft size={16} /> Voltar ao site
+          </Link>
+        </div>
         <div className="relative mt-10 lg:mt-0">
           <h1 className="text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl lg:text-5xl">{p.titulo}</h1>
           <p className="mt-3 max-w-md text-white/80 lg:text-lg">{p.texto}</p>

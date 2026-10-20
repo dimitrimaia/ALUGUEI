@@ -1,10 +1,11 @@
 "use client";
 
-import { Car, ChevronDown, CircleDollarSign, FileText, Landmark, LayoutDashboard, LogOut, Menu, Plus, UserPlus, Users, X } from "lucide-react";
+import { Car, ChevronDown, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Menu, Plus, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Gaveta } from "@/components/gaveta";
 import { Marca } from "@/components/ui";
 
 const GESTAO = [
@@ -19,7 +20,7 @@ const DINHEIRO = [
 ] as const;
 const ABAS_MOVEIS = [GESTAO[0], GESTAO[2]] as const;
 const ABAS_MOVEIS_DIREITA = [DINHEIRO[0]] as const;
-const MAIS = [GESTAO[1], GESTAO[3], DINHEIRO[1]] as const;
+const MAIS = [GESTAO[1], GESTAO[3], DINHEIRO[1]] as const; // marcam a aba "Mais" como ativa
 
 const ACOES = [
   { href: "/painel/veiculos/novo", rotulo: "Cadastrar veículo", detalhe: "Placa, modelo e km", icone: Car },
@@ -115,7 +116,10 @@ export function NavegacaoPainel({
             <p className="mt-1 text-xs leading-relaxed text-white/75">Sem isso, o motorista não consegue pagar pelo Pix. Leva 2 minutos.</p>
           </Link>
         )}
-        <form action="/sair" method="post" className="mt-3">
+        <Link href="/" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
+          <Globe size={18} aria-hidden /> Ver o site
+        </Link>
+        <form action="/sair" method="post">
           <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
             <LogOut size={18} aria-hidden /> Sair
           </button>
@@ -153,8 +157,11 @@ export function NavegacaoPainel({
       </div>
 
       {/* Celular */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-borda bg-cartao/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Link href="/painel"><Marca /></Link>
+      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-borda bg-cartao/90 px-3 py-2.5 backdrop-blur lg:hidden">
+        <button onClick={() => setMaisAberto(true)} aria-label="Abrir menu" aria-expanded={maisAberto} className="grid size-10 place-items-center rounded-xl hover:bg-cartao-2">
+          <Menu size={22} />
+        </button>
+        <Link href="/painel" className="flex-1"><Marca /></Link>
         <span className="grid size-9 place-items-center rounded-full bg-marca-suave text-sm font-bold text-marca" aria-label={organizacao}>{inicial}</span>
       </header>
 
@@ -186,24 +193,41 @@ export function NavegacaoPainel({
         </div>
       </nav>
 
-      {maisAberto && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Mais opções">
-          <button className="absolute inset-0 bg-[#071a3d]/50 backdrop-blur-[2px]" onClick={() => setMaisAberto(false)} aria-label="Fechar" />
-          <div className="animar-entrada absolute inset-x-0 bottom-0 rounded-t-3xl bg-cartao p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-flutuante">
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-borda-forte" />
-            <div className="grid grid-cols-3 gap-2">
-              {MAIS.map(({ href, rotulo, icone: Icone }) => (
-                <Link key={href} href={href} className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-semibold ${ativo(caminho, href) ? "border-marca bg-marca-suave text-marca" : "border-borda"}`}>
-                  <Icone size={24} aria-hidden /> {rotulo}
-                </Link>
-              ))}
+      <Gaveta aberta={maisAberto} aoFechar={() => setMaisAberto(false)} escura rotulo="Menu do painel">
+        <div className="flex flex-1 flex-col px-4 pt-5 pb-5">
+          <Link href="/painel" className="w-fit px-1"><Marca inverso /></Link>
+          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+            <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-[#5b8cff] to-[#1f56e8] font-bold">{inicial}</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{organizacao}</p>
+              <p className="truncate text-xs text-white/55">{usuario}</p>
             </div>
-            <form action="/sair" method="post" className="mt-3">
-              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-borda p-3.5 text-sm font-semibold text-suave"><LogOut size={18} /> Sair</button>
+          </div>
+          {([["Gestão", GESTAO], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
+            <div key={titulo}>
+              <p className="mt-6 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{titulo}</p>
+              <nav className="flex flex-col gap-1" aria-label={titulo}>
+                {itens.map(({ href, rotulo, icone: Icone }) => {
+                  const atual = ativo(caminho, href);
+                  return (
+                    <Link key={href} href={href} aria-current={atual ? "page" : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-3 font-medium ${atual ? "bg-white text-[#0b2a6b]" : "text-white/80 hover:bg-white/[0.07]"}`}>
+                      <Icone size={20} className={atual ? "text-[#1f56e8]" : ""} />
+                      <span className="flex-1">{rotulo}</span>
+                      {href === "/painel/motoristas" && <Contador n={pendentes} />}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
+          <div className="mt-auto flex flex-col gap-1 pt-6">
+            <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/70 hover:bg-white/[0.07]"><Globe size={18} /> Ver o site do Aluguei</Link>
+            <form action="/sair" method="post">
+              <button className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/70 hover:bg-white/[0.07]"><LogOut size={18} /> Sair</button>
             </form>
           </div>
         </div>
-      )}
+      </Gaveta>
 
       {acoesAbertas && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Criar novo">
