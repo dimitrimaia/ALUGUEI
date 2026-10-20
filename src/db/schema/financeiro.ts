@@ -73,6 +73,8 @@ export const cobrancas = pgTable(
     splitPlataforma: integer("split_plataforma_centavos").notNull().default(0),
     status: text("status").notNull().default("emitida"),
     pixCopiaECola: text("pix_copia_e_cola"),
+    pixQrCode: text("pix_qr_code"), // imagem PNG em base64
+    valorPago: integer("valor_pago_centavos"),
     linkPagamento: text("link_pagamento"),
     pagoEm: timestamp("pago_em", { withTimezone: true }),
     criadoEm: criadoEm(),
@@ -94,4 +96,38 @@ export const webhookEventos = pgTable(
     erro: text("erro"),
   },
   (t) => [uniqueIndex("webhook_eventos_unico").on(t.provedor, t.eventoId)],
+);
+
+/**
+ * Conta de recebimento do locador no provedor (subconta Asaas). A chave de API
+ * da subconta fica cifrada (AES-256-GCM) e só o servidor lê: sem políticas de RLS.
+ */
+export const contasPagamento = pgTable(
+  "contas_pagamento",
+  {
+    id: id(),
+    organizacaoId: organizacaoId(),
+    provedor: text("provedor").notNull(),
+    contaId: text("conta_id").notNull(),
+    walletId: text("wallet_id").notNull(),
+    chaveApiCifrada: text("chave_api_cifrada").notNull(),
+    status: text("status").notNull().default("ativa"),
+    dados: jsonb("dados"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [uniqueIndex("contas_pagamento_org").on(t.organizacaoId, t.provedor)],
+);
+
+/** Cliente (o motorista) cadastrado na subconta do locador. */
+export const clientesPagamento = pgTable(
+  "clientes_pagamento",
+  {
+    id: id(),
+    organizacaoId: organizacaoId(),
+    locatarioId: uuid("locatario_id").notNull(),
+    provedor: text("provedor").notNull(),
+    clienteId: text("cliente_id").notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [uniqueIndex("clientes_pagamento_unico").on(t.locatarioId, t.provedor)],
 );

@@ -22,16 +22,28 @@ export type Database = {
         Update: { id?: string; organizacao_id?: string; contrato_id?: string; obrigacao_id?: string; referencia?: string; odometro_informado?: number | null; combustivel_oitavos?: number | null; evidencias?: Json; revisado_por?: string | null; enviado_em?: string };
         Relationships: [];
       };
+      clientes_pagamento: {
+        Row: { id: string; organizacao_id: string; locatario_id: string; provedor: string; cliente_id: string; criado_em: string };
+        Insert: { id?: string; organizacao_id: string; locatario_id: string; provedor: string; cliente_id: string; criado_em?: string };
+        Update: { id?: string; organizacao_id?: string; locatario_id?: string; provedor?: string; cliente_id?: string; criado_em?: string };
+        Relationships: [];
+      };
       cobrancas: {
-        Row: { id: string; organizacao_id: string; contrato_id: string; obrigacao_id: string | null; provedor: string; provedor_id: string | null; valor_centavos: number; vencimento: string; split_plataforma_centavos: number; status: string; pix_copia_e_cola: string | null; link_pagamento: string | null; pago_em: string | null; criado_em: string };
-        Insert: { id?: string; organizacao_id: string; contrato_id: string; obrigacao_id?: string | null; provedor: string; provedor_id?: string | null; valor_centavos: number; vencimento: string; split_plataforma_centavos?: number; status?: string; pix_copia_e_cola?: string | null; link_pagamento?: string | null; pago_em?: string | null; criado_em?: string };
-        Update: { id?: string; organizacao_id?: string; contrato_id?: string; obrigacao_id?: string | null; provedor?: string; provedor_id?: string | null; valor_centavos?: number; vencimento?: string; split_plataforma_centavos?: number; status?: string; pix_copia_e_cola?: string | null; link_pagamento?: string | null; pago_em?: string | null; criado_em?: string };
+        Row: { id: string; organizacao_id: string; contrato_id: string; obrigacao_id: string | null; provedor: string; provedor_id: string | null; valor_centavos: number; vencimento: string; split_plataforma_centavos: number; status: string; pix_copia_e_cola: string | null; pix_qr_code: string | null; valor_pago_centavos: number | null; link_pagamento: string | null; pago_em: string | null; criado_em: string };
+        Insert: { id?: string; organizacao_id: string; contrato_id: string; obrigacao_id?: string | null; provedor: string; provedor_id?: string | null; valor_centavos: number; vencimento: string; split_plataforma_centavos?: number; status?: string; pix_copia_e_cola?: string | null; pix_qr_code?: string | null; valor_pago_centavos?: number | null; link_pagamento?: string | null; pago_em?: string | null; criado_em?: string };
+        Update: { id?: string; organizacao_id?: string; contrato_id?: string; obrigacao_id?: string | null; provedor?: string; provedor_id?: string | null; valor_centavos?: number; vencimento?: string; split_plataforma_centavos?: number; status?: string; pix_copia_e_cola?: string | null; pix_qr_code?: string | null; valor_pago_centavos?: number | null; link_pagamento?: string | null; pago_em?: string | null; criado_em?: string };
         Relationships: [];
       };
       consentimentos: {
         Row: { id: string; organizacao_id: string; locatario_id: string; finalidade: string; versao_texto: string; aceito_em: string; ip: string | null; dispositivo: string | null; revogado_em: string | null };
         Insert: { id?: string; organizacao_id: string; locatario_id: string; finalidade: string; versao_texto: string; aceito_em?: string; ip?: string | null; dispositivo?: string | null; revogado_em?: string | null };
         Update: { id?: string; organizacao_id?: string; locatario_id?: string; finalidade?: string; versao_texto?: string; aceito_em?: string; ip?: string | null; dispositivo?: string | null; revogado_em?: string | null };
+        Relationships: [];
+      };
+      contas_pagamento: {
+        Row: { id: string; organizacao_id: string; provedor: string; conta_id: string; wallet_id: string; chave_api_cifrada: string; status: string; dados: Json | null; criado_em: string };
+        Insert: { id?: string; organizacao_id: string; provedor: string; conta_id: string; wallet_id: string; chave_api_cifrada: string; status?: string; dados?: Json | null; criado_em?: string };
+        Update: { id?: string; organizacao_id?: string; provedor?: string; conta_id?: string; wallet_id?: string; chave_api_cifrada?: string; status?: string; dados?: Json | null; criado_em?: string };
         Relationships: [];
       };
       contratos: {

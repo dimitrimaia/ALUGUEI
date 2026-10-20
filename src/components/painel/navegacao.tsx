@@ -1,18 +1,25 @@
 "use client";
 
-import { Car, ChevronDown, FileText, LayoutDashboard, LogOut, Plus, UserPlus, Users, X } from "lucide-react";
+import { Car, ChevronDown, CircleDollarSign, FileText, Landmark, LayoutDashboard, LogOut, Menu, Plus, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Marca } from "@/components/ui";
 
-const MENU = [
+const GESTAO = [
   { href: "/painel", rotulo: "Início", icone: LayoutDashboard },
   { href: "/painel/veiculos", rotulo: "Veículos", icone: Car },
   { href: "/painel/motoristas", rotulo: "Motoristas", icone: Users },
   { href: "/painel/contratos", rotulo: "Contratos", icone: FileText },
 ] as const;
+const DINHEIRO = [
+  { href: "/painel/financeiro", rotulo: "Financeiro", icone: CircleDollarSign },
+  { href: "/painel/recebimentos", rotulo: "Recebimentos", icone: Landmark },
+] as const;
+const ABAS_MOVEIS = [GESTAO[0], GESTAO[2]] as const;
+const ABAS_MOVEIS_DIREITA = [DINHEIRO[0]] as const;
+const MAIS = [GESTAO[1], GESTAO[3], DINHEIRO[1]] as const;
 
 const ACOES = [
   { href: "/painel/veiculos/novo", rotulo: "Cadastrar veículo", detalhe: "Placa, modelo e km", icone: Car },
@@ -32,11 +39,13 @@ function Contador({ n }: { n: number }) {
 export function NavegacaoPainel({ organizacao, usuario, pendentes }: { organizacao: string; usuario: string; pendentes: number }) {
   const caminho = usePathname();
   const [acoesAbertas, setAcoesAbertas] = useState(false);
+  const [maisAberto, setMaisAberto] = useState(false);
   const [menuNovo, setMenuNovo] = useState(false);
   const refNovo = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setAcoesAbertas(false);
+    setMaisAberto(false);
     setMenuNovo(false);
   }, [caminho]);
 
@@ -62,24 +71,28 @@ export function NavegacaoPainel({ organizacao, usuario, pendentes }: { organizac
           </div>
         </div>
 
-        <p className="mt-8 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">Gestão</p>
-        <nav className="flex flex-col gap-1" aria-label="Principal">
-          {MENU.map(({ href, rotulo, icone: Icone }) => {
-            const atual = ativo(caminho, href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={atual ? "page" : undefined}
-                className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.95rem] font-medium transition-colors ${atual ? "bg-white text-[#0b2a6b] shadow-flutuante" : "text-white/70 hover:bg-white/[0.07] hover:text-white"}`}
-              >
-                <Icone size={20} aria-hidden className={atual ? "text-[#1f56e8]" : ""} />
-                <span className="flex-1">{rotulo}</span>
-                {href === "/painel/motoristas" && <Contador n={pendentes} />}
-              </Link>
-            );
-          })}
-        </nav>
+        {([["Gestão", GESTAO], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
+          <div key={titulo}>
+            <p className="mt-7 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{titulo}</p>
+            <nav className="flex flex-col gap-1" aria-label={titulo}>
+              {itens.map(({ href, rotulo, icone: Icone }) => {
+                const atual = ativo(caminho, href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={atual ? "page" : undefined}
+                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.95rem] font-medium transition-colors ${atual ? "bg-white text-[#0b2a6b] shadow-flutuante" : "text-white/70 hover:bg-white/[0.07] hover:text-white"}`}
+                  >
+                    <Icone size={20} aria-hidden className={atual ? "text-[#1f56e8]" : ""} />
+                    <span className="flex-1">{rotulo}</span>
+                    {href === "/painel/motoristas" && <Contador n={pendentes} />}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        ))}
 
         <div className="mt-auto rounded-2xl bg-gradient-to-br from-[#1f56e8] to-[#0d3aa8] p-4 ring-1 ring-white/10">
           <p className="text-sm font-semibold">Modo assistido ligado</p>
@@ -133,7 +146,9 @@ export function NavegacaoPainel({ organizacao, usuario, pendentes }: { organizac
         className="fixed inset-x-0 bottom-0 z-30 border-t border-borda bg-cartao/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         <div className="relative grid grid-cols-5">
-          {MENU.slice(0, 2).map((item) => <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} />)}
+          {ABAS_MOVEIS.map((item) => (
+            <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} contador={item.href === "/painel/motoristas" ? pendentes : 0} />
+          ))}
           <div className="flex justify-center">
             <button
               onClick={() => setAcoesAbertas(true)}
@@ -143,11 +158,35 @@ export function NavegacaoPainel({ organizacao, usuario, pendentes }: { organizac
               <Plus size={26} aria-hidden />
             </button>
           </div>
-          {MENU.slice(2).map((item) => (
-            <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} contador={item.href === "/painel/motoristas" ? pendentes : 0} />
-          ))}
+          {ABAS_MOVEIS_DIREITA.map((item) => <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} />)}
+          <button
+            onClick={() => setMaisAberto(true)}
+            className={`flex flex-col items-center gap-1 pt-2.5 pb-2 text-[0.68rem] font-semibold ${MAIS.some((m) => ativo(caminho, m.href)) ? "text-marca" : "text-suave"}`}
+          >
+            <span className="grid h-7 w-12 place-items-center rounded-full"><Menu size={21} aria-hidden /></span>
+            Mais
+          </button>
         </div>
       </nav>
+
+      {maisAberto && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Mais opções">
+          <button className="absolute inset-0 bg-[#071a3d]/50 backdrop-blur-[2px]" onClick={() => setMaisAberto(false)} aria-label="Fechar" />
+          <div className="animar-entrada absolute inset-x-0 bottom-0 rounded-t-3xl bg-cartao p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-flutuante">
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-borda-forte" />
+            <div className="grid grid-cols-3 gap-2">
+              {MAIS.map(({ href, rotulo, icone: Icone }) => (
+                <Link key={href} href={href} className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-semibold ${ativo(caminho, href) ? "border-marca bg-marca-suave text-marca" : "border-borda"}`}>
+                  <Icone size={24} aria-hidden /> {rotulo}
+                </Link>
+              ))}
+            </div>
+            <form action="/sair" method="post" className="mt-3">
+              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-borda p-3.5 text-sm font-semibold text-suave"><LogOut size={18} /> Sair</button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {acoesAbertas && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Criar novo">

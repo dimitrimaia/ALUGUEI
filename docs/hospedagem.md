@@ -19,10 +19,12 @@ ou um blog.
 
 1. vercel.com → *Add New Project* → importar `dimitrimaia/aluguei`.
 2. *Environment Variables* (Production e Preview):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - `SUPABASE_SECRET_KEY`
-   - `NEXT_PUBLIC_SITE_URL` = `https://seudominio.com.br`
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`
+   - `ASAAS_API_URL`, `ASAAS_API_KEY` (com o `$` inicial), `ASAAS_WALLET_ID_PLATAFORMA`, `ASAAS_WEBHOOK_TOKEN`
+   - `CHAVE_CIFRA`: 64 caracteres hex; cifra as chaves das subcontas. **Nunca troque depois de criada**,
+     ou as subcontas existentes ficam ilegíveis.
+   - `CRON_SECRET`: a Vercel envia no cabeçalho da rotina diária (`/api/cron/diario`, 06:00).
+   - `NEXT_PUBLIC_SITE_URL` = `https://seudominio.com.br` (quando o domínio estiver ligado)
 3. *Deploy*.
 4. *Settings → Domains*: adicionar `seudominio.com.br` e `www.seudominio.com.br`.
    No painel do registro do domínio (Registro.br ou outro):

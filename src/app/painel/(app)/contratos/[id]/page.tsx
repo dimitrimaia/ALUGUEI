@@ -5,9 +5,11 @@ import { BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Selo, Suave } from "@
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import type { ParametrosContrato } from "@/dominio/contrato/parametros";
 import { nomeDiaDaSemana } from "@/dominio/contrato/variaveis";
-import { data, formatarData } from "@/dominio/datas/data";
+import { data, formatarData, hoje } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { BotaoAcao } from "@/components/painel/botao-acao";
 import { ResumoVistoria } from "@/components/resumo-vistoria";
+import { gerarPix } from "../../financeiro/acoes";
 import type { ChecklistVistoria } from "@/dominio/vistoria/roteiro";
 import { linkTemporario } from "@/lib/evidencias";
 import { fotosDaVistoria } from "@/lib/vistorias";
@@ -30,9 +32,15 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
     supabase.from("locatarios").select("nome, telefone").eq("id", c.locatario_id).single(),
     supabase.from("veiculos").select("placa, modelo").eq("id", c.veiculo_id).single(),
     supabase.from("evidencias").select("id, tipo, finalidade, caminho_storage, recebido_em, ip, sha256").eq("contrato_id", id).order("recebido_em"),
-    supabase.from("obrigacoes").select("id, tipo, vencimento, valor_centavos, status").eq("contrato_id", id).order("vencimento").limit(30),
+    supabase.from("obrigacoes").select("id, tipo, vencimento, valor_centavos, status").eq("contrato_id", id).order("vencimento").limit(40),
     supabase.from("vistorias").select("*").eq("contrato_id", id).eq("tipo", "entrega").maybeSingle(),
   ]);
+  const [{ data: cobrancas }, { data: lancamentos }] = await Promise.all([
+    supabase.from("cobrancas").select("id, obrigacao_id, status, valor_pago_centavos").eq("contrato_id", id),
+    supabase.from("lancamentos").select("id, descricao, valor_centavos, competencia, tipo").eq("contrato_id", id).order("competencia", { ascending: false }).order("criado_em", { ascending: false }),
+  ]);
+  const saldoAberto = (lancamentos ?? []).reduce((s, l) => s + l.valor_centavos, 0);
+  const dia = hoje();
   const checklist = vistoria?.checklist as unknown as ChecklistVistoria | undefined;
   const fotosVistoria = checklist ? await fotosDaVistoria(checklist) : {};
   const p = c.parametros as unknown as ParametrosContrato;
@@ -80,6 +88,23 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
             </Suave>
           ))}
         </Cartao>
+        {!!lancamentos?.length && (
+          <Cartao className="lg:col-span-2">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="font-semibold">Extrato</p>
+              <span className={`text-sm font-bold ${saldoAberto > 0 ? "text-perigo" : "text-ok"}`}>{saldoAberto > 0 ? `${formatarBRL(saldoAberto)} em aberto` : "Em dia"}</span>
+            </div>
+            <ul className="divide-y divide-borda text-sm">
+              {lancamentos.map((l) => (
+                <li key={l.id} className="flex justify-between gap-2 py-2.5">
+                  <span className="w-24 tabular-nums">{formatarData(data(l.competencia))}</span>
+                  <span className="flex-1">{l.descricao}</span>
+                  <span className={`font-semibold tabular-nums ${l.valor_centavos < 0 ? "text-ok" : ""}`}>{l.valor_centavos < 0 ? "+ " : "− "}{formatarBRL(Math.abs(l.valor_centavos))}</span>
+                </li>
+              ))}
+            </ul>
+          </Cartao>
+        )}
         {vistoria && checklist && (
           <section className="lg:col-span-2">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -99,13 +124,28 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
           <Cartao className="lg:col-span-2">
             <p className="mb-2 font-semibold">Agenda do contrato</p>
             <ul className="divide-y divide-borda text-sm">
-              {agenda.map((o) => (
-                <li key={o.id} className="flex justify-between gap-2 py-2">
-                  <span className="w-24">{formatarData(data(o.vencimento))}</span>
-                  <span className="flex-1">{TIPO_OBRIGACAO[o.tipo]}</span>
-                  <span>{o.valor_centavos !== null ? formatarBRL(o.valor_centavos) : ""}</span>
-                </li>
-              ))}
+              {agenda.map((o) => {
+                const cob = cobrancas?.find((x) => x.obrigacao_id === o.id && x.status !== "cancelada");
+                const cobravel = o.tipo !== "checkin" && o.status !== "cumprida";
+                return (
+                  <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                    <span className="w-24 tabular-nums">{formatarData(data(o.vencimento))}</span>
+                    <span className="flex-1">{TIPO_OBRIGACAO[o.tipo]}</span>
+                    <span className="w-24 text-right font-semibold tabular-nums">{o.valor_centavos !== null ? formatarBRL(o.valor_centavos) : ""}</span>
+                    <span className="flex w-36 justify-end">
+                      {o.status === "cumprida" ? (
+                        <Selo tom="ok">Pago</Selo>
+                      ) : cob ? (
+                        <Selo tom={o.vencimento < dia ? "perigo" : "neutro"}>{o.vencimento < dia ? "Pix vencido" : "Pix enviado"}</Selo>
+                      ) : cobravel && c.status === "ativo" ? (
+                        <BotaoAcao acao={gerarPix.bind(null, o.id)} rotulo="Gerar Pix" />
+                      ) : o.tipo !== "checkin" && o.vencimento < dia ? (
+                        <Selo tom="perigo">Em atraso</Selo>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </Cartao>
         )}

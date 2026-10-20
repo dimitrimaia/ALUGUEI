@@ -47,12 +47,12 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 ## Semanas 7–9: dinheiro e régua
 
 - [x] Agenda de obrigações gerada na assinatura (já implementada em `gerarAgenda`).
-- [ ] Cobrança semanal Pix na subconta do locador, com split da mensalidade (RF-050, RF-051 só Pix, RF-062).
-- [ ] Webhook com deduplicação, baixa automática e conciliação diária (RF-052, RNF-033).
+- [x] Cobrança semanal Pix na subconta do locador, com split da mensalidade (RF-050, RF-051 só Pix, RF-062).
+- [x] Webhook com deduplicação, baixa automática e conciliação diária (RF-052, RNF-033).
 - [ ] Multa, juros (já implementados) e correção monetária (RF-054).
-- [ ] Caução: parcelas, saldo e status (RF-053).
+- [x] Caução: parcelas cobradas no Pix e saldo pago no extrato (RF-053). Uso e devolução: falta.
 - [ ] Cobrança extra com justificativa, anexos e fila de aprovação do modo assistido (RF-056).
-- [ ] Extrato do motorista (RF-059).
+- [x] Extrato do motorista (RF-059).
 - [ ] Lembretes, notificação formal com 24 h e sugestão de rescisão para decisão humana (RF-065, RF-066, RF-067).
 - [ ] Notificações guardadas com status de entrega e leitura em app, push, WhatsApp e e-mail (RF-110, RF-111).
 
@@ -65,7 +65,8 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 - [ ] Vistoria de devolução e demonstrativo de pendências (RF-045).
 - [ ] Encerramento e rescisão com multa calculada (RF-035), devolução da caução em dias úteis (RF-060).
 - [ ] Renovação com os mesmos parâmetros.
-- [ ] Painéis do locador e do motorista (RF-120, RF-121), relatório financeiro com CSV (RF-061).
+- [x] Relatório financeiro com CSV (RF-061).
+- [ ] Painéis do locador e do motorista com km e check-in (RF-120, RF-121).
 
 ## Semana 12: piloto
 

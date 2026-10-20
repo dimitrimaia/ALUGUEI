@@ -1,4 +1,4 @@
-import { CalendarClock, Camera, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, LogOut, UserRoundPen, Wallet, XCircle } from "lucide-react";
+import { CalendarClock, Camera, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, LogOut, UserRoundPen, Wallet, XCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { BotaoLink, Cartao, Marca, Placa, Selo, Suave, Vazio } from "@/components/ui";
@@ -31,7 +31,7 @@ export default async function Motorista() {
   const [{ data: orgs }, { data: vistorias }, { data: obrigacoes }, { data: veiculos }] = await Promise.all([
     cadastros.length ? admin.from("organizacoes").select("id, nome").in("id", cadastros.map((c) => c.organizacao_id)) : Promise.resolve({ data: [] }),
     ids.length ? admin.from("vistorias").select("id, contrato_id, aceite_locatario_evidencia_id").in("contrato_id", ids) : Promise.resolve({ data: [] }),
-    ids.length ? admin.from("obrigacoes").select("id, contrato_id, tipo, vencimento, valor_centavos, status").in("contrato_id", ids).eq("status", "pendente").gte("vencimento", dia).lte("vencimento", somarDias(dia, 21)).order("vencimento") : Promise.resolve({ data: [] }),
+    ids.length ? admin.from("obrigacoes").select("id, contrato_id, tipo, vencimento, valor_centavos, status").in("contrato_id", ids).in("status", ["pendente", "atrasada"]).lte("vencimento", somarDias(dia, 21)).order("vencimento") : Promise.resolve({ data: [] }),
     contratos.length ? admin.from("veiculos").select("id, placa, modelo").in("id", contratos.map((c) => c.veiculo_id)) : Promise.resolve({ data: [] }),
   ]);
 
@@ -66,10 +66,12 @@ export default async function Motorista() {
             <p className="text-[2.6rem] leading-tight font-extrabold tracking-tight">{proximoPagamento ? formatarBRL(proximoPagamento.valor_centavos ?? 0) : "R$ 0,00"}</p>
             {proximoPagamento && <p className="text-sm text-white/75">{TIPO_OBRIGACAO[proximoPagamento.tipo]}</p>}
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <span className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-white/90 font-bold text-[#1641b8] opacity-80" aria-disabled>
-                <Wallet size={18} /> Pix em breve
-              </span>
-              <BotaoLink href={`/m/contrato/${contrato.id}` as Route} variante="vidro" className="h-12 rounded-2xl"><FileText size={18} /> Contrato</BotaoLink>
+              {proximoPagamento ? (
+                <BotaoLink href={`/m/pagar/${proximoPagamento.id}` as Route} variante="claro" className="h-12 rounded-2xl"><Wallet size={18} /> Pagar com Pix</BotaoLink>
+              ) : (
+                <span className="flex h-12 items-center justify-center rounded-2xl bg-white/15 text-sm font-semibold">Tudo pago</span>
+              )}
+              <BotaoLink href="/m/extrato" variante="vidro" className="h-12 rounded-2xl"><Receipt size={18} /> Extrato</BotaoLink>
             </div>
           </div>
         ) : principal && principal.status !== "recusado" ? (
@@ -166,7 +168,7 @@ export default async function Motorista() {
                   </span>
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{TIPO_OBRIGACAO[o.tipo]}</p>
-                    <p className="text-xs text-suave">{nomeDiaDaSemana(diaDaSemana(data(o.vencimento)))}, {formatarData(data(o.vencimento))}</p>
+                    <p className={`text-xs ${o.vencimento < dia ? "font-semibold text-perigo" : "text-suave"}`}>{o.vencimento < dia ? "Vencido · " : ""}{nomeDiaDaSemana(diaDaSemana(data(o.vencimento)))}, {formatarData(data(o.vencimento))}</p>
                   </div>
                   {o.valor_centavos !== null && <span className="text-sm font-bold">{formatarBRL(o.valor_centavos)}</span>}
                 </div>

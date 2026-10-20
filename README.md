@@ -20,7 +20,7 @@ o marketplace fica para a Fase 3.
 ## Stack
 
 Next.js 16 (painel + PWA) · Supabase (Postgres, Auth OTP, Storage, região São Paulo) ·
-Drizzle · Inngest · Asaas · ZapSign · WhatsApp Cloud API · Vitest
+Drizzle · Vercel Cron · Asaas · ZapSign · WhatsApp Cloud API · Vitest
 
 ## Como rodar
 

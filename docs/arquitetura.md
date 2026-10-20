@@ -32,8 +32,8 @@ src/
     contrato/     parâmetros, encargos (multa/juros)
     agenda/       geração da agenda de obrigações
     cadastro/     pré-análise do candidato
-  integracoes/    portas (interfaces) de pagamento, assinatura e mensagens
-  jobs/           funções Inngest (cron e eventos), idempotentes por chave
+  integracoes/    Asaas (pagamentos) e portas de assinatura e mensagens
+  app/api/cron/   rotina diária (Vercel Cron): emite, concilia e marca atrasos
   db/             schema Drizzle e cliente
 supabase/rls.sql  isolamento por locador e imutabilidade
 drizzle/          migrações geradas
