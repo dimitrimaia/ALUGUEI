@@ -13,6 +13,7 @@ o marketplace fica para a Fase 3.
 - [Revisão dos requisitos](docs/revisao-requisitos.md): o que faltava na proposta, correções e decisões em aberto
 - [Roadmap do MVP](docs/roadmap-mvp.md): 12 semanas, com rastreio dos requisitos
 - [Decisões de produto](docs/decisoes.md): Pix, PWA, mensalidade por split, o app como administrador
+- [Configurar o Supabase](docs/configurar-supabase.md): banco, login por código, SMS
 - [Arquitetura](docs/arquitetura.md): os quatro pilares e as camadas
 
 ## Stack
@@ -29,5 +30,5 @@ pnpm dev                     # http://localhost:3000
 pnpm test                    # regras de domínio
 pnpm typecheck
 pnpm db:generate             # gera migração a partir do schema
-pnpm db:migrate              # aplica no banco de DATABASE_URL; depois aplique supabase/rls.sql
+pnpm db:preparar             # aplica migrações + RLS no banco de DATABASE_URL
 ```

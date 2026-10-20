@@ -17,8 +17,10 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 ## Semana 1: fundação
 
 - [x] Estrutura do repositório, CI, schema inicial e regras de domínio com testes.
-- [ ] Projeto Supabase (sa-east-1), deploy (Vercel, região gru1), Sentry.
-- [ ] Login por OTP no celular (RF-001), aplicação do `supabase/rls.sql`.
+- [x] Projeto Supabase criado.
+- [ ] Deploy (Vercel, região gru1), Sentry.
+- [x] Login por código (OTP) por celular ou e-mail (RF-001), com proteção de /painel e /m.
+- [ ] Aplicar migrações e RLS no projeto (`pnpm db:preparar`) e ligar o provedor de SMS.
 - [ ] Protótipo navegável das telas do motorista e do locador.
 
 ## Semanas 2–4: pessoas, frota e entrada do motorista
