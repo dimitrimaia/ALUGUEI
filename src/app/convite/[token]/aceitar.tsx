@@ -9,7 +9,7 @@ export function BotaoAceitar({ token }: { token: string }) {
   return (
     <form action={enviar} className="flex flex-col gap-3">
       {estado.erro && <Aviso tom="perigo">{estado.erro}</Aviso>}
-      <Botao disabled={enviando}>{enviando ? "Abrindo…" : "Começar cadastro"}</Botao>
+      <Botao tamanho="lg" disabled={enviando}>{enviando ? "Abrindo…" : "Começar cadastro"}</Botao>
     </form>
   );
 }

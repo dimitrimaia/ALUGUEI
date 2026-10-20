@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Cartao, Suave } from "@/components/ui";
+import { Cartao, Marca, Suave } from "@/components/ui";
 import { exigirUsuario } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { FormularioComecar } from "./formulario";
@@ -11,8 +11,9 @@ export default async function Comecar() {
   if (membro) redirect("/painel");
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Criar conta de locador</h1>
+    <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-10">
+      <Marca className="mb-4 text-xl" />
+      <h1 className="text-2xl font-bold tracking-tight">Criar conta de locador</h1>
       <Suave>Esses dados aparecem nos contratos e nas cobranças. Dá para mudar depois.</Suave>
       <Cartao>
         <FormularioComecar />

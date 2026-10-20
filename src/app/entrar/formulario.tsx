@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { normalizarCelular } from "@/dominio/cadastro/telefone";
+import { Aviso, Botao, Campo, classeEntrada } from "@/components/ui";
 import { supabaseNavegador } from "@/lib/supabase/navegador";
 
 type Canal = "celular" | "email";
@@ -52,17 +53,14 @@ export function FormularioEntrar({ destino }: { destino: string }) {
     router.refresh();
   }
 
-  const campo = "w-full rounded-lg border bg-transparent p-3 text-lg";
-  const botao = "w-full rounded-lg p-3 font-medium text-white disabled:opacity-60";
 
   if (enviadoPara) {
     return (
       <form onSubmit={verificar} className="flex flex-col gap-4">
-        <p>Enviamos um código para <strong>{enviadoPara}</strong>.</p>
-        <label className="flex flex-col gap-1">
-          Código
+        <p className="text-sm">Enviamos um código para <strong>{enviadoPara}</strong>.</p>
+        <Campo rotulo="Código">
           <input
-            className={`${campo} tracking-widest`}
+            className={`${classeEntrada} h-13 text-center text-2xl font-bold tracking-[0.4em]`}
             inputMode="numeric"
             autoComplete="one-time-code"
             maxLength={8}
@@ -70,12 +68,12 @@ export function FormularioEntrar({ destino }: { destino: string }) {
             onChange={(e) => setCodigo(e.target.value)}
             autoFocus
           />
-        </label>
-        {erro && <p role="alert" className="text-red-600">{erro}</p>}
-        <button className={botao} style={{ background: "var(--marca)" }} disabled={ocupado || codigo.length < 6}>
+        </Campo>
+        {erro && <Aviso tom="perigo">{erro}</Aviso>}
+        <Botao tamanho="lg" disabled={ocupado || codigo.length < 6}>
           {ocupado ? "Verificando…" : "Entrar"}
-        </button>
-        <button type="button" className="underline" onClick={() => { setEnviadoPara(null); setCodigo(""); }}>
+        </Botao>
+        <button type="button" className="text-sm font-medium text-suave underline" onClick={() => { setEnviadoPara(null); setCodigo(""); }}>
           Usar outro {canal === "celular" ? "número" : "e-mail"}
         </button>
       </form>
@@ -84,24 +82,23 @@ export function FormularioEntrar({ destino }: { destino: string }) {
 
   return (
     <form onSubmit={enviarCodigo} className="flex flex-col gap-4">
-      <div className="flex gap-2" role="tablist">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-cartao-2 p-1" role="tablist">
         {(["celular", "email"] as const).map((c) => (
           <button
             key={c}
             type="button"
             role="tab"
             aria-selected={canal === c}
-            className={`flex-1 rounded-lg border p-2 ${canal === c ? "font-semibold" : ""}`}
+            className={`rounded-lg py-2 text-sm font-semibold transition-colors ${canal === c ? "bg-cartao text-texto shadow-cartao" : "text-suave"}`}
             onClick={() => { setCanal(c); setContato(""); setErro(null); }}
           >
             {c === "celular" ? "Celular" : "E-mail"}
           </button>
         ))}
       </div>
-      <label className="flex flex-col gap-1">
-        {canal === "celular" ? "Celular com DDD" : "E-mail"}
+      <Campo rotulo={canal === "celular" ? "Celular com DDD" : "E-mail"}>
         <input
-          className={campo}
+          className={classeEntrada}
           type={canal === "celular" ? "tel" : "email"}
           inputMode={canal === "celular" ? "tel" : "email"}
           autoComplete={canal === "celular" ? "tel-national" : "email"}
@@ -109,11 +106,11 @@ export function FormularioEntrar({ destino }: { destino: string }) {
           value={contato}
           onChange={(e) => setContato(e.target.value)}
         />
-      </label>
-      {erro && <p role="alert" className="text-red-600">{erro}</p>}
-      <button className={botao} style={{ background: "var(--marca)" }} disabled={ocupado}>
+      </Campo>
+      {erro && <Aviso tom="perigo">{erro}</Aviso>}
+      <Botao tamanho="lg" disabled={ocupado}>
         {ocupado ? "Enviando…" : "Receber código"}
-      </button>
+      </Botao>
     </form>
   );
 }

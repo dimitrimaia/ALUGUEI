@@ -18,6 +18,7 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 
 - [x] Estrutura do repositório, CI, schema inicial e regras de domínio com testes.
 - [x] Projeto Supabase criado.
+- [x] Visual: sistema de design, painel responsivo (menu lateral / abas no celular), página inicial, tema escuro, app instalável (PWA).
 - [ ] Deploy (Vercel, região gru1), Sentry.
 - [x] Login por código (OTP) por celular ou e-mail (RF-001), com proteção de /painel e /m.
 - [ ] Aplicar migrações e RLS no projeto (`pnpm db:preparar`) e ligar o provedor de SMS.
@@ -41,7 +42,7 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 - [x] Resumo "sem juridiquês" antes de assinar (RNF-041).
 - [x] Assinatura eletrônica no próprio app, com aceite, hash do PDF, IP e dispositivo no cofre (RF-032, RNF-011, RNF-012). ZapSign fica como opção depois.
 - [x] Cofre de provas: upload com hash, hora do servidor, geolocalização e dispositivo (RNF-010).
-- [ ] Vistoria de entrega guiada: checklist, fotos, odômetro, combustível e aceite (RF-040 a RF-043).
+- [x] Vistoria de entrega guiada: checklist, fotos com carimbo de data/hora/local, odômetro, combustível e aceite do motorista (RF-040 a RF-043).
 
 ## Semanas 7–9: dinheiro e régua
 

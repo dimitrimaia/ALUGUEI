@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { Cartao, Selo, Suave, Titulo, Vazio } from "@/components/ui";
+import { FileText } from "lucide-react";
+import { CabecalhoPagina, ItemLista, Lista, Selo, Vazio } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { data, formatarData } from "@/dominio/datas/data";
 import { exigirEquipe } from "@/lib/sessao";
@@ -22,25 +22,22 @@ export default async function Contratos() {
 
   return (
     <>
-      <Titulo>Contratos</Titulo>
+      <CabecalhoPagina titulo="Contratos" />
       {!contratos?.length ? (
-        <Vazio>Nenhum contrato ainda. Aprove um motorista e gere o contrato pela ficha dele.</Vazio>
+        <Vazio icone={FileText} titulo="Nenhum contrato ainda">Aprove um motorista e gere o contrato pela ficha dele.</Vazio>
       ) : (
-        <ul className="grid gap-3">
+        <Lista>
           {contratos.map((c) => (
-            <li key={c.id}>
-              <Link href={`/painel/contratos/${c.id}`}>
-                <Cartao className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{nome(c.locatario_id)}</p>
-                    <Suave>{carro(c.veiculo_id)} · {formatarData(data(c.inicio))} a {formatarData(data(c.fim))}</Suave>
-                  </div>
-                  <Selo tom={STATUS_CONTRATO[c.status].tom}>{STATUS_CONTRATO[c.status].rotulo}</Selo>
-                </Cartao>
-              </Link>
-            </li>
+            <ItemLista
+              key={c.id}
+              href={`/painel/contratos/${c.id}`}
+              icone={FileText}
+              titulo={nome(c.locatario_id)}
+              detalhe={`${carro(c.veiculo_id)} · ${formatarData(data(c.inicio))} a ${formatarData(data(c.fim))}`}
+              lateral={<Selo tom={STATUS_CONTRATO[c.status].tom}>{STATUS_CONTRATO[c.status].rotulo}</Selo>}
+            />
           ))}
-        </ul>
+        </Lista>
       )}
     </>
   );

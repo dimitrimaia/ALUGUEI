@@ -23,11 +23,11 @@ export function FormularioAssinatura({ contratoId, pdfSha256 }: { contratoId: st
       {posicao && <input type="hidden" name="latitude" value={posicao.latitude} />}
       {posicao && <input type="hidden" name="longitude" value={posicao.longitude} />}
       {estado.erro && <Aviso tom="perigo">{estado.erro}</Aviso>}
-      <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" name="concordo" value="sim" className="mt-1" required />
+      <label className="flex items-start gap-3 rounded-xl border border-borda bg-cartao p-4 text-sm">
+        <input type="checkbox" name="concordo" value="sim" className="mt-0.5 size-5 accent-[var(--marca)]" required />
         <span>Li o contrato completo e concordo com todas as cláusulas. Sei que esta assinatura eletrônica tem validade legal.</span>
       </label>
-      <Botao disabled={enviando}>{enviando ? "Assinando…" : "Assinar contrato"}</Botao>
+      <Botao tamanho="lg" disabled={enviando}>{enviando ? "Assinando…" : "Assinar contrato"}</Botao>
     </form>
   );
 }

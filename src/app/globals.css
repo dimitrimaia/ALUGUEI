@@ -1,31 +1,81 @@
 @import "tailwindcss";
 
+/* Tokens de cor. Os componentes usam as classes geradas (bg-cartao, text-suave…). */
 :root {
-  --fundo: #f7f7f5;
+  --fundo: #f5f6f8;
   --cartao: #ffffff;
-  --borda: #e3e3de;
-  --texto: #1b1b1a;
-  --suave: #6b6b66;
-  --marca: #0f766e;
+  --cartao-2: #f9fafb;
+  --borda: #e5e7eb;
+  --borda-forte: #d1d5db;
+  --texto: #111827;
+  --suave: #6b7280;
+  --marca: #0e7c66;
+  --marca-forte: #0a5f4e;
+  --marca-suave: #e6f4f0;
   --marca-texto: #ffffff;
   --ok: #15803d;
+  --ok-suave: #dcfce7;
   --alerta: #b45309;
-  --perigo: #b91c1c;
+  --alerta-suave: #fef3c7;
+  --perigo: #dc2626;
+  --perigo-suave: #fee2e2;
+  --info: #2563eb;
+  --info-suave: #dbeafe;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fundo: #141413;
-    --cartao: #1e1e1c;
-    --borda: #33332f;
-    --texto: #ededea;
-    --suave: #a3a39d;
-    --marca: #2dd4bf;
-    --marca-texto: #08201d;
+    --fundo: #0b0f14;
+    --cartao: #131920;
+    --cartao-2: #182029;
+    --borda: #232c37;
+    --borda-forte: #33404e;
+    --texto: #e8ecf1;
+    --suave: #94a3b4;
+    --marca: #2fcf9f;
+    --marca-forte: #5fe0b9;
+    --marca-suave: #0f2a23;
+    --marca-texto: #052019;
     --ok: #4ade80;
+    --ok-suave: #0f2a19;
     --alerta: #fbbf24;
+    --alerta-suave: #2b2109;
     --perigo: #f87171;
+    --perigo-suave: #2d1214;
+    --info: #60a5fa;
+    --info-suave: #0f1d33;
+    color-scheme: dark;
   }
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-cartao: var(--cartao);
+  --color-cartao-2: var(--cartao-2);
+  --color-borda: var(--borda);
+  --color-borda-forte: var(--borda-forte);
+  --color-texto: var(--texto);
+  --color-suave: var(--suave);
+  --color-marca: var(--marca);
+  --color-marca-forte: var(--marca-forte);
+  --color-marca-suave: var(--marca-suave);
+  --color-marca-texto: var(--marca-texto);
+  --color-ok: var(--ok);
+  --color-ok-suave: var(--ok-suave);
+  --color-alerta: var(--alerta);
+  --color-alerta-suave: var(--alerta-suave);
+  --color-perigo: var(--perigo);
+  --color-perigo-suave: var(--perigo-suave);
+  --color-info: var(--info);
+  --color-info-suave: var(--info-suave);
+  --font-sans: var(--fonte-texto), ui-sans-serif, system-ui, sans-serif;
+  --shadow-cartao: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --shadow-flutuante: 0 8px 24px rgb(16 24 40 / 0.12);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -36,6 +86,16 @@ body {
 input,
 select,
 textarea {
-  border-color: var(--borda);
   background: var(--cartao);
+  color: var(--texto);
+}
+
+:focus-visible {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+}
+
+/* Espaço para a barra inferior fixa no celular, respeitando o recorte da tela. */
+.pb-barra {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }

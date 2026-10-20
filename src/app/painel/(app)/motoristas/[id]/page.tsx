@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Botao, BotaoLink, Cartao, Selo, Suave, Titulo } from "@/components/ui";
+import { FileText } from "lucide-react";
+import { Avatar, Botao, BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Selo, Suave } from "@/components/ui";
 import type { Oferta } from "@/db/schema/pessoas";
 import { formatarCpf, formatarPlaca } from "@/dominio/cadastro/documentos";
 import type { Pendencia } from "@/dominio/cadastro/elegibilidade";
@@ -55,12 +56,21 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <Titulo acao={<Selo tom={status.tom}>{status.rotulo}</Selo>}>{m.nome}</Titulo>
+      <CabecalhoPagina
+        voltar={{ href: "/painel/motoristas", rotulo: "Motoristas" }}
+        titulo={
+          <span className="flex flex-wrap items-center gap-3">
+            <Avatar nome={m.nome} tamanho="lg" />
+            <span>{m.nome}</span>
+            <Selo tom={status.tom}>{status.rotulo}</Selo>
+          </span>
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {conviteAberto && linkConvite && (
           <Cartao className="flex flex-col gap-3 lg:col-span-2">
-            <p className="font-medium">Convite</p>
+            <p className="font-semibold">Convite</p>
             {conviteVencido ? (
               <form action={renovarConvite.bind(null, m.id)} className="flex flex-col items-start gap-2">
                 <Suave>O link venceu. Gere um novo e envie de novo.</Suave>
@@ -74,7 +84,7 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
 
         {m.status === "em_analise" && (
           <Cartao className="flex flex-col gap-3 lg:col-span-2">
-            <p className="font-medium">Análise do cadastro</p>
+            <p className="font-semibold">Análise do cadastro</p>
             {pendencias.length ? (
               <ul className="flex flex-wrap gap-2">
                 {pendencias.map((p) => <Selo key={p} tom="perigo">{PENDENCIAS[p]}</Selo>)}
@@ -89,7 +99,7 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
 
         {m.status === "aprovado" || m.status === "recusado" ? (
           <Cartao className="flex flex-col items-start gap-2 lg:col-span-2">
-            <p className="font-medium">Decisão</p>
+            <p className="font-semibold">Decisão</p>
             <Suave>
               {status.rotulo} em {m.decidido_em ? new Date(m.decidido_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"}
               {m.motivo_decisao ? ` · Motivo: ${m.motivo_decisao}` : ""}
@@ -100,36 +110,40 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
           </Cartao>
         ) : null}
 
-        <Cartao className="flex flex-col gap-1">
-          <p className="mb-1 font-medium">Oferta</p>
-          <Suave>Veículo: {veiculo ? `${formatarPlaca(veiculo.placa)} · ${veiculo.modelo}` : "a definir"}</Suave>
-          {oferta && (
-            <>
-              <Suave>Aluguel: {formatarBRL(oferta.aluguelSemanal)} por semana</Suave>
-              <Suave>Caução: {formatarBRL(oferta.caucao)}</Suave>
-              <Suave>Franquia: {oferta.franquiaKmMensal.toLocaleString("pt-BR")} km/mês</Suave>
-              <Suave>Prazo: {oferta.prazoMeses} meses</Suave>
-            </>
-          )}
+        <Cartao>
+          <p className="mb-1 font-semibold">Oferta</p>
+          <dl className="divide-y divide-borda">
+            <DadoRotulado rotulo="Veículo">{veiculo ? `${formatarPlaca(veiculo.placa)} · ${veiculo.modelo}` : "A definir"}</DadoRotulado>
+            {oferta && (
+              <>
+                <DadoRotulado rotulo="Aluguel">{formatarBRL(oferta.aluguelSemanal)}/semana</DadoRotulado>
+                <DadoRotulado rotulo="Caução">{formatarBRL(oferta.caucao)}</DadoRotulado>
+                <DadoRotulado rotulo="Franquia">{oferta.franquiaKmMensal.toLocaleString("pt-BR")} km/mês</DadoRotulado>
+                <DadoRotulado rotulo="Prazo">{oferta.prazoMeses} meses</DadoRotulado>
+              </>
+            )}
+          </dl>
         </Cartao>
 
-        <Cartao className="flex flex-col gap-1">
-          <p className="mb-1 font-medium">Dados</p>
-          <Suave>Celular: {m.telefone}</Suave>
-          {m.cpf && <Suave>CPF: {formatarCpf(m.cpf)}</Suave>}
-          {m.data_nascimento && <Suave>Nascimento: {formatarData(data(m.data_nascimento))}</Suave>}
-          {m.cnh_numero && <Suave>CNH: {m.cnh_numero} · EAR: {m.cnh_tem_ear ? "sim" : "não"}</Suave>}
-          {m.cnh_primeira_habilitacao && <Suave>1ª habilitação: {formatarData(data(m.cnh_primeira_habilitacao))}</Suave>}
-          {m.cnh_validade && <Suave>Validade da CNH: {formatarData(data(m.cnh_validade))}</Suave>}
-          {endereco && <Suave>Endereço: {[endereco.logradouro, endereco.numero, endereco.bairro, endereco.cidade, endereco.uf].filter(Boolean).join(", ")}</Suave>}
+        <Cartao>
+          <p className="mb-1 font-semibold">Dados</p>
+          <dl className="divide-y divide-borda">
+            <DadoRotulado rotulo="Celular">{m.telefone}</DadoRotulado>
+            {m.cpf && <DadoRotulado rotulo="CPF">{formatarCpf(m.cpf)}</DadoRotulado>}
+            {m.data_nascimento && <DadoRotulado rotulo="Nascimento">{formatarData(data(m.data_nascimento))}</DadoRotulado>}
+            {m.cnh_numero && <DadoRotulado rotulo="CNH">{m.cnh_numero} · EAR {m.cnh_tem_ear ? "sim" : "não"}</DadoRotulado>}
+            {m.cnh_primeira_habilitacao && <DadoRotulado rotulo="1ª habilitação">{formatarData(data(m.cnh_primeira_habilitacao))}</DadoRotulado>}
+            {m.cnh_validade && <DadoRotulado rotulo="Validade da CNH">{formatarData(data(m.cnh_validade))}</DadoRotulado>}
+            {endereco && <DadoRotulado rotulo="Endereço">{[endereco.logradouro, endereco.numero, endereco.bairro, endereco.cidade, endereco.uf].filter(Boolean).join(", ")}</DadoRotulado>}
+          </dl>
         </Cartao>
 
         <Cartao className="flex flex-col gap-2">
-          <p className="font-medium">Documentos</p>
+          <p className="font-semibold">Documentos</p>
           {links.length ? (
             links.map((d) => (
-              <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="underline">
-                {DOCUMENTOS[d.finalidade] ?? d.finalidade}
+              <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-borda px-3 py-2.5 font-medium hover:bg-cartao-2">
+                <FileText size={18} className="text-marca" aria-hidden /> {DOCUMENTOS[d.finalidade] ?? d.finalidade}
               </a>
             ))
           ) : (
@@ -138,7 +152,7 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
         </Cartao>
 
         <Cartao className="flex flex-col gap-1">
-          <p className="mb-1 font-medium">Consentimentos (LGPD)</p>
+          <p className="mb-1 font-semibold">Consentimentos (LGPD)</p>
           {consentimentos?.length ? (
             consentimentos.map((c) => (
               <Suave key={c.finalidade}>

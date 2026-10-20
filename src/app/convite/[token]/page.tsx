@@ -1,4 +1,5 @@
-import { BotaoLink, Cartao, Suave } from "@/components/ui";
+import { Car, CheckCircle2 } from "lucide-react";
+import { BotaoLink, Cartao, Marca, Suave } from "@/components/ui";
 import type { Oferta } from "@/db/schema/pessoas";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
@@ -19,8 +20,9 @@ export default async function Convite({ params }: { params: Promise<{ token: str
   const valido = l && (!l.convite_expira_em || new Date(l.convite_expira_em) > new Date());
   if (!valido) {
     return (
-      <main className="mx-auto max-w-md p-6">
-        <h1 className="mb-2 text-xl font-semibold">Convite inválido</h1>
+      <main className="mx-auto max-w-md px-4 py-10">
+        <Marca className="mb-8" />
+        <h1 className="mb-2 text-2xl font-bold tracking-tight">Convite inválido</h1>
         <Suave>Este link venceu ou já foi usado. Peça um novo ao locador.</Suave>
       </main>
     );
@@ -36,46 +38,55 @@ export default async function Convite({ params }: { params: Promise<{ token: str
   const usuario = await usuarioAtual();
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
+    <main className="mx-auto flex max-w-md flex-col gap-4 px-4 pt-5 pb-10">
+      <Marca className="mb-2" />
       <div>
         <Suave>Convite de {org?.nome}{org ? ` · ${org.cidade}/${org.uf}` : ""}</Suave>
-        <h1 className="text-2xl font-semibold">Olá, {l.nome.split(" ")[0]}!</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">Olá, {l.nome.split(" ")[0]}!</h1>
+        <p className="mt-1 text-suave">Você foi convidado para alugar um carro.</p>
       </div>
       {veiculo && (
-        <Cartao>
-          <Suave>Veículo</Suave>
-          <p className="text-lg font-semibold">{veiculo.modelo}</p>
-          <Suave>{[veiculo.ano_modelo, veiculo.cor, formatarPlaca(veiculo.placa)].filter(Boolean).join(" · ")}</Suave>
+        <Cartao className="flex items-center gap-4">
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-marca-suave text-marca"><Car size={28} aria-hidden /></span>
+          <div>
+            <p className="text-lg font-bold">{veiculo.modelo}</p>
+            <Suave>{[veiculo.ano_modelo, veiculo.cor, formatarPlaca(veiculo.placa)].filter(Boolean).join(" · ")}</Suave>
+          </div>
         </Cartao>
       )}
       {oferta && (
-        <Cartao className="grid grid-cols-2 gap-3">
+        <Cartao className="grid grid-cols-2 gap-4">
           <div>
             <Suave>Aluguel</Suave>
-            <p className="font-semibold">{formatarBRL(oferta.aluguelSemanal)}/semana</p>
+            <p className="text-lg font-bold">{formatarBRL(oferta.aluguelSemanal)}<span className="text-sm font-medium text-suave">/sem</span></p>
           </div>
           <div>
             <Suave>Caução</Suave>
-            <p className="font-semibold">{formatarBRL(oferta.caucao)}</p>
+            <p className="text-lg font-bold">{formatarBRL(oferta.caucao)}</p>
           </div>
           <div>
             <Suave>Franquia</Suave>
-            <p className="font-semibold">{oferta.franquiaKmMensal.toLocaleString("pt-BR")} km/mês</p>
+            <p className="text-lg font-bold">{oferta.franquiaKmMensal.toLocaleString("pt-BR")} km/mês</p>
           </div>
           <div>
             <Suave>Prazo</Suave>
-            <p className="font-semibold">{oferta.prazoMeses} meses</p>
+            <p className="text-lg font-bold">{oferta.prazoMeses} meses</p>
           </div>
         </Cartao>
       )}
       <Cartao>
-        <p className="mb-1 font-medium">Para o cadastro, tenha em mãos:</p>
-        <Suave>CNH com a observação EAR, documento com foto, comprovante de endereço e um print do seu perfil no Uber ou 99. Leva uns 5 minutos.</Suave>
+        <p className="mb-3 font-semibold">Para o cadastro, tenha em mãos</p>
+        <ul className="flex flex-col gap-2 text-sm">
+          {["CNH com a observação EAR", "Comprovante de endereço", "Print do seu perfil no Uber ou 99"].map((item) => (
+            <li key={item} className="flex items-center gap-2"><CheckCircle2 size={18} className="text-marca" aria-hidden /> {item}</li>
+          ))}
+        </ul>
+        <Suave className="mt-3">Leva uns 5 minutos.</Suave>
       </Cartao>
       {usuario ? (
         <BotaoAceitar token={token} />
       ) : (
-        <BotaoLink href={`/entrar?voltar=${encodeURIComponent(`/convite/${token}`)}`}>Começar cadastro</BotaoLink>
+        <BotaoLink tamanho="lg" href={`/entrar?voltar=${encodeURIComponent(`/convite/${token}`)}`}>Começar cadastro</BotaoLink>
       )}
     </main>
   );

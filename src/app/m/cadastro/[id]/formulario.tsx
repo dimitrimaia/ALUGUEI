@@ -56,7 +56,7 @@ export function FormularioCadastro({
       {Object.keys(e).length > 0 && <Aviso tom="perigo">Confira os campos marcados.</Aviso>}
 
       <Cartao className="flex flex-col gap-4">
-        <p className="font-medium">Dados pessoais</p>
+        <p className="font-semibold">Dados pessoais</p>
         <Campo rotulo="Nome completo" erro={e.nome}>
           <input name="nome" defaultValue={inicial.nome} autoComplete="name" className={classeEntrada} required />
         </Campo>
@@ -72,7 +72,7 @@ export function FormularioCadastro({
       </Cartao>
 
       <Cartao className="flex flex-col gap-4">
-        <p className="font-medium">Endereço</p>
+        <p className="font-semibold">Endereço</p>
         <Campo rotulo="CEP" erro={e.cep}>
           <input name="cep" inputMode="numeric" autoComplete="postal-code" className={classeEntrada} onBlur={(ev) => buscarCep(ev.target.value)} required />
         </Campo>
@@ -101,7 +101,7 @@ export function FormularioCadastro({
       </Cartao>
 
       <Cartao className="flex flex-col gap-4">
-        <p className="font-medium">CNH</p>
+        <p className="font-semibold">CNH</p>
         <Campo rotulo="Número de registro" erro={e.cnhNumero}>
           <input name="cnhNumero" inputMode="numeric" className={classeEntrada} required />
         </Campo>
@@ -118,13 +118,13 @@ export function FormularioCadastro({
       </Cartao>
 
       <Cartao className="flex flex-col gap-4">
-        <p className="font-medium">Fotos dos documentos</p>
+        <p className="font-semibold">Fotos dos documentos</p>
         {FOTOS.map((f) => (
           <Campo key={f.campo} rotulo={f.rotulo} erro={e[f.campo]} dica={fotos[f.campo] ? `Pronto · ${Math.round(fotos[f.campo]!.size / 1024)} KB` : undefined}>
             <input
               type="file"
               accept="image/*,application/pdf"
-              className={classeEntrada}
+              className="w-full rounded-xl border border-dashed border-borda-forte bg-cartao-2 p-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-marca file:px-3 file:py-2 file:font-semibold file:text-marca-texto"
               required={f.obrigatorio}
               onChange={async (ev) => {
                 const arquivo = ev.target.files?.[0];
@@ -138,7 +138,7 @@ export function FormularioCadastro({
       </Cartao>
 
       <Cartao className="flex flex-col gap-3">
-        <p className="font-medium">Autorizações</p>
+        <p className="font-semibold">Autorizações</p>
         {consentimentos.map((c) => (
           <label key={c.id} className="flex items-start gap-2 text-sm">
             <input type="checkbox" name={`consentimento.${c.id}`} value="sim" className="mt-1" required />
@@ -148,7 +148,7 @@ export function FormularioCadastro({
         {e.consentimentos && <span className="text-xs" style={{ color: "var(--perigo)" }}>{e.consentimentos}</span>}
       </Cartao>
 
-      <Botao disabled={enviando} className="sticky bottom-4">
+      <Botao tamanho="lg" disabled={enviando} className="sticky bottom-4 shadow-flutuante">
         {enviando ? "Enviando…" : "Enviar cadastro"}
       </Botao>
     </form>

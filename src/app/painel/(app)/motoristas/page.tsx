@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { BotaoLink, Cartao, Selo, Suave, Titulo, Vazio } from "@/components/ui";
+import { UserPlus, Users } from "lucide-react";
+import { Avatar, BotaoLink, CabecalhoPagina, ItemLista, Lista, Selo, Vazio } from "@/components/ui";
 import type { Linha } from "@/db/tipos";
 import { exigirEquipe } from "@/lib/sessao";
 import { STATUS_LOCATARIO } from "@/lib/rotulos";
@@ -20,32 +20,34 @@ export default async function Motoristas() {
 
   return (
     <>
-      <Titulo acao={<BotaoLink href="/painel/motoristas/convidar">Convidar motorista</BotaoLink>}>Motoristas</Titulo>
+      <CabecalhoPagina titulo="Motoristas" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Convidar</BotaoLink>} />
       {!motoristas.length ? (
-        <Vazio>Nenhum motorista ainda. Convide pelo WhatsApp.</Vazio>
+        <Vazio icone={Users} titulo="Nenhum motorista ainda" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Convidar motorista</BotaoLink>}>
+          Você manda o convite pelo WhatsApp e o motorista faz o cadastro pelo celular.
+        </Vazio>
       ) : (
-        <ul className="grid gap-3">
+        <Lista>
           {motoristas.map((m) => {
             const s = STATUS_LOCATARIO[m.status];
             const pendencias = (m.pendencias_pre_analise as string[] | null)?.length ?? 0;
             return (
-              <li key={m.id}>
-                <Link href={`/painel/motoristas/${m.id}`}>
-                  <Cartao className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">{m.nome}</p>
-                      <Suave>{m.telefone}</Suave>
-                    </div>
-                    <div className="flex gap-2">
-                      {m.status === "em_analise" && pendencias > 0 && <Selo tom="perigo">{pendencias} pendência(s)</Selo>}
+              <div key={m.id}>
+                <ItemLista
+                  href={`/painel/motoristas/${m.id}`}
+                  inicio={<Avatar nome={m.nome} />}
+                  titulo={m.nome}
+                  detalhe={m.telefone}
+                  lateral={
+                    <span className="flex flex-col items-end gap-1 sm:flex-row sm:items-center">
+                      {m.status === "em_analise" && pendencias > 0 && <Selo tom="perigo">{pendencias} alerta(s)</Selo>}
                       <Selo tom={s.tom}>{s.rotulo}</Selo>
-                    </div>
-                  </Cartao>
-                </Link>
-              </li>
+                    </span>
+                  }
+                />
+              </div>
             );
           })}
-        </ul>
+        </Lista>
       )}
     </>
   );

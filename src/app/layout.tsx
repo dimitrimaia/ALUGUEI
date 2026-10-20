@@ -1,17 +1,30 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
+const fonte = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--fonte-texto", display: "swap" });
+
 export const metadata: Metadata = {
-  title: "Aluguei",
-  description: "Gestão de locação de veículos para motoristas de aplicativo",
+  title: { default: "Aluguei · Gestão de locação para motoristas de app", template: "%s · Aluguei" },
+  description: "Contrato, cobrança semanal, check-in e vistoria do carro alugado, tudo pelo celular.",
+  applicationName: "Aluguei",
+  appleWebApp: { capable: true, title: "Aluguei", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0f766e" };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0f14" },
+  ],
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="min-h-dvh antialiased">{children}</body>
+    <html lang="pt-BR" className={fonte.variable}>
+      <body className="min-h-dvh font-sans antialiased">{children}</body>
     </html>
   );
 }

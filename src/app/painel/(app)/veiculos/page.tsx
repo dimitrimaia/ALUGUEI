@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { BotaoLink, Cartao, Selo, Suave, Titulo, Vazio } from "@/components/ui";
+import { Car, Plus } from "lucide-react";
+import { BotaoLink, CabecalhoPagina, ItemLista, Lista, Selo, Vazio } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { exigirEquipe } from "@/lib/sessao";
 import { STATUS_VEICULO } from "@/lib/rotulos";
@@ -18,25 +18,28 @@ export default async function Veiculos() {
 
   return (
     <>
-      <Titulo acao={<BotaoLink href="/painel/veiculos/novo">Novo veículo</BotaoLink>}>Veículos</Titulo>
+      <CabecalhoPagina
+        titulo="Veículos"
+        subtitulo={veiculos?.length ? `${veiculos.length} na frota` : undefined}
+        acao={<BotaoLink href="/painel/veiculos/novo" icone={Plus}>Novo veículo</BotaoLink>}
+      />
       {!veiculos?.length ? (
-        <Vazio>Nenhum veículo cadastrado ainda.</Vazio>
+        <Vazio icone={Car} titulo="Nenhum veículo ainda" acao={<BotaoLink href="/painel/veiculos/novo" icone={Plus}>Cadastrar veículo</BotaoLink>}>
+          Cadastre o carro com placa e km atual. Depois é só convidar o motorista.
+        </Vazio>
       ) : (
-        <ul className="grid gap-3">
+        <Lista>
           {veiculos.map((v) => (
-            <li key={v.id}>
-              <Link href={`/painel/veiculos/${v.id}`}>
-                <Cartao className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{formatarPlaca(v.placa)} · {v.modelo}</p>
-                    <Suave>{[v.ano_modelo, v.cor, `${km.format(v.odometro_atual)} km`].filter(Boolean).join(" · ")}</Suave>
-                  </div>
-                  <Selo tom={STATUS_VEICULO[v.status].tom}>{STATUS_VEICULO[v.status].rotulo}</Selo>
-                </Cartao>
-              </Link>
-            </li>
+            <ItemLista
+              key={v.id}
+              href={`/painel/veiculos/${v.id}`}
+              icone={Car}
+              titulo={`${formatarPlaca(v.placa)} · ${v.modelo}`}
+              detalhe={[v.ano_modelo, v.cor, `${km.format(v.odometro_atual)} km`].filter(Boolean).join(" · ")}
+              lateral={<Selo tom={STATUS_VEICULO[v.status].tom}>{STATUS_VEICULO[v.status].rotulo}</Selo>}
+            />
           ))}
-        </ul>
+        </Lista>
       )}
     </>
   );

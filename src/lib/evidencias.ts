@@ -84,3 +84,70 @@ export async function linkTemporario(caminho: string): Promise<string | null> {
   const { data } = await supabaseAdmin().storage.from("evidencias").createSignedUrl(caminho, 600);
   return data?.signedUrl ?? null;
 }
+
+/**
+ * Registra no cofre um arquivo que o navegador já enviou direto ao Storage
+ * por URL assinada (fotos e vídeos: não passam pelo servidor, que tem limite
+ * de tamanho). O hash é calculado aqui, a partir do arquivo guardado.
+ */
+export async function registrarArquivoEnviado(caminho: string, dados: {
+  organizacaoId: string;
+  enviadoPor: string;
+  finalidade: string;
+  tipo: "foto" | "video";
+  contratoId?: string;
+  veiculoId?: string;
+  latitude?: number;
+  longitude?: number;
+  precisaoMetros?: number;
+  capturadoEm?: Date;
+}): Promise<{ id: string; sha256: string }> {
+  if (!caminho.startsWith(`${dados.organizacaoId}/`)) throw new ArquivoInvalido("Caminho fora da conta do locador.");
+  const admin = supabaseAdmin();
+  const { data: arquivo, error } = await admin.storage.from("evidencias").download(caminho);
+  if (error || !arquivo) throw new ArquivoInvalido("A foto não chegou. Tente enviar de novo.");
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+
+  const { data: existente } = await admin
+    .from("evidencias")
+    .select("id")
+    .eq("organizacao_id", dados.organizacaoId)
+    .eq("finalidade", dados.finalidade)
+    .eq("sha256", sha256)
+    .maybeSingle();
+  if (existente) return { id: existente.id, sha256 };
+
+  const h = await headers();
+  const { data, error: erroInsert } = await admin
+    .from("evidencias")
+    .insert({
+      organizacao_id: dados.organizacaoId,
+      contrato_id: dados.contratoId ?? null,
+      veiculo_id: dados.veiculoId ?? null,
+      tipo: dados.tipo,
+      finalidade: dados.finalidade,
+      caminho_storage: caminho,
+      sha256,
+      tamanho_bytes: bytes.byteLength,
+      mime: arquivo.type || "image/jpeg",
+      capturado_em_dispositivo: dados.capturadoEm?.toISOString() ?? null,
+      latitude: dados.latitude ?? null,
+      longitude: dados.longitude ?? null,
+      precisao_metros: dados.precisaoMetros ?? null,
+      ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      dispositivo: h.get("user-agent"),
+      enviado_por: dados.enviadoPor,
+    })
+    .select("id")
+    .single();
+  if (erroInsert || !data) throw new Error(`Falha ao registrar evidência: ${erroInsert?.message}`);
+  return { id: data.id, sha256 };
+}
+
+/** URL assinada para o navegador enviar um arquivo direto ao cofre (vale 2 horas, uso único). */
+export async function urlDeEnvio(caminho: string): Promise<{ caminho: string; token: string }> {
+  const { data, error } = await supabaseAdmin().storage.from("evidencias").createSignedUploadUrl(caminho);
+  if (error || !data) throw new Error(`Falha ao preparar envio: ${error?.message}`);
+  return { caminho: data.path, token: data.token };
+}

@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Cartao, Suave } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
@@ -46,10 +47,10 @@ export default async function ContratoMotorista({ params }: { params: Promise<{ 
   ];
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4">
       <div>
         <Suave>Contrato com {org?.nome}</Suave>
-        <h1 className="text-xl font-semibold">Resumo do contrato</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Resumo do contrato</h1>
       </div>
       <Cartao className="flex flex-col gap-3">
         {pontos.map(([rotulo, texto]) => (
@@ -60,23 +61,23 @@ export default async function ContratoMotorista({ params }: { params: Promise<{ 
         ))}
       </Cartao>
       <Cartao>
-        <p className="mb-2 font-medium">O que é importante saber</p>
+        <p className="mb-2 font-semibold">O que é importante saber</p>
         <ul className="flex list-disc flex-col gap-2 pl-5 text-sm">
           {regras.map((r) => <li key={r}>{r}</li>)}
         </ul>
       </Cartao>
       {linkPdf && (
-        <a href={linkPdf} target="_blank" rel="noreferrer" className="rounded-xl border p-4 text-center font-medium underline" style={{ borderColor: "var(--borda)" }}>
-          Ler o contrato completo (PDF)
+        <a href={linkPdf} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-xl border border-borda bg-cartao p-4 font-semibold hover:bg-cartao-2">
+          <FileText size={18} className="text-marca" aria-hidden /> Ler o contrato completo (PDF)
         </a>
       )}
       {c.status === "aguardando_assinatura" ? (
         <FormularioAssinatura contratoId={c.id} pdfSha256={c.pdf_sha256 ?? ""} />
       ) : (
         <Cartao>
-          <p className="font-medium">Contrato assinado{c.assinado_em ? ` em ${new Date(c.assinado_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}.</p>
+          <p className="font-semibold">Contrato assinado{c.assinado_em ? ` em ${new Date(c.assinado_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}.</p>
         </Cartao>
       )}
-    </main>
+    </div>
   );
 }

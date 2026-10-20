@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Aviso, Botao, Campo, classeEntrada } from "@/components/ui";
+import { Aviso, Botao, Campo, classeAreaTexto } from "@/components/ui";
 import { decidirCadastro, type EstadoDecisao } from "../acoes";
 
 export function FormularioDecisao({ locatarioId }: { locatarioId: string }) {
@@ -21,7 +21,7 @@ export function FormularioDecisao({ locatarioId }: { locatarioId: string }) {
         </label>
       </div>
       <Campo rotulo={decisao === "recusado" ? "Motivo da recusa (obrigatório)" : "Observação (opcional)"}>
-        <textarea name="motivo" rows={2} className={classeEntrada} required={decisao === "recusado"} />
+        <textarea name="motivo" rows={2} className={classeAreaTexto} required={decisao === "recusado"} />
       </Campo>
       <Botao variante={decisao === "recusado" ? "perigo" : "primario"} disabled={enviando}>
         {enviando ? "Salvando…" : decisao === "recusado" ? "Recusar cadastro" : "Aprovar cadastro"}

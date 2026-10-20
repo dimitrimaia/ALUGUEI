@@ -1,4 +1,4 @@
-import { Cartao, Suave, Titulo } from "@/components/ui";
+import { CabecalhoPagina, Cartao } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { exigirEquipe } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -18,14 +18,15 @@ export default async function Convidar({ searchParams }: { searchParams: Promise
   const veiculos = (data ?? []).map((v) => ({ id: v.id, rotulo: `${formatarPlaca(v.placa)} · ${v.modelo}` }));
 
   return (
-    <>
-      <Titulo>Convidar motorista</Titulo>
-      <Suave className="mb-4">
-        O motorista recebe um link, vê o carro e as condições, e faz o cadastro pelo celular.
-      </Suave>
-      <Cartao className="max-w-xl">
+    <div className="max-w-2xl">
+      <CabecalhoPagina
+        voltar={{ href: "/painel/motoristas", rotulo: "Motoristas" }}
+        titulo="Convidar motorista"
+        subtitulo="Ele recebe um link, vê o carro e as condições e faz o cadastro pelo celular."
+      />
+      <Cartao>
         <FormularioConvite veiculos={veiculos} veiculoInicial={veiculo} />
       </Cartao>
-    </>
+    </div>
   );
 }

@@ -14,6 +14,7 @@ o marketplace fica para a Fase 3.
 - [Roadmap do MVP](docs/roadmap-mvp.md): 12 semanas, com rastreio dos requisitos
 - [Decisões de produto](docs/decisoes.md): Pix, PWA, mensalidade por split, o app como administrador
 - [Configurar o Supabase](docs/configurar-supabase.md): banco, login por código, SMS
+- [Hospedagem e domínio](docs/hospedagem.md)
 - [Arquitetura](docs/arquitetura.md): os quatro pilares e as camadas
 
 ## Stack

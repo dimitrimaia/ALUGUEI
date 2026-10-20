@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Oferta } from "@/db/schema/pessoas";
-import { Cartao, Suave, Titulo } from "@/components/ui";
+import { CabecalhoPagina, Cartao } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { PARAMETROS_CONTRATO_REFERENCIA } from "@/dominio/contrato/parametros";
 import { hoje } from "@/dominio/datas/data";
@@ -22,10 +22,13 @@ export default async function NovoContrato({ searchParams }: { searchParams: Pro
   const oferta = l.oferta as Oferta | null;
   const ref = PARAMETROS_CONTRATO_REFERENCIA;
   return (
-    <>
-      <Titulo>Contrato de {l.nome}</Titulo>
-      <Suave className="mb-4">Os valores vêm do convite. Confira e gere o contrato; o motorista assina pelo celular.</Suave>
-      <Cartao className="max-w-2xl">
+    <div className="max-w-3xl">
+      <CabecalhoPagina
+        voltar={{ href: `/painel/motoristas/${l.id}`, rotulo: l.nome }}
+        titulo="Novo contrato"
+        subtitulo="Os valores vêm do convite. Confira e gere: o motorista assina pelo celular."
+      />
+      <Cartao>
         <FormularioContrato
           locatarioId={l.id}
           veiculos={(veiculos ?? []).map((v) => ({ id: v.id, rotulo: `${formatarPlaca(v.placa)} · ${v.modelo}` }))}
@@ -41,6 +44,6 @@ export default async function NovoContrato({ searchParams }: { searchParams: Pro
           }}
         />
       </Cartao>
-    </>
+    </div>
   );
 }
