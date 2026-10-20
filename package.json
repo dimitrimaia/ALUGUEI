@@ -17,7 +17,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:preparar": "bash scripts/preparar-banco.sh"
+    "db:preparar": "bash scripts/preparar-banco.sh",
+    "db:setup-sql": "node scripts/gerar-setup-sql.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

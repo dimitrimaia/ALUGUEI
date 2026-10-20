@@ -72,3 +72,7 @@ create policy auditoria_equipe_le on auditoria for select using (organizacao_id 
 
 -- webhook_eventos: só a service role (sem políticas = nenhum acesso via JWT).
 alter table webhook_eventos enable row level security;
+
+-- Bucket privado do cofre de provas. Sem políticas de update/delete em storage.objects.
+insert into storage.buckets (id, name, public) values ('evidencias', 'evidencias', false)
+on conflict (id) do nothing;

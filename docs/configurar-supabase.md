@@ -4,9 +4,15 @@ Projeto: `wwmehpiomzfflticagmx`. As chaves ficam só no `.env.local`, que não v
 
 ## 1. Banco
 
+Com conexão direta ao banco:
+
 ```bash
 pnpm db:preparar   # migrações do Drizzle + supabase/rls.sql
 ```
+
+Sem conexão direta (ex.: ambiente na nuvem que só libera HTTPS): rode
+`pnpm db:setup-sql` e cole `supabase/setup.sql` no **SQL Editor** do Supabase.
+O arquivo registra as migrações como aplicadas, então o `db:migrate` continua funcionando depois.
 
 Se a senha do banco tiver `&` ou `+`, codifique na `DATABASE_URL` (`&` vira `%26`, `+` vira `%2B`).
 A conexão direta (`db.<projeto>.supabase.co:5432`) usa só IPv6; se a sua rede
