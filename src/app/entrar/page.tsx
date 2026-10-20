@@ -33,8 +33,8 @@ const PERFIS = {
   },
 } as const;
 
-export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string; perfil?: string }> }) {
-  const { voltar, erro, perfil } = await searchParams;
+export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string; perfil?: string; novo?: string }> }) {
+  const { voltar, erro, perfil, novo } = await searchParams;
   // Só aceita caminhos internos, para o link de login não virar redirecionamento aberto.
   const tipo = perfil === "locador" || perfil === "motorista" ? perfil : "geral";
   const padrao = tipo === "locador" ? "/painel" : tipo === "motorista" ? "/m" : "/inicio";
@@ -69,6 +69,11 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
         <div className="mx-auto w-full max-w-sm rounded-[1.5rem] border border-borda bg-cartao p-6 shadow-flutuante lg:border-0 lg:p-0 lg:shadow-none">
           <h2 className="text-xl font-extrabold tracking-tight">{tipo === "locador" ? "Entrar ou criar conta" : "Entrar"}</h2>
           <p className="mt-1 mb-6 text-sm text-suave">Vamos enviar um código de 6 dígitos para confirmar que é você.</p>
+          {tipo === "motorista" && novo && (
+            <p className="mb-5 rounded-xl bg-marca-suave p-3 text-sm">
+              <strong>Primeira vez?</strong> O cadastro de motorista começa pelo link de convite que o locador manda no WhatsApp. Abra o link neste celular.
+            </p>
+          )}
           <FormularioEntrar destino={destino} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um código novo." : undefined} />
           <p className="mt-6 text-center text-sm text-suave">
             {tipo === "motorista" ? (

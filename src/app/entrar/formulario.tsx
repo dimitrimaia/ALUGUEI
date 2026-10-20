@@ -14,6 +14,8 @@ export function FormularioEntrar({ destino, erroInicial }: { destino: string; er
   const [canal, setCanal] = useState<Canal>("email");
   const [contato, setContato] = useState("");
   const [enviadoPara, setEnviadoPara] = useState<string | null>(null);
+  const [comSenha, setComSenha] = useState(false);
+  const [senha, setSenha] = useState("");
   const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState<string | null>(erroInicial ?? null);
   const [ocupado, setOcupado] = useState(false);
@@ -39,6 +41,17 @@ export function FormularioEntrar({ destino, erroInicial }: { destino: string; er
     setOcupado(false);
     if (error) return setErro("Não foi possível enviar o código. Tente de novo em instantes.");
     setEnviadoPara(alvo);
+  }
+
+  async function entrarComSenha(e: React.FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    setOcupado(true);
+    const { error } = await supabaseNavegador().auth.signInWithPassword({ email: contato.trim().toLowerCase(), password: senha });
+    setOcupado(false);
+    if (error) return setErro("E-mail ou senha incorretos.");
+    router.replace(destino as never);
+    router.refresh();
   }
 
   async function verificar(e: React.FormEvent) {
@@ -88,6 +101,24 @@ export function FormularioEntrar({ destino, erroInicial }: { destino: string; er
     );
   }
 
+  if (comSenha) {
+    return (
+      <form onSubmit={entrarComSenha} className="flex flex-col gap-4">
+        <Campo rotulo="E-mail">
+          <input className={classeEntrada} type="email" autoComplete="email" value={contato} onChange={(e) => setContato(e.target.value)} required />
+        </Campo>
+        <Campo rotulo="Senha">
+          <input className={classeEntrada} type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        </Campo>
+        {erro && <Aviso tom="perigo">{erro}</Aviso>}
+        <Botao tamanho="lg" disabled={ocupado}>{ocupado ? "Entrando…" : "Entrar"}</Botao>
+        <button type="button" className="text-sm font-medium text-suave underline" onClick={() => { setComSenha(false); setErro(null); }}>
+          Entrar com código
+        </button>
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={enviarCodigo} className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-cartao-2 p-1" role="tablist">
@@ -119,6 +150,9 @@ export function FormularioEntrar({ destino, erroInicial }: { destino: string; er
       <Botao tamanho="lg" disabled={ocupado}>
         {ocupado ? "Enviando…" : "Receber código"}
       </Botao>
+      <button type="button" className="text-sm font-medium text-suave underline" onClick={() => { setComSenha(true); setErro(null); }}>
+        Tenho senha
+      </button>
     </form>
   );
 }
