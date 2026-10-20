@@ -1,6 +1,6 @@
-import { Car, Plus } from "lucide-react";
-import { BotaoLink, CabecalhoPagina, ItemLista, Lista, Selo, Vazio } from "@/components/ui";
-import { formatarPlaca } from "@/dominio/cadastro/documentos";
+import { Car, Gauge, Plus } from "lucide-react";
+import Link from "next/link";
+import { BotaoLink, CabecalhoPagina, Placa, Selo, Vazio } from "@/components/ui";
 import { exigirEquipe } from "@/lib/sessao";
 import { STATUS_VEICULO } from "@/lib/rotulos";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -16,11 +16,13 @@ export default async function Veiculos() {
     .eq("organizacao_id", organizacao.id)
     .order("criado_em", { ascending: false });
 
+  const contagem = (s: string) => (veiculos ?? []).filter((v) => v.status === s).length;
+
   return (
     <>
       <CabecalhoPagina
         titulo="Veículos"
-        subtitulo={veiculos?.length ? `${veiculos.length} na frota` : undefined}
+        subtitulo={veiculos?.length ? `${veiculos.length} na frota · ${contagem("alugado")} alugado(s) · ${contagem("disponivel")} disponível(is)` : "Sua frota em um só lugar"}
         acao={<BotaoLink href="/painel/veiculos/novo" icone={Plus}>Novo veículo</BotaoLink>}
       />
       {!veiculos?.length ? (
@@ -28,18 +30,29 @@ export default async function Veiculos() {
           Cadastre o carro com placa e km atual. Depois é só convidar o motorista.
         </Vazio>
       ) : (
-        <Lista>
-          {veiculos.map((v) => (
-            <ItemLista
-              key={v.id}
-              href={`/painel/veiculos/${v.id}`}
-              icone={Car}
-              titulo={`${formatarPlaca(v.placa)} · ${v.modelo}`}
-              detalhe={[v.ano_modelo, v.cor, `${km.format(v.odometro_atual)} km`].filter(Boolean).join(" · ")}
-              lateral={<Selo tom={STATUS_VEICULO[v.status].tom}>{STATUS_VEICULO[v.status].rotulo}</Selo>}
-            />
-          ))}
-        </Lista>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {veiculos.map((v) => {
+            const s = STATUS_VEICULO[v.status];
+            return (
+              <Link
+                key={v.id}
+                href={`/painel/veiculos/${v.id}`}
+                className="group overflow-hidden rounded-[1.25rem] border border-borda bg-cartao shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante"
+              >
+                <div className="relative flex h-28 items-end justify-between bg-gradient-to-br from-marca-suave to-cartao-2 px-5 pb-4">
+                  <Car className="absolute top-4 right-5 text-marca/25 transition-transform group-hover:translate-x-1" size={64} strokeWidth={1.4} aria-hidden />
+                  <Placa placa={v.placa} />
+                  <Selo tom={s.tom}>{s.rotulo}</Selo>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="truncate font-bold">{v.modelo}</p>
+                  <p className="mt-0.5 text-sm text-suave">{[v.ano_modelo, v.cor].filter(Boolean).join(" · ") || "—"}</p>
+                  <p className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold"><Gauge size={16} className="text-marca" aria-hidden /> {km.format(v.odometro_atual)} km</p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       )}
     </>
   );

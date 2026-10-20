@@ -1,3 +1,4 @@
+import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
 import { createHash } from "node:crypto";
 import { notFound } from "next/navigation";
 import { ResumoVistoria } from "@/components/resumo-vistoria";
@@ -27,6 +28,7 @@ export default async function VistoriaMotorista({ params }: { params: Promise<{ 
 
   return (
     <div className="flex flex-col gap-4">
+      <CabecalhoMotorista titulo="Vistoria" />
       <div>
         <Suave>{veiculo ? `${veiculo.modelo} · ${formatarPlaca(veiculo.placa)}` : ""}</Suave>
         <h1 className="text-2xl font-bold tracking-tight">Vistoria de entrega</h1>

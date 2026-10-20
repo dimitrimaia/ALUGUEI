@@ -1,3 +1,4 @@
+import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
 import { notFound, redirect } from "next/navigation";
 import { Suave } from "@/components/ui";
 import { FINALIDADES } from "@/lib/consentimentos";
@@ -14,6 +15,7 @@ export default async function Cadastro({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="flex flex-col gap-4">
+      <CabecalhoMotorista titulo="Cadastro" />
       <h1 className="text-2xl font-bold tracking-tight">Seu cadastro</h1>
       <Suave>Preencha seus dados e mande as fotos dos documentos. Leva uns 5 minutos.</Suave>
       <FormularioCadastro

@@ -1,6 +1,6 @@
 import { Gauge, UserPlus } from "lucide-react";
 import { notFound } from "next/navigation";
-import { Botao, BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Selo, classeEntrada } from "@/components/ui";
+import { Botao, BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Placa, Selo, classeEntrada } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { data, formatarData } from "@/dominio/datas/data";
 import { exigirEquipe } from "@/lib/sessao";
@@ -27,8 +27,7 @@ export default async function FichaVeiculo({ params }: { params: Promise<{ id: s
     <>
       <CabecalhoPagina
         voltar={{ href: "/painel/veiculos", rotulo: "Veículos" }}
-        titulo={<span className="flex flex-wrap items-center gap-3">{v.modelo} <Selo tom={status.tom}>{status.rotulo}</Selo></span>}
-        subtitulo={formatarPlaca(v.placa)}
+        titulo={<span className="flex flex-wrap items-center gap-3"><Placa placa={v.placa} tamanho="lg" /> {v.modelo} <Selo tom={status.tom}>{status.rotulo}</Selo></span>}
         acao={v.status === "disponivel" ? <BotaoLink href={`/painel/motoristas/convidar?veiculo=${v.id}`} icone={UserPlus}>Convidar motorista</BotaoLink> : undefined}
       />
 

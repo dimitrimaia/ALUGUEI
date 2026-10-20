@@ -1,3 +1,4 @@
+import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
 import { FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Cartao, Suave } from "@/components/ui";
@@ -48,6 +49,7 @@ export default async function ContratoMotorista({ params }: { params: Promise<{ 
 
   return (
     <div className="flex flex-col gap-4">
+      <CabecalhoMotorista titulo="Contrato" />
       <div>
         <Suave>Contrato com {org?.nome}</Suave>
         <h1 className="text-2xl font-bold tracking-tight">Resumo do contrato</h1>

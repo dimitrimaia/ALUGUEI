@@ -1,13 +1,18 @@
-import { CalendarClock, Car, CheckCircle2, Circle, ClipboardCheck, FileSignature, KeyRound, UserCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, Car, CheckCircle2, ClipboardCheck, FileSignature, KeyRound, Plus, UserCheck, UserPlus, Wrench } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { CabecalhoPagina, Cartao, Indicador, ItemLista, Lista, Selo, Vazio } from "@/components/ui";
+import { BotaoLink, Cartao, ItemLista, Lista, Placa, Selo, Vazio } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { data, formatarData, hoje, somarDias } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { exigirEquipe } from "@/lib/sessao";
-import { TIPO_OBRIGACAO } from "@/lib/rotulos";
+import { STATUS_VEICULO, TIPO_OBRIGACAO } from "@/lib/rotulos";
 import { supabaseServidor } from "@/lib/supabase/servidor";
+
+function saudacao() {
+  const hora = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hourCycle: "h23", timeZone: "America/Sao_Paulo" }).format(new Date()));
+  return hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+}
 
 /** Painel do locador (RF-120): o que precisa de atenção hoje, e a semana que vem. */
 export default async function VisaoGeral() {
@@ -15,7 +20,7 @@ export default async function VisaoGeral() {
   const supabase = await supabaseServidor();
   const dia = hoje();
   const [{ data: veiculos }, { data: motoristas }, { data: contratos }, { data: proximas }] = await Promise.all([
-    supabase.from("veiculos").select("id, status, placa, modelo").eq("organizacao_id", organizacao.id),
+    supabase.from("veiculos").select("id, status, placa, modelo, odometro_atual").eq("organizacao_id", organizacao.id).order("criado_em"),
     supabase.from("locatarios").select("id, nome, status").eq("organizacao_id", organizacao.id),
     supabase.from("contratos").select("id, status, locatario_id, veiculo_id").eq("organizacao_id", organizacao.id),
     supabase
@@ -36,18 +41,21 @@ export default async function VisaoGeral() {
     const k = c.find((x) => x.id === contratoId);
     return m.find((x) => x.id === k?.locatario_id)?.nome ?? "—";
   };
+  const alugados = v.filter((x) => x.status === "alugado").length;
+  const ocupacao = v.length ? Math.round((alugados / v.length) * 100) : 0;
+  const aReceber = (proximas ?? []).reduce((s, o) => s + (o.valor_centavos ?? 0), 0);
 
   const passos = [
-    { feito: v.length > 0, titulo: "Cadastre um veículo", href: "/painel/veiculos/novo" },
-    { feito: m.length > 0, titulo: "Convide um motorista pelo WhatsApp", href: "/painel/motoristas/convidar" },
-    { feito: c.length > 0, titulo: "Gere e assine o contrato", href: "/painel/motoristas" },
-    { feito: c.some((x) => x.status === "ativo"), titulo: "Faça a vistoria de entrega", href: "/painel/contratos" },
+    { feito: v.length > 0, titulo: "Cadastre um veículo", href: "/painel/veiculos/novo", icone: Car },
+    { feito: m.length > 0, titulo: "Convide um motorista", href: "/painel/motoristas/convidar", icone: UserPlus },
+    { feito: c.length > 0, titulo: "Gere e assine o contrato", href: "/painel/motoristas", icone: FileSignature },
+    { feito: c.some((x) => x.status === "ativo"), titulo: "Faça a vistoria de entrega", href: "/painel/contratos", icone: ClipboardCheck },
   ] as const;
-  const emAndamento = passos.some((p) => !p.feito);
+  const feitos = passos.filter((p) => p.feito).length;
 
   const pendencias = [
     ...m.filter((x) => x.status === "em_analise").map((x) => ({ id: x.id, href: `/painel/motoristas/${x.id}`, icone: UserCheck, titulo: x.nome, detalhe: "Cadastro para analisar", tom: "alerta" as const, selo: "Analisar" })),
-    ...c.filter((x) => x.status === "aguardando_assinatura").map((x) => ({ id: x.id, href: `/painel/contratos/${x.id}`, icone: FileSignature, titulo: m.find((y) => y.id === x.locatario_id)?.nome ?? "Contrato", detalhe: "Aguardando assinatura do motorista", tom: "neutro" as const, selo: "Assinatura" })),
+    ...c.filter((x) => x.status === "aguardando_assinatura").map((x) => ({ id: x.id, href: `/painel/contratos/${x.id}`, icone: FileSignature, titulo: m.find((y) => y.id === x.locatario_id)?.nome ?? "Contrato", detalhe: "Aguardando a assinatura do motorista", tom: "neutro" as const, selo: "Assinatura" })),
     ...c.filter((x) => x.status === "assinado").map((x) => {
       const carro = v.find((y) => y.id === x.veiculo_id);
       return { id: x.id, href: `/painel/contratos/${x.id}/vistoria`, icone: ClipboardCheck, titulo: carro ? `${formatarPlaca(carro.placa)} · ${carro.modelo}` : "Vistoria", detalhe: "Contrato assinado: falta a vistoria de entrega", tom: "marca" as const, selo: "Vistoriar" };
@@ -55,18 +63,52 @@ export default async function VisaoGeral() {
   ];
 
   return (
-    <>
-      <CabecalhoPagina titulo="Início" subtitulo="O que precisa da sua atenção hoje." />
+    <div className="flex flex-col gap-6">
+      {/* Destaque */}
+      <section className="fundo-marca relative overflow-hidden rounded-[1.75rem] p-6 shadow-flutuante sm:p-8">
+        <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(70%_80%_at_80%_20%,black,transparent)]" aria-hidden />
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-white/75">{saudacao()}, {organizacao.nome}</p>
+            <p className="mt-4 text-sm font-medium text-white/75">A receber nos próximos 7 dias</p>
+            <p className="mt-1 text-4xl font-extrabold tracking-tight sm:text-5xl">{formatarBRL(aReceber)}</p>
+            <p className="mt-2 text-sm text-white/75">{(proximas ?? []).filter((o) => o.tipo !== "checkin").length} cobrança(s) programada(s)</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {[
+              { rotulo: "Rodando", valor: alugados },
+              { rotulo: "Ocupação", valor: `${ocupacao}%` },
+              { rotulo: "Frota", valor: v.length },
+            ].map((x) => (
+              <div key={x.rotulo} className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15 backdrop-blur sm:min-w-28">
+                <p className="text-xs font-medium text-white/70">{x.rotulo}</p>
+                <p className="text-2xl font-extrabold">{x.valor}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {emAndamento && (
-        <Cartao className="mb-6">
-          <p className="font-semibold">Primeiros passos</p>
-          <ol className="mt-3 grid gap-2 sm:grid-cols-2">
-            {passos.map((p) => (
-              <li key={p.titulo}>
-                <Link href={p.href as Route} className={`flex items-center gap-3 rounded-xl border border-borda px-3 py-3 transition-colors hover:bg-cartao-2 ${p.feito ? "text-suave" : ""}`}>
-                  {p.feito ? <CheckCircle2 className="text-ok" size={20} aria-hidden /> : <Circle className="text-borda-forte" size={20} aria-hidden />}
-                  <span className={p.feito ? "line-through" : "font-medium"}>{p.titulo}</span>
+      {feitos < passos.length && (
+        <Cartao>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="font-bold">Primeiros passos</p>
+              <p className="text-sm text-suave">{feitos} de {passos.length} concluídos</p>
+            </div>
+            <div className="h-2 w-40 rounded-full bg-cartao-2"><div className="h-2 rounded-full bg-marca" style={{ width: `${(feitos / passos.length) * 100}%` }} /></div>
+          </div>
+          <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {passos.map(({ feito, titulo, href, icone: Icone }, i) => (
+              <li key={titulo}>
+                <Link href={href as Route} className={`flex h-full items-center gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-cartao ${feito ? "border-borda bg-cartao-2" : "border-marca/30 bg-marca-suave/40"}`}>
+                  <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${feito ? "bg-ok-suave text-ok" : "bg-marca text-white"}`}>
+                    {feito ? <CheckCircle2 size={20} aria-hidden /> : <Icone size={20} aria-hidden />}
+                  </span>
+                  <span>
+                    <span className="block text-xs font-semibold text-suave">Passo {i + 1}</span>
+                    <span className={`block text-sm font-semibold ${feito ? "text-suave line-through" : ""}`}>{titulo}</span>
+                  </span>
                 </Link>
               </li>
             ))}
@@ -74,46 +116,126 @@ export default async function VisaoGeral() {
         </Cartao>
       )}
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Indicador icone={KeyRound} rotulo="Alugados" valor={v.filter((x) => x.status === "alugado").length} detalhe={`de ${v.length} veículo(s)`} />
-        <Indicador icone={Car} rotulo="Disponíveis" valor={v.filter((x) => x.status === "disponivel").length} tom="ok" />
-        <Indicador icone={UserCheck} rotulo="Para analisar" valor={m.filter((x) => x.status === "em_analise").length} tom="alerta" />
-        <Indicador icone={FileSignature} rotulo="Contratos ativos" valor={c.filter((x) => x.status === "ativo").length} tom="info" />
-      </section>
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="flex flex-col gap-6">
+          <section>
+            <CabecalhoSecao titulo="Precisa de você" />
+            {pendencias.length ? (
+              <Lista>
+                {pendencias.map((p) => (
+                  <ItemLista key={`${p.selo}${p.id}`} href={p.href} icone={p.icone} titulo={p.titulo} detalhe={p.detalhe} lateral={<Selo tom={p.tom}>{p.selo}</Selo>} />
+                ))}
+              </Lista>
+            ) : (
+              <Vazio icone={CheckCircle2} titulo="Tudo em dia">Nenhuma pendência agora.</Vazio>
+            )}
+          </section>
+          <section>
+            <CabecalhoSecao titulo="Próximos 7 dias" />
+            {proximas?.length ? (
+              <Lista>
+                {proximas.map((o) => (
+                  <ItemLista
+                    key={o.id}
+                    href={`/painel/contratos/${o.contrato_id}`}
+                    inicio={<DataCompacta iso={o.vencimento} />}
+                    titulo={TIPO_OBRIGACAO[o.tipo]}
+                    detalhe={nomeMotorista(o.contrato_id)}
+                    lateral={o.valor_centavos !== null ? <span className="font-bold">{formatarBRL(o.valor_centavos)}</span> : <Selo tom="info">Fotos</Selo>}
+                  />
+                ))}
+              </Lista>
+            ) : (
+              <Vazio icone={CalendarClock} titulo="Semana livre">Sem vencimentos nem check-ins nos próximos dias.</Vazio>
+            )}
+          </section>
+        </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Pendências</h2>
-          {pendencias.length ? (
-            <Lista>
-              {pendencias.map((p) => (
-                <ItemLista key={`${p.selo}${p.id}`} href={p.href as Route} icone={p.icone} titulo={p.titulo} detalhe={p.detalhe} lateral={<Selo tom={p.tom}>{p.selo}</Selo>} />
-              ))}
-            </Lista>
+          <CabecalhoSecao titulo="Sua frota" acao={<Link href="/painel/veiculos" className="inline-flex items-center gap-1 text-sm font-semibold text-marca">Ver todos <ArrowRight size={16} /></Link>} />
+          {v.length ? (
+            <Cartao className="flex flex-col gap-4">
+              <div className="flex flex-col items-center gap-5 sm:flex-row">
+                <Anel percentual={ocupacao} />
+                <div className="grid w-full flex-1 grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  {[
+                    { icone: KeyRound, rotulo: "Alugados", n: alugados, cor: "text-marca" },
+                    { icone: Car, rotulo: "Disponíveis", n: v.filter((x) => x.status === "disponivel").length, cor: "text-ok" },
+                    { icone: Wrench, rotulo: "Manutenção", n: v.filter((x) => x.status === "em_manutencao").length, cor: "text-alerta" },
+                    { icone: UserCheck, rotulo: "Em análise", n: m.filter((x) => x.status === "em_analise").length, cor: "text-info" },
+                  ].map(({ icone: Icone, rotulo, n, cor }) => (
+                    <div key={rotulo} className="flex items-center gap-2">
+                      <Icone size={16} className={cor} aria-hidden />
+                      <span className="text-suave">{rotulo}</span>
+                      <span className="ml-auto font-bold">{n}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <ul className="divide-y divide-borda border-t border-borda">
+                {v.slice(0, 5).map((x) => (
+                  <li key={x.id}>
+                    <Link href={`/painel/veiculos/${x.id}`} className="flex items-center justify-between gap-3 py-3 hover:text-marca">
+                      <span className="flex min-w-0 items-center gap-3">
+                        <Placa placa={x.placa} tamanho="sm" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">{x.modelo}</span>
+                          <span className="block text-xs text-suave">{x.odometro_atual.toLocaleString("pt-BR")} km</span>
+                        </span>
+                      </span>
+                      <Selo tom={STATUS_VEICULO[x.status].tom}>{STATUS_VEICULO[x.status].rotulo}</Selo>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Cartao>
           ) : (
-            <Vazio icone={CheckCircle2} titulo="Tudo em dia">Nenhuma pendência agora.</Vazio>
-          )}
-        </section>
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Próximos 7 dias</h2>
-          {proximas?.length ? (
-            <Lista>
-              {proximas.map((o) => (
-                <ItemLista
-                  key={o.id}
-                  href={`/painel/contratos/${o.contrato_id}` as Route}
-                  icone={CalendarClock}
-                  titulo={`${TIPO_OBRIGACAO[o.tipo]} · ${nomeMotorista(o.contrato_id)}`}
-                  detalhe={formatarData(data(o.vencimento))}
-                  lateral={o.valor_centavos !== null ? <span className="font-semibold">{formatarBRL(o.valor_centavos)}</span> : undefined}
-                />
-              ))}
-            </Lista>
-          ) : (
-            <Vazio icone={CalendarClock} titulo="Semana livre">Sem vencimentos nem check-ins nos próximos dias.</Vazio>
+            <Vazio icone={Car} titulo="Sem veículos" acao={<BotaoLink href="/painel/veiculos/novo" icone={Plus}>Cadastrar veículo</BotaoLink>}>Cadastre o primeiro carro da frota.</Vazio>
           )}
         </section>
       </div>
-    </>
+    </div>
+  );
+}
+
+function CabecalhoSecao({ titulo, acao }: { titulo: string; acao?: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <h2 className="text-lg font-bold tracking-tight">{titulo}</h2>
+      {acao}
+    </div>
+  );
+}
+
+const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+
+function DataCompacta({ iso }: { iso: string }) {
+  const d = data(iso);
+  return (
+    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-marca-suave leading-none text-marca" title={formatarData(d)}>
+      <span className="text-center">
+        <span className="block text-base font-extrabold">{d.slice(8, 10)}</span>
+        <span className="block text-[0.6rem] font-bold">{MESES[Number(d.slice(5, 7)) - 1]}</span>
+      </span>
+    </span>
+  );
+}
+
+function Anel({ percentual }: { percentual: number }) {
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative size-24 shrink-0">
+      <svg viewBox="0 0 80 80" className="size-full -rotate-90" aria-hidden>
+        <circle cx="40" cy="40" r={r} fill="none" stroke="var(--cartao-2)" strokeWidth="9" />
+        <circle cx="40" cy="40" r={r} fill="none" stroke="var(--marca)" strokeWidth="9" strokeLinecap="round" strokeDasharray={`${(percentual / 100) * c} ${c}`} />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-center">
+        <span>
+          <span className="block text-xl font-extrabold">{percentual}%</span>
+          <span className="block text-[0.65rem] font-semibold text-suave">ocupação</span>
+        </span>
+      </span>
+    </div>
   );
 }

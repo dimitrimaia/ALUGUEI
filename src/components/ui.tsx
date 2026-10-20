@@ -17,7 +17,7 @@ const TONS: Record<Tom, string> = {
 
 export function Cartao({ children, className = "", ...props }: ComponentProps<"div">) {
   return (
-    <div {...props} className={`rounded-2xl border border-borda bg-cartao p-4 shadow-cartao sm:p-5 ${className}`}>
+    <div {...props} className={`rounded-[1.25rem] border border-borda bg-cartao p-4 shadow-cartao sm:p-6 ${className}`}>
       {children}
     </div>
   );
@@ -43,7 +43,7 @@ export function CabecalhoPagina({
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-[1.75rem]">{titulo}</h1>
+          <h1 className="text-[1.6rem] leading-tight font-extrabold tracking-tight sm:text-3xl">{titulo}</h1>
           {subtitulo && <p className="mt-1 text-suave">{subtitulo}</p>}
         </div>
         {acao && <div className="flex shrink-0 flex-wrap gap-2">{acao}</div>}
@@ -62,12 +62,14 @@ export function Suave({ children, className = "" }: { children: ReactNode; class
 }
 
 const VARIANTES = {
-  primario: "border-transparent bg-marca text-marca-texto hover:bg-marca-forte shadow-cartao",
+  primario: "border-transparent bg-marca text-marca-texto hover:bg-marca-forte shadow-marca",
+  claro: "border-transparent bg-white text-[#0b2a6b] hover:bg-white/90 shadow-flutuante",
+  vidro: "border-white/25 bg-white/10 text-white hover:bg-white/20 backdrop-blur",
   secundario: "border-borda-forte bg-cartao text-texto hover:bg-cartao-2",
   perigo: "border-transparent bg-perigo text-white hover:opacity-90",
   fantasma: "border-transparent bg-transparent text-texto hover:bg-cartao-2",
 } as const;
-const TAMANHOS = { md: "h-11 px-4 text-[0.95rem]", lg: "h-13 px-5 text-base", sm: "h-9 px-3 text-sm" } as const;
+const TAMANHOS = { md: "h-11 px-4 text-[0.95rem]", lg: "h-13 px-6 text-base", sm: "h-9 px-3 text-sm" } as const;
 
 type Variante = keyof typeof VARIANTES;
 type Tamanho = keyof typeof TAMANHOS;
@@ -218,17 +220,22 @@ export function DadoRotulado({ rotulo, children }: { rotulo: string; children: R
   );
 }
 
-export function Marca({ className = "" }: { className?: string }) {
+/** Símbolo da marca: um "A" que é uma estrada, com a faixa central tracejada. */
+export function Simbolo({ className = "size-9" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 font-bold tracking-tight ${className}`}>
-      <span className="grid size-8 place-items-center rounded-lg bg-marca text-marca-texto">
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M5 16h14l-1.6-5.2A2 2 0 0 0 15.5 9.4h-7a2 2 0 0 0-1.9 1.4L5 16Z" />
-          <path d="M5 16v2.5M19 16v2.5" />
-          <circle cx="8" cy="16" r="0.6" fill="currentColor" />
-          <circle cx="16" cy="16" r="0.6" fill="currentColor" />
-        </svg>
-      </span>
+    <span className={`grid shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#3b74ff] to-[#1641b8] text-white shadow-marca ${className}`}>
+      <svg viewBox="0 0 24 24" className="size-[62%]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M4.5 20 11 4.5h2L19.5 20" />
+        <path d="M12 10.5v1.6M12 14.6v1.6M12 18.7V20" strokeWidth="2" />
+      </svg>
+    </span>
+  );
+}
+
+export function Marca({ className = "", inverso = false }: { className?: string; inverso?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-2.5 text-[1.15rem] font-extrabold tracking-tight ${inverso ? "text-white" : "text-texto"} ${className}`}>
+      <Simbolo />
       Aluguei
     </span>
   );
@@ -240,6 +247,18 @@ export function Avatar({ nome, tamanho = "md" }: { nome: string; tamanho?: "md" 
   return (
     <span className={`grid shrink-0 place-items-center rounded-full bg-marca-suave font-bold text-marca ${tamanho === "lg" ? "size-14 text-lg" : "size-10 text-sm"}`} aria-hidden>
       {letras}
+    </span>
+  );
+}
+
+/** Placa no estilo Mercosul (faixa azul com BRASIL), para reconhecer o carro de relance. */
+export function Placa({ placa, tamanho = "md" }: { placa: string; tamanho?: "sm" | "md" | "lg" }) {
+  const texto = /^[A-Z]{3}\d{4}$/.test(placa) ? `${placa.slice(0, 3)}-${placa.slice(3)}` : placa;
+  const t = { sm: "w-[5.2rem] text-[0.8rem]", md: "w-[6.4rem] text-[0.98rem]", lg: "w-[8.5rem] text-[1.3rem]" }[tamanho];
+  return (
+    <span className={`inline-flex shrink-0 flex-col overflow-hidden rounded-md border-[1.5px] border-[#1b2a44] bg-white text-center font-mono leading-none font-bold tracking-wider text-[#111827] shadow-sm ${t}`} aria-label={`Placa ${texto}`}>
+      <span className="bg-[#1f4bb8] py-[2px] text-[0.42em] font-sans font-bold tracking-[0.2em] text-white">BRASIL</span>
+      <span className="py-[0.28em]">{texto}</span>
     </span>
   );
 }
