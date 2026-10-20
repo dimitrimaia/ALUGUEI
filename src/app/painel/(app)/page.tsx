@@ -65,14 +65,14 @@ export default async function VisaoGeral() {
   return (
     <div className="flex flex-col gap-6">
       {/* Destaque */}
-      <section className="fundo-marca relative overflow-hidden rounded-[1.75rem] p-6 shadow-flutuante sm:p-8">
+      <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante sm:p-7">
         <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(70%_80%_at_80%_20%,black,transparent)]" aria-hidden />
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-medium text-white/75">{saudacao()}, {organizacao.nome}</p>
-            <p className="mt-4 text-sm font-medium text-white/75">A receber nos próximos 7 dias</p>
-            <p className="mt-1 text-4xl font-extrabold tracking-tight sm:text-5xl">{formatarBRL(aReceber)}</p>
-            <p className="mt-2 text-sm text-white/75">{(proximas ?? []).filter((o) => o.tipo !== "checkin").length} cobrança(s) programada(s)</p>
+            <p className="mt-3 text-sm font-medium text-white/75">A receber nos próximos 7 dias</p>
+            <p className="mt-1 text-[2rem] leading-tight font-extrabold tracking-tight sm:text-5xl">{formatarBRL(aReceber)}</p>
+            <p className="mt-2 text-sm text-white/75">{(() => { const n = (proximas ?? []).filter((o) => o.tipo !== "checkin").length; return n === 1 ? "1 cobrança programada" : `${n} cobranças programadas`; })()}</p>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
@@ -80,9 +80,9 @@ export default async function VisaoGeral() {
               { rotulo: "Ocupação", valor: `${ocupacao}%` },
               { rotulo: "Frota", valor: v.length },
             ].map((x) => (
-              <div key={x.rotulo} className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15 backdrop-blur sm:min-w-28">
+              <div key={x.rotulo} className="rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15 backdrop-blur sm:min-w-28 sm:px-4">
                 <p className="text-xs font-medium text-white/70">{x.rotulo}</p>
-                <p className="text-2xl font-extrabold">{x.valor}</p>
+                <p className="text-xl font-extrabold sm:text-2xl">{x.valor}</p>
               </div>
             ))}
           </div>
@@ -201,7 +201,7 @@ export default async function VisaoGeral() {
 function CabecalhoSecao({ titulo, acao }: { titulo: string; acao?: React.ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <h2 className="text-lg font-bold tracking-tight">{titulo}</h2>
+      <h2 className="text-base font-bold tracking-tight">{titulo}</h2>
       {acao}
     </div>
   );
@@ -225,14 +225,14 @@ function Anel({ percentual }: { percentual: number }) {
   const r = 34;
   const c = 2 * Math.PI * r;
   return (
-    <div className="relative size-24 shrink-0">
+    <div className="relative size-20 shrink-0">
       <svg viewBox="0 0 80 80" className="size-full -rotate-90" aria-hidden>
         <circle cx="40" cy="40" r={r} fill="none" stroke="var(--cartao-2)" strokeWidth="9" />
         <circle cx="40" cy="40" r={r} fill="none" stroke="var(--marca)" strokeWidth="9" strokeLinecap="round" strokeDasharray={`${(percentual / 100) * c} ${c}`} />
       </svg>
       <span className="absolute inset-0 grid place-items-center text-center">
         <span>
-          <span className="block text-xl font-extrabold">{percentual}%</span>
+          <span className="block text-lg font-extrabold">{percentual}%</span>
           <span className="block text-[0.65rem] font-semibold text-suave">ocupação</span>
         </span>
       </span>

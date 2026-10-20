@@ -10,18 +10,13 @@ import { ACOES_PERFIL, BotaoPerfil } from "./escolha-perfil";
 
 type Perfil = "locador" | "motorista";
 
-const SECOES: Record<Perfil, { href: string; rotulo: string; icone: typeof Tag }[]> = {
-  locador: [
-    { href: "#como-funciona", rotulo: "Como funciona", icone: ListOrdered },
-    { href: "#recursos", rotulo: "Recursos", icone: Layers },
-    { href: "#preco", rotulo: "Preço", icone: Tag },
-    { href: "#duvidas", rotulo: "Dúvidas", icone: CircleHelp },
-  ],
-  motorista: [
-    { href: "#convite", rotulo: "Como funciona", icone: ListOrdered },
-    { href: "#duvidas", rotulo: "Dúvidas", icone: CircleHelp },
-  ],
-};
+// As duas versões têm as mesmas seções, com os mesmos endereços.
+const SECOES = [
+  { href: "#como-funciona", rotulo: "Como funciona", icone: ListOrdered },
+  { href: "#recursos", rotulo: "Recursos", icone: Layers },
+  { href: "#preco", rotulo: "Preço", icone: Tag },
+  { href: "#duvidas", rotulo: "Dúvidas", icone: CircleHelp },
+];
 
 /**
  * Página inicial com duas versões, alternadas pelo seletor flutuante:
@@ -53,16 +48,17 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
   const sobreAzul = perfil === "locador" && !rolou;
 
   return (
-    <div className="min-h-dvh bg-cartao">
+    // A visão do motorista é sempre clara, mesmo com o aparelho no tema escuro.
+    <div className={`min-h-dvh bg-cartao ${perfil === "motorista" ? "tema-claro" : ""}`}>
       <header
         className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${sobreAzul ? "text-white" : "border-b border-borda bg-cartao/90 text-texto shadow-cartao backdrop-blur"}`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
           <Link href="/" aria-label="Aluguei, início" onClick={() => window.scrollTo({ top: 0 })}>
             <Marca inverso={sobreAzul} />
           </Link>
           <nav className={`hidden items-center gap-6 text-sm font-semibold md:flex ${sobreAzul ? "text-white/80" : "text-suave"}`} aria-label="Seções">
-            {SECOES[perfil].map((s) => <a key={s.href} href={s.href} className="hover:text-current hover:opacity-100">{s.rotulo}</a>)}
+            {SECOES.map((s) => <a key={s.href} href={s.href} className="hover:text-current hover:opacity-100">{s.rotulo}</a>)}
           </nav>
           <div className="hidden items-center gap-2 md:flex">
             <BotaoPerfil tipo="entrar" rotulo="Entrar" estilo={sobreAzul ? "text-white hover:bg-white/10" : "hover:bg-cartao-2"} />
@@ -72,7 +68,7 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
             onClick={() => setMenu(true)}
             aria-label="Abrir menu"
             aria-expanded={menu}
-            className={`grid size-11 place-items-center rounded-xl md:hidden ${sobreAzul ? "bg-white/10 ring-1 ring-white/20" : "bg-cartao-2"}`}
+            className={`grid size-10 place-items-center rounded-xl md:hidden ${sobreAzul ? "bg-white/10 ring-1 ring-white/20" : "bg-cartao-2"}`}
           >
             <Menu size={22} />
           </button>
@@ -97,7 +93,7 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
               role="tab"
               aria-selected={perfil === id}
               onClick={() => trocar(id)}
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-colors ${perfil === id ? "bg-marca text-white shadow-marca" : "text-suave hover:text-texto"}`}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors ${perfil === id ? "bg-marca text-white shadow-marca" : "text-suave hover:text-texto"}`}
             >
               <Icone size={17} /> {rotulo}
             </button>
@@ -109,7 +105,7 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
         <div className="flex flex-1 flex-col px-5 pt-5 pb-6">
           <Link href="/" onClick={() => setMenu(false)} className="w-fit"><Marca inverso /></Link>
           <nav className="mt-8 flex flex-col gap-1" aria-label="Seções">
-            {SECOES[perfil].map(({ href, rotulo, icone: Icone }) => (
+            {SECOES.map(({ href, rotulo, icone: Icone }) => (
               <a key={href} href={href} onClick={() => setMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 font-semibold text-white/85 hover:bg-white/[0.07]">
                 <Icone size={20} className="text-[#7dd3fc]" /> {rotulo}
               </a>

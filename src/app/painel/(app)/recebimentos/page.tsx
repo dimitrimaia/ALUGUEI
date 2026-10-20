@@ -16,16 +16,18 @@ export default async function Recebimentos() {
     <div className="max-w-4xl">
       <CabecalhoPagina titulo="Recebimentos" subtitulo="Onde cai o Pix que os motoristas pagam." />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-5 grid gap-2.5 sm:grid-cols-3">
         {[
           { icone: Landmark, titulo: "Conta sua", texto: "O Pix cai numa conta Asaas no seu nome. A plataforma não guarda o seu dinheiro." },
           { icone: QrCode, titulo: "Pix automático", texto: "Cada aluguel vira um Pix com QR Code. A baixa é automática quando o motorista paga." },
           { icone: Split, titulo: "Taxa no próprio Pix", texto: `A mensalidade sai por carro alugado: ${formatarBRL(taxaSemana)} por semana. Carro parado não paga.` },
         ].map(({ icone: Icone, titulo, texto }) => (
-          <Cartao key={titulo}>
-            <span className="grid size-10 place-items-center rounded-xl bg-marca-suave text-marca"><Icone size={20} /></span>
-            <p className="mt-3 font-bold">{titulo}</p>
-            <p className="mt-1 text-sm text-suave">{texto}</p>
+          <Cartao key={titulo} className="flex gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-marca-suave text-marca"><Icone size={16} /></span>
+            <div>
+              <p className="text-sm font-bold">{titulo}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-suave">{texto}</p>
+            </div>
           </Cartao>
         ))}
       </div>
@@ -33,7 +35,7 @@ export default async function Recebimentos() {
       {conta ? (
         <Cartao>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-lg font-bold"><BadgeCheck className="text-ok" /> Recebimentos ativos</p>
+            <p className="flex items-center gap-2 font-bold"><BadgeCheck size={18} className="text-ok" /> Recebimentos ativos</p>
             <span className="flex gap-2"><Selo tom="ok">Conta Asaas criada</Selo>{pixAtivo ? <Selo tom="ok">Pix ativo</Selo> : <Selo tom="alerta">Pix sendo liberado</Selo>}</span>
           </div>
           <dl className="divide-y divide-borda">
@@ -49,7 +51,7 @@ export default async function Recebimentos() {
         <Aviso tom="alerta">Só o dono da conta pode ativar os recebimentos.</Aviso>
       ) : (
         <Cartao>
-          <p className="text-lg font-bold">Ativar recebimentos</p>
+          <p className="font-bold">Ativar recebimentos</p>
           <p className="mt-1 mb-5 text-sm text-suave">Dados exigidos pelo Banco Central para abrir a conta de recebimento em nome de {organizacao.nome}.</p>
           <FormularioRecebimentos pessoaFisica={organizacao.documento.length === 11} />
         </Cartao>

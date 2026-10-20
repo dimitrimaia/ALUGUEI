@@ -1,7 +1,7 @@
+import { LOCADOR, MOTORISTA } from "@/components/site/conteudo";
+import { PaginaPerfil } from "@/components/site/pagina-perfil";
 import { SiteInicial } from "@/components/site/site-inicial";
-import { VersaoLocador } from "@/components/site/versao-locador";
-import { VersaoMotorista } from "@/components/site/versao-motorista";
 
 export default function Inicio() {
-  return <SiteInicial locador={<VersaoLocador />} motorista={<VersaoMotorista />} />;
+  return <SiteInicial locador={<PaginaPerfil c={LOCADOR} />} motorista={<PaginaPerfil c={MOTORISTA} />} />;
 }

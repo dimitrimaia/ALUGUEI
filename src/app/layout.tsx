@@ -14,6 +14,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // App em tela cheia: sem zoom por pinça nem zoom automático ao focar campos.
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f3f6fb" },

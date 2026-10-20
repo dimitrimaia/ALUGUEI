@@ -67,11 +67,34 @@ export default async function Financeiro() {
         <Indicador icone={Split} rotulo="Taxa Aluguei no mês" valor={formatarBRL(taxa)} tom="info" detalhe="Descontada no próprio Pix" />
       </section>
 
-      <h2 className="mt-8 mb-3 text-lg font-bold tracking-tight">Cobranças</h2>
+      <h2 className="mt-7 mb-3 text-base font-bold tracking-tight">Cobranças</h2>
       {!lista.length ? (
         <Vazio icone={CircleDollarSign} titulo="Nenhuma cobrança ainda">As cobranças são geradas 3 dias antes de cada vencimento, ou na hora pela ficha do contrato.</Vazio>
       ) : (
-        <Cartao className="overflow-hidden p-0 sm:p-0">
+        <>
+        <div className="divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao md:hidden">
+          {lista.map((c) => {
+            const atrasada = (c.status === "emitida" || c.status === "vencida") && c.vencimento < dia;
+            const s = atrasada ? STATUS.vencida : STATUS[c.status as keyof typeof STATUS] ?? STATUS.emitida;
+            return (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{nome(c.contrato_id)}</p>
+                  <p className="text-xs text-suave">{tipo(c.obrigacao_id)} · {formatarData(data(c.vencimento))}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-sm font-bold tabular-nums">{formatarBRL(c.valor_pago_centavos ?? c.valor_centavos)}</span>
+                  {c.status !== "paga" && c.status !== "cancelada" ? (
+                    <BotaoAcao acao={registrarPagamentoPorFora.bind(null, c.id)} rotulo="Recebi por fora" confirmar="Marcar como pago?" />
+                  ) : (
+                    <Selo tom={s.tom}>{s.rotulo}</Selo>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <Cartao className="hidden overflow-hidden p-0 sm:p-0 md:block">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[44rem] text-sm">
               <thead className="bg-cartao-2 text-left text-xs font-semibold tracking-wide text-suave uppercase">
@@ -110,6 +133,7 @@ export default async function Financeiro() {
             </table>
           </div>
         </Cartao>
+        </>
       )}
     </>
   );

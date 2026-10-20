@@ -62,7 +62,7 @@ export default async function Motorista() {
             <p className="mt-4 text-sm text-white/75">
               {proximoPagamento ? `Próximo pagamento · ${nomeDiaDaSemana(diaDaSemana(data(proximoPagamento.vencimento)))}, ${formatarData(data(proximoPagamento.vencimento)).slice(0, 5)}` : "Nenhum pagamento nos próximos dias"}
             </p>
-            <p className="text-[2.6rem] leading-tight font-extrabold tracking-tight">{proximoPagamento ? formatarBRL(proximoPagamento.valor_centavos ?? 0) : "R$ 0,00"}</p>
+            <p className="text-[2.2rem] leading-tight font-extrabold tracking-tight">{proximoPagamento ? formatarBRL(proximoPagamento.valor_centavos ?? 0) : "R$ 0,00"}</p>
             {proximoPagamento && <p className="text-sm text-white/75">{TIPO_OBRIGACAO[proximoPagamento.tipo]}</p>}
             <div className="mt-5 grid grid-cols-2 gap-2">
               {proximoPagamento ? (

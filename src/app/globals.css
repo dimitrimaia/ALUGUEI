@@ -53,6 +53,26 @@
   }
 }
 
+/* Força o tema claro num trecho da página, independente do tema do aparelho. */
+.tema-claro {
+  --fundo: #f3f6fb;
+  --cartao: #ffffff;
+  --cartao-2: #f6f8fc;
+  --borda: #e3e8f1;
+  --borda-forte: #cdd5e3;
+  --texto: #0b1630;
+  --suave: #5b6880;
+  --marca: #1f56e8;
+  --marca-forte: #1641b8;
+  --marca-suave: #e8efff;
+  --ok: #0f8a4b;
+  --ok-suave: #dcf5e7;
+  --alerta: #b45309;
+  --alerta-suave: #fff1d6;
+  color-scheme: light;
+  color: var(--texto);
+}
+
 @theme inline {
   --color-fundo: var(--fundo);
   --color-cartao: var(--cartao);
@@ -83,6 +103,15 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Nada pode alargar a página no celular. */
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 body {

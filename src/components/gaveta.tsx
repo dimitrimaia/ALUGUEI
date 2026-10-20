@@ -46,7 +46,8 @@ export function Gaveta({
   }, [aberta]);
 
   return (
-    <div className={`fixed inset-0 z-50 ${aberta ? "" : "pointer-events-none"}`} aria-hidden={!aberta}>
+    // overflow-hidden + invisible: fechada, a gaveta não pode ficar fora da tela alargando a página.
+    <div className={`fixed inset-0 z-50 overflow-hidden ${aberta ? "visible" : "pointer-events-none invisible delay-300"}`} aria-hidden={!aberta}>
       <button
         tabIndex={aberta ? 0 : -1}
         aria-label="Fechar menu"
