@@ -1,7 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import { useState, useTransition } from "react";
+import { type ReactNode, useState, useTransition } from "react";
 import { Botao } from "@/components/ui";
 
 /** Botão que chama uma ação do servidor e mostra o resultado; com `confirmar`, pede confirmação na própria tela. */
@@ -16,7 +15,8 @@ export function BotaoAcao({
   acao: () => Promise<{ erro?: string; ok?: string }>;
   rotulo: string;
   confirmar?: string;
-  icone?: LucideIcon;
+  /** Elemento do ícone (ex.: <RefreshCw size={18} />); componentes não podem ser passados do servidor. */
+  icone?: ReactNode;
   variante?: "primario" | "secundario";
   tamanho?: "sm" | "md";
 }) {
@@ -39,7 +39,8 @@ export function BotaoAcao({
           <Botao tamanho="sm" variante="fantasma" onClick={() => setPedindo(false)}>Cancelar</Botao>
         </span>
       ) : (
-        <Botao tamanho={tamanho} variante={variante} icone={icone} disabled={pendente} onClick={() => (confirmar ? setPedindo(true) : executar())}>
+        <Botao tamanho={tamanho} variante={variante} disabled={pendente} onClick={() => (confirmar ? setPedindo(true) : executar())}>
+          {icone}
           {pendente ? "Aguarde…" : rotulo}
         </Botao>
       )}

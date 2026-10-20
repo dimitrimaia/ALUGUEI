@@ -21,6 +21,19 @@ export async function proxy(request: NextRequest) {
     },
   });
 
+  // Link de e-mail expirado: o Supabase devolve para a raiz com ?error=; mandamos para o login com aviso.
+  if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("error_code")) {
+    const destino = request.nextUrl.clone();
+    destino.pathname = "/entrar";
+    destino.search = "?erro=link";
+    return NextResponse.redirect(destino);
+  }
+  if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("code")) {
+    const destino = request.nextUrl.clone();
+    destino.pathname = "/auth/callback";
+    return NextResponse.redirect(destino);
+  }
+
   const { data } = await supabase.auth.getClaims();
   const caminho = request.nextUrl.pathname;
   const protegida = AREAS_PROTEGIDAS.some((a) => caminho === a || caminho.startsWith(`${a}/`));

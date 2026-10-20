@@ -22,12 +22,14 @@ export default async function Financeiro() {
   const supabase = await supabaseServidor();
   const dia = hoje();
   const inicioMes = `${dia.slice(0, 7)}-01`;
-  const [conta, { data: cobrancas }, { data: contratos }, { data: locatarios }] = await Promise.all([
+  const [conta, { data: cobrancas }, { data: contratos }, { data: locatarios }, { data: obrigacoes }] = await Promise.all([
     contaDoLocador(organizacao.id),
     supabase.from("cobrancas").select("*").eq("organizacao_id", organizacao.id).order("vencimento", { ascending: false }).limit(100),
     supabase.from("contratos").select("id, locatario_id").eq("organizacao_id", organizacao.id),
     supabase.from("locatarios").select("id, nome").eq("organizacao_id", organizacao.id),
+    supabase.from("obrigacoes").select("id, tipo").eq("organizacao_id", organizacao.id).neq("tipo", "checkin"),
   ]);
+  const tipo = (obrigacaoId: string | null) => (obrigacoes?.find((o) => o.id === obrigacaoId)?.tipo === "caucao_parcela" ? "Caução" : "Aluguel");
   const lista = cobrancas ?? [];
   const nome = (contratoId: string) => locatarios?.find((l) => l.id === contratos?.find((c) => c.id === contratoId)?.locatario_id)?.nome ?? "—";
   const pagasNoMes = lista.filter((c) => c.status === "paga" && c.pago_em && c.pago_em.slice(0, 10) >= inicioMes);
@@ -44,7 +46,7 @@ export default async function Financeiro() {
         subtitulo="Cobranças Pix, pagamentos e atrasos."
         acao={
           <>
-            <BotaoAcao acao={atualizarCobrancas} rotulo="Atualizar" icone={RefreshCw} tamanho="md" />
+            <BotaoAcao acao={atualizarCobrancas} rotulo="Atualizar" icone={<RefreshCw size={18} aria-hidden />} tamanho="md" />
             <BotaoLink href="/painel/financeiro/exportar" variante="secundario" icone={ArrowDownToLine} prefetch={false}>Exportar CSV</BotaoLink>
           </>
         }
@@ -76,6 +78,7 @@ export default async function Financeiro() {
                 <tr>
                   <th className="px-5 py-3">Vencimento</th>
                   <th className="px-5 py-3">Motorista</th>
+                  <th className="px-5 py-3">Tipo</th>
                   <th className="px-5 py-3 text-right">Valor</th>
                   <th className="px-5 py-3">Situação</th>
                   <th className="px-5 py-3 text-right">Ação</th>
@@ -89,6 +92,7 @@ export default async function Financeiro() {
                     <tr key={c.id} className="hover:bg-cartao-2/60">
                       <td className="px-5 py-3.5 font-medium tabular-nums">{formatarData(data(c.vencimento))}</td>
                       <td className="px-5 py-3.5">{nome(c.contrato_id)}</td>
+                      <td className="px-5 py-3.5 text-suave">{tipo(c.obrigacao_id)}</td>
                       <td className="px-5 py-3.5 text-right font-bold tabular-nums">
                         {formatarBRL(c.valor_pago_centavos ?? c.valor_centavos)}
                         {c.valor_pago_centavos !== null && c.valor_pago_centavos > c.valor_centavos && <span className="block text-xs font-medium text-alerta">com encargos</span>}

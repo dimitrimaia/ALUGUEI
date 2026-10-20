@@ -2,13 +2,14 @@ import { BadgeCheck, Landmark, QrCode, Split } from "lucide-react";
 import { Aviso, CabecalhoPagina, Cartao, DadoRotulado, Selo } from "@/components/ui";
 import { taxaPlataformaDoPeriodo } from "@/dominio/plataforma/taxa";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
-import { contaDoLocador } from "@/lib/cobrancas";
+import { contaDoLocador, garantirPixAtivo } from "@/lib/cobrancas";
 import { exigirEquipe } from "@/lib/sessao";
 import { FormularioRecebimentos } from "./formulario";
 
 export default async function Recebimentos() {
   const { organizacao, papel } = await exigirEquipe();
   const conta = await contaDoLocador(organizacao.id);
+  const pixAtivo = conta ? await garantirPixAtivo(conta.chaveApi).catch(() => false) : false;
   const taxaSemana = taxaPlataformaDoPeriodo(organizacao.mensalidade_por_carro_centavos, 7);
 
   return (
@@ -33,7 +34,7 @@ export default async function Recebimentos() {
         <Cartao>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="flex items-center gap-2 text-lg font-bold"><BadgeCheck className="text-ok" /> Recebimentos ativos</p>
-            <Selo tom="ok">Conta Asaas criada</Selo>
+            <span className="flex gap-2"><Selo tom="ok">Conta Asaas criada</Selo>{pixAtivo ? <Selo tom="ok">Pix ativo</Selo> : <Selo tom="alerta">Pix sendo liberado</Selo>}</span>
           </div>
           <dl className="divide-y divide-borda">
             <DadoRotulado rotulo="Titular">{organizacao.nome}</DadoRotulado>
@@ -41,6 +42,7 @@ export default async function Recebimentos() {
             <DadoRotulado rotulo="Carteira">{conta.wallet_id}</DadoRotulado>
             <DadoRotulado rotulo="E-mail de acesso">{(conta.dados as { email?: string } | null)?.email ?? "—"}</DadoRotulado>
           </dl>
+          {!pixAtivo && <div className="mt-4"><Aviso tom="alerta" titulo="Pix sendo liberado">O banco leva alguns minutos para liberar o Pix de uma conta nova. Esta página tenta ativar a chave Pix toda vez que é aberta.</Aviso></div>}
           <p className="mt-4 text-sm text-suave">O Asaas manda um e-mail para você criar a senha e acompanhar o saldo e os saques pelo app dele.</p>
         </Cartao>
       ) : papel !== "dono" ? (

@@ -42,10 +42,15 @@ async function chamar<T>(chaveApi: string, metodo: "GET" | "POST" | "DELETE", ca
   return json as T;
 }
 
+/**
+ * Chave da conta da plataforma. As chaves do Asaas começam com "$", que alguns
+ * carregadores de .env tentam expandir como variável; por isso aceitamos a chave
+ * com ou sem o "$" e o recolocamos aqui.
+ */
 export function chavePlataforma(): string {
-  const chave = process.env.ASAAS_API_KEY;
+  const chave = process.env.ASAAS_API_KEY?.trim().replace(/^\\/, "");
   if (!chave) throw new Error("ASAAS_API_KEY não configurada");
-  return chave;
+  return chave.startsWith("$") ? chave : `$${chave}`;
 }
 
 export function walletPlataforma(): string {

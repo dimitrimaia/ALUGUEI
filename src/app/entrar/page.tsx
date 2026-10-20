@@ -2,8 +2,8 @@ import { CalendarCheck, Camera, ShieldCheck } from "lucide-react";
 import { Marca } from "@/components/ui";
 import { FormularioEntrar } from "./formulario";
 
-export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string }> }) {
-  const { voltar } = await searchParams;
+export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string }> }) {
+  const { voltar, erro } = await searchParams;
   // Só aceita caminhos internos, para o link de login não virar redirecionamento aberto.
   const destino = voltar?.startsWith("/") && !voltar.startsWith("//") ? voltar : "/m";
   return (
@@ -33,7 +33,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
         <div className="mx-auto w-full max-w-sm rounded-[1.5rem] border border-borda bg-cartao p-6 shadow-flutuante lg:border-0 lg:p-0 lg:shadow-none">
           <h2 className="text-xl font-extrabold tracking-tight">Entrar</h2>
           <p className="mt-1 mb-6 text-sm text-suave">Enviamos um código para confirmar que é você.</p>
-          <FormularioEntrar destino={destino} />
+          <FormularioEntrar destino={destino} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um código novo." : undefined} />
         </div>
       </section>
     </main>

@@ -14,6 +14,7 @@ import {
   criarCobrancaPix,
   criarSubconta,
   estaPaga,
+  listarChavesPix,
   qrCodePix,
   valorEmCentavos,
   walletPlataforma,
@@ -23,6 +24,22 @@ import { cifrar, decifrar } from "./cifra";
 import { supabaseAdmin } from "./supabase/admin";
 
 const PROVEDOR = "asaas";
+
+export class PixIndisponivel extends Error {}
+
+/**
+ * Garante uma chave Pix ativa na subconta. Logo depois de aprovada, a conta
+ * leva alguns minutos para liberar o Pix; até lá, avisamos em vez de falhar.
+ */
+export async function garantirPixAtivo(chaveApi: string): Promise<boolean> {
+  if ((await listarChavesPix(chaveApi)).length) return true;
+  try {
+    await criarChavePixAleatoria(chaveApi);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function contaDoLocador(organizacaoId: string) {
   const { data } = await supabaseAdmin().from("contas_pagamento").select("*").eq("organizacao_id", organizacaoId).eq("provedor", PROVEDOR).maybeSingle();
@@ -91,6 +108,9 @@ export async function emitirCobranca(obrigacaoId: string): Promise<Linha<"cobran
       ? taxaPlataformaDoPeriodo(org?.mensalidade_por_carro_centavos ?? 25000, diasEntre(lerData(o.periodo_inicio), lerData(o.periodo_fim)))
       : 0;
 
+  if (!(await garantirPixAtivo(conta.chaveApi))) {
+    throw new PixIndisponivel("O Pix do locador ainda está sendo liberado pelo banco. Tente de novo em alguns minutos.");
+  }
   const clienteId = await garantirCliente(o.organizacao_id, conta.chaveApi, l);
   const [jaCriada] = await cobrancasPorReferencia(conta.chaveApi, o.chave);
   const vencimento = (o.vencimento < hoje() ? hoje() : o.vencimento) as DataISO;

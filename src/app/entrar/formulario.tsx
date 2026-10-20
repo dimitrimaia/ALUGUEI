@@ -8,13 +8,13 @@ import { supabaseNavegador } from "@/lib/supabase/navegador";
 
 type Canal = "celular" | "email";
 
-export function FormularioEntrar({ destino }: { destino: string }) {
+export function FormularioEntrar({ destino, erroInicial }: { destino: string; erroInicial?: string }) {
   const router = useRouter();
   const [canal, setCanal] = useState<Canal>("celular");
   const [contato, setContato] = useState("");
   const [enviadoPara, setEnviadoPara] = useState<string | null>(null);
   const [codigo, setCodigo] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(erroInicial ?? null);
   const [ocupado, setOcupado] = useState(false);
 
   async function enviarCodigo(e: React.FormEvent) {
@@ -30,7 +30,11 @@ export function FormularioEntrar({ destino }: { destino: string }) {
     const { error } =
       canal === "celular"
         ? await supabase.auth.signInWithOtp({ phone: alvo })
-        : await supabase.auth.signInWithOtp({ email: alvo });
+        : await supabase.auth.signInWithOtp({
+            email: alvo,
+            // Se o e-mail chegar com link em vez de código, o link volta para cá já logado.
+            options: { emailRedirectTo: `${window.location.origin}/auth/callback?voltar=${encodeURIComponent(destino)}` },
+          });
     setOcupado(false);
     if (error) return setErro("Não foi possível enviar o código. Tente de novo em instantes.");
     setEnviadoPara(alvo);
@@ -57,7 +61,10 @@ export function FormularioEntrar({ destino }: { destino: string }) {
   if (enviadoPara) {
     return (
       <form onSubmit={verificar} className="flex flex-col gap-4">
-        <p className="text-sm">Enviamos um código para <strong>{enviadoPara}</strong>.</p>
+        <p className="text-sm">
+          Enviamos um código para <strong>{enviadoPara}</strong>.
+          {canal === "email" && " Se chegar um link em vez do código, é só tocar nele neste mesmo aparelho."}
+        </p>
         <Campo rotulo="Código">
           <input
             className={`${classeEntrada} h-13 text-center text-2xl font-bold tracking-[0.4em]`}

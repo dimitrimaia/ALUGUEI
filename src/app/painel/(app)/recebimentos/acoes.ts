@@ -43,6 +43,7 @@ export async function ativarRecebimentos(_: EstadoRecebimentos, form: FormData):
   if (pf && !d.dataNascimento) return { erros: { dataNascimento: "Obrigatória para pessoa física" } };
   if (!pf && !d.tipoEmpresa) return { erros: { tipoEmpresa: "Escolha o tipo de empresa" } };
 
+  const site = await urlDoSite();
   try {
     await configurarRecebimentos(organizacao.id, usuario.id, {
       nome: organizacao.nome,
@@ -53,8 +54,9 @@ export async function ativarRecebimentos(_: EstadoRecebimentos, form: FormData):
       celular: d.celular,
       rendaMensal: d.rendaMensal,
       endereco: { logradouro: d.logradouro, numero: d.numero, complemento: d.complemento, bairro: d.bairro, cep: d.cep },
-      webhook: process.env.ASAAS_WEBHOOK_TOKEN
-        ? { url: `${await urlDoSite()}/api/webhooks/asaas`, token: process.env.ASAAS_WEBHOOK_TOKEN, email: d.email }
+      // O Asaas só aceita aviso de pagamento em endereço público com HTTPS.
+      webhook: process.env.ASAAS_WEBHOOK_TOKEN && site.startsWith("https://")
+        ? { url: `${site}/api/webhooks/asaas`, token: process.env.ASAAS_WEBHOOK_TOKEN, email: d.email }
         : undefined,
     });
   } catch (e) {
