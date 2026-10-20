@@ -2,21 +2,40 @@
 
 :root {
   --fundo: #f7f7f5;
+  --cartao: #ffffff;
+  --borda: #e3e3de;
   --texto: #1b1b1a;
   --suave: #6b6b66;
   --marca: #0f766e;
+  --marca-texto: #ffffff;
+  --ok: #15803d;
+  --alerta: #b45309;
+  --perigo: #b91c1c;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --fundo: #141413;
+    --cartao: #1e1e1c;
+    --borda: #33332f;
     --texto: #ededea;
     --suave: #a3a39d;
     --marca: #2dd4bf;
+    --marca-texto: #08201d;
+    --ok: #4ade80;
+    --alerta: #fbbf24;
+    --perigo: #f87171;
   }
 }
 
 body {
   background: var(--fundo);
   color: var(--texto);
+}
+
+input,
+select,
+textarea {
+  border-color: var(--borda);
+  background: var(--cartao);
 }

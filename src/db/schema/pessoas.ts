@@ -1,6 +1,13 @@
 import { boolean, date, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { criadoEm, id, organizacaoId } from "./comum";
 
+export interface Oferta {
+  aluguelSemanal: number;
+  caucao: number;
+  franquiaKmMensal: number;
+  prazoMeses: number;
+}
+
 export const statusAnalise = pgEnum("status_analise", ["convidado", "em_cadastro", "em_analise", "aprovado", "recusado"]);
 
 /** Locatário no contexto de um locador. A mesma pessoa pode alugar de dois locadores. */
@@ -27,6 +34,10 @@ export const locatarios = pgTable(
     decididoPor: uuid("decidido_por"),
     decididoEm: timestamp("decidido_em", { withTimezone: true }),
     tokenConvite: text("token_convite").unique(),
+    conviteExpiraEm: timestamp("convite_expira_em", { withTimezone: true }),
+    /** Condições oferecidas junto com o convite (RF-020): veículo, valores, prazo. */
+    veiculoOfertadoId: uuid("veiculo_ofertado_id"),
+    oferta: jsonb("oferta").$type<Oferta>(),
     criadoEm: criadoEm(),
   },
   (t) => [index("locatarios_org").on(t.organizacaoId)],

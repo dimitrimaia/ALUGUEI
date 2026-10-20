@@ -14,6 +14,7 @@ export const evidencias = pgTable(
     organizacaoId: organizacaoId(),
     contratoId: uuid("contrato_id").references(() => contratos.id),
     veiculoId: uuid("veiculo_id").references(() => veiculos.id),
+    locatarioId: uuid("locatario_id"), // documentos do cadastro (CNH, identidade, print do app)
     tipo: text("tipo").notNull(), // foto | video | pdf | notificacao | aceite
     finalidade: text("finalidade").notNull(), // ex.: checkin.painel, vistoria.entrega.frente
     caminhoStorage: text("caminho_storage").notNull(),

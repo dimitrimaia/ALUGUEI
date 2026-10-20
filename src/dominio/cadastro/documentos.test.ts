@@ -1,0 +1,26 @@
+import { describe, expect, it } from "vitest";
+import { cpfValido, formatarCpf, formatarPlaca, normalizarPlaca } from "./documentos";
+
+describe("cpfValido", () => {
+  it.each(["529.982.247-25", "52998224725", "111.444.777-35"])("aceita %s", (cpf) => {
+    expect(cpfValido(cpf)).toBe(true);
+  });
+  it.each(["529.982.247-24", "111.111.111-11", "123"])("rejeita %s", (cpf) => {
+    expect(cpfValido(cpf)).toBe(false);
+  });
+  it("formata", () => {
+    expect(formatarCpf("52998224725")).toBe("529.982.247-25");
+  });
+});
+
+describe("placa", () => {
+  it("normaliza placa antiga e Mercosul", () => {
+    expect(normalizarPlaca("abc-1234")).toBe("ABC1234");
+    expect(normalizarPlaca("RTA 1B23")).toBe("RTA1B23");
+    expect(normalizarPlaca("AB12345")).toBeNull();
+  });
+  it("formata a antiga com traço", () => {
+    expect(formatarPlaca("ABC1234")).toBe("ABC-1234");
+    expect(formatarPlaca("RTA1B23")).toBe("RTA1B23");
+  });
+});

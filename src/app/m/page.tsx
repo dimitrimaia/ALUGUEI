@@ -1,20 +1,55 @@
-/** Tela inicial do motorista (RF-121). Mobile-first, pensada para Android. */
-export default function Motorista() {
+import type { Route } from "next";
+import { BotaoLink, Cartao, Selo, Suave } from "@/components/ui";
+import { exigirUsuario } from "@/lib/sessao";
+import { cadastrosDoMotorista } from "@/lib/motorista";
+import { STATUS_LOCATARIO } from "@/lib/rotulos";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+/** Tela inicial do motorista (RF-121). Pagamento, km e check-in aparecem quando houver contrato. */
+export default async function Motorista() {
+  const usuario = await exigirUsuario("/m");
+  const cadastros = await cadastrosDoMotorista(usuario.id);
+  const orgs = cadastros.length
+    ? (await supabaseAdmin().from("organizacoes").select("id, nome").in("id", cadastros.map((c) => c.organizacao_id))).data ?? []
+    : [];
+  const nomeOrg = (id: string) => orgs.find((o) => o.id === id)?.nome ?? "Locador";
+
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
-      <h1 className="text-xl font-semibold">Olá!</h1>
-      <div className="rounded-xl border p-4">
-        <p className="text-sm" style={{ color: "var(--suave)" }}>Próximo vencimento</p>
-        <p className="text-2xl font-semibold">—</p>
-        <button className="mt-3 w-full rounded-lg p-3 font-medium text-white" style={{ background: "var(--marca)" }}>
-          Pagar com Pix
-        </button>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Olá{cadastros[0] ? `, ${cadastros[0].nome.split(" ")[0]}` : ""}!</h1>
+        <form action="/sair" method="post">
+          <button className="text-sm underline" style={{ color: "var(--suave)" }}>Sair</button>
+        </form>
       </div>
-      <div className="rounded-xl border p-4">
-        <p className="text-sm" style={{ color: "var(--suave)" }}>Km do mês / franquia</p>
-        <p className="text-lg font-semibold">— / 6.000 km</p>
-      </div>
-      <button className="rounded-xl border p-4 text-left font-medium">Fazer check-in de segunda</button>
+
+      {!cadastros.length && (
+        <Cartao>
+          <p className="font-medium">Nenhum convite por aqui.</p>
+          <Suave>Para alugar, peça ao locador o link de convite e abra pelo celular.</Suave>
+        </Cartao>
+      )}
+
+      {cadastros.map((c) => {
+        const s = STATUS_LOCATARIO[c.status];
+        return (
+          <Cartao key={c.id} className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <p className="font-medium">{nomeOrg(c.organizacao_id)}</p>
+              <Selo tom={s.tom}>{s.rotulo}</Selo>
+            </div>
+            {c.status === "em_cadastro" && (
+              <>
+                <Suave>Falta terminar seu cadastro.</Suave>
+                <BotaoLink href={`/m/cadastro/${c.id}` as Route}>Continuar cadastro</BotaoLink>
+              </>
+            )}
+            {c.status === "em_analise" && <Suave>Recebemos seu cadastro. O locador vai analisar e você será avisado.</Suave>}
+            {c.status === "aprovado" && <Suave>Cadastro aprovado! O próximo passo é assinar o contrato.</Suave>}
+            {c.status === "recusado" && <Suave>O locador não aprovou o cadastro desta vez.</Suave>}
+          </Cartao>
+        );
+      })}
     </main>
   );
 }

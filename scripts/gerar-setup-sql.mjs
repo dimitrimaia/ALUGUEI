@@ -3,7 +3,7 @@
 // Registra as migrações em drizzle.__drizzle_migrations, como o drizzle-kit faria,
 // para que um `pnpm db:migrate` futuro não tente reaplicá-las.
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
 const partes = [
@@ -16,10 +16,18 @@ const partes = [
 for (const entrada of journal.entries) {
   const sql = readFileSync(`drizzle/${entrada.tag}.sql`, "utf8");
   const hash = createHash("sha256").update(sql).digest("hex");
-  partes.push(`\n-- Migração ${entrada.tag}`, sql.replaceAll("--> statement-breakpoint", ""));
-  partes.push(`insert into drizzle.__drizzle_migrations (hash, created_at) values ('${hash}', ${entrada.when});`);
+  const corpo = sql.replaceAll("--> statement-breakpoint", "");
+  const registro = `insert into drizzle.__drizzle_migrations (hash, created_at) values ('${hash}', ${entrada.when});`;
+  partes.push(`\n-- Migração ${entrada.tag}`, corpo, registro);
+
+  // Arquivo avulso por migração, para aplicar só o que falta num banco já criado.
+  mkdirSync("supabase/migracoes", { recursive: true });
+  writeFileSync(
+    `supabase/migracoes/${entrada.tag}.sql`,
+    [`-- Migração ${entrada.tag}. Gerado por scripts/gerar-setup-sql.mjs.`, "begin;", corpo, registro, "commit;\n"].join("\n"),
+  );
 }
 
 partes.push("\n-- Políticas de acesso (supabase/rls.sql)", readFileSync("supabase/rls.sql", "utf8"), "commit;\n");
 writeFileSync("supabase/setup.sql", partes.join("\n"));
-console.log("supabase/setup.sql gerado");
+console.log("supabase/setup.sql e supabase/migracoes/ gerados");

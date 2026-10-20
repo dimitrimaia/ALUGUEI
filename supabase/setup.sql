@@ -346,6 +346,13 @@ CREATE UNIQUE INDEX "notificacoes_chave" ON "notificacoes" USING btree ("chave")
 CREATE INDEX "notificacoes_contrato" ON "notificacoes" USING btree ("contrato_id");
 insert into drizzle.__drizzle_migrations (hash, created_at) values ('325cec2865f4c2bfce7d1c0985f2057a846f7aa797efcb944759509bc8bcacd3', 1792515761025);
 
+-- Migração 0001_fresh_strong_guy
+ALTER TABLE "locatarios" ADD COLUMN "convite_expira_em" timestamp with time zone;
+ALTER TABLE "locatarios" ADD COLUMN "veiculo_ofertado_id" uuid;
+ALTER TABLE "locatarios" ADD COLUMN "oferta" jsonb;
+ALTER TABLE "evidencias" ADD COLUMN "locatario_id" uuid;
+insert into drizzle.__drizzle_migrations (hash, created_at) values ('7cdacdc5a8cb360f806164b0d1395d66e098b39728db357856b0bbcf616c4b0f', 1792517712970);
+
 -- Políticas de acesso (supabase/rls.sql)
 -- Isolamento entre locadores (RNF-002) e imutabilidade do cofre/extrato (RNF-007, RNF-010).
 -- Aplicar depois das migrações do Drizzle. Rascunho: revisar a cada tabela nova.

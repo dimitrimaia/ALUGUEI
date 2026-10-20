@@ -35,3 +35,11 @@ const formatador = new Intl.NumberFormat("pt-BR", { style: "currency", currency:
 export function formatarBRL(valor: Centavos): string {
   return formatador.format(valor / 100);
 }
+
+/** Lê um valor digitado ("600", "600,50", "1.200,00", "R$ 1.200") em centavos. Null se inválido. */
+export function lerReais(texto: string): Centavos | null {
+  const limpo = texto.replace(/R\$|\s/g, "");
+  if (!/^\d{1,3}(\.?\d{3})*(,\d{1,2})?$/.test(limpo)) return null;
+  const [inteiro, fracao = ""] = limpo.replace(/\./g, "").split(",");
+  return Number(inteiro) * 100 + Number(fracao.padEnd(2, "0"));
+}
