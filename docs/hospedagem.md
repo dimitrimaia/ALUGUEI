@@ -1,5 +1,7 @@
 # Hospedagem e domínio
 
+Domínio: **aluguei.xyz** (DNS na Vercel). E-mail de login: Resend (domínio verificado).
+
 ## Recomendação: Vercel (plano Pro) para o app
 
 - É a plataforma do Next.js: deploy a cada push no GitHub, HTTPS automático, prévia por branch.
@@ -24,14 +26,15 @@ ou um blog.
    - `CHAVE_CIFRA`: 64 caracteres hex; cifra as chaves das subcontas. **Nunca troque depois de criada**,
      ou as subcontas existentes ficam ilegíveis.
    - `CRON_SECRET`: a Vercel envia no cabeçalho da rotina diária (`/api/cron/diario`, 06:00).
-   - `NEXT_PUBLIC_SITE_URL` = `https://seudominio.com.br` (quando o domínio estiver ligado)
+   - `NEXT_PUBLIC_SITE_URL` = `https://aluguei.xyz` (só em Production; nas prévias o app usa o endereço acessado)
 3. *Deploy*.
 4. *Settings → Domains*: adicionar `seudominio.com.br` e `www.seudominio.com.br`.
    No painel do registro do domínio (Registro.br ou outro):
    - apex (`@`): registro **A** → `76.76.21.21`
    - `www`: registro **CNAME** → `cname.vercel-dns.com`
    (A Vercel mostra os valores exatos ao adicionar o domínio.)
-5. No Supabase: *Authentication → URL Configuration* → *Site URL* = `https://seudominio.com.br`.
+5. No Supabase: *Authentication → URL Configuration* → *Site URL* = `https://aluguei.xyz`;
+   *Redirect URLs*: `https://aluguei.xyz/**`, `https://www.aluguei.xyz/**` e `https://*.vercel.app/**`.
 
 ## E-mail do domínio
 
