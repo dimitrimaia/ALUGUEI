@@ -12,9 +12,10 @@ export default async function Comecar() {
 
   return (
     <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-10">
-      <Marca className="mb-4 text-xl" />
-      <h1 className="text-2xl font-bold tracking-tight">Criar conta de locador</h1>
-      <Suave>Esses dados aparecem nos contratos e nas cobranças. Dá para mudar depois.</Suave>
+      <Marca className="mb-4" />
+      <p className="text-sm font-semibold text-marca">Primeiro acesso</p>
+      <h1 className="text-3xl font-extrabold tracking-tight">Cadastre sua locadora</h1>
+      <Suave>Esses dados aparecem no contrato como LOCADOR. Depois você cadastra o primeiro carro e convida o motorista.</Suave>
       <Cartao>
         <FormularioComecar />
       </Cartao>

@@ -36,7 +36,17 @@ function Contador({ n }: { n: number }) {
 }
 
 /** Barra lateral escura no computador; cabeçalho, abas inferiores e botão de ação no celular. */
-export function NavegacaoPainel({ organizacao, usuario, pendentes }: { organizacao: string; usuario: string; pendentes: number }) {
+export function NavegacaoPainel({
+  organizacao,
+  usuario,
+  pendentes,
+  recebimentosAtivos,
+}: {
+  organizacao: string;
+  usuario: string;
+  pendentes: number;
+  recebimentosAtivos: boolean;
+}) {
   const caminho = usePathname();
   const [acoesAbertas, setAcoesAbertas] = useState(false);
   const [maisAberto, setMaisAberto] = useState(false);
@@ -94,10 +104,17 @@ export function NavegacaoPainel({ organizacao, usuario, pendentes }: { organizac
           </div>
         ))}
 
-        <div className="mt-auto rounded-2xl bg-gradient-to-br from-[#1f56e8] to-[#0d3aa8] p-4 ring-1 ring-white/10">
-          <p className="text-sm font-semibold">Modo assistido ligado</p>
-          <p className="mt-1 text-xs leading-relaxed text-white/70">Cobranças extras e notificações formais passam pela sua aprovação.</p>
-        </div>
+        {recebimentosAtivos ? (
+          <div className="mt-auto rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
+            <p className="flex items-center gap-2 text-sm font-semibold"><span className="size-2 rounded-full bg-[#4ade80]" /> Recebendo no Pix</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/60">Os aluguéis caem direto na sua conta Asaas.</p>
+          </div>
+        ) : (
+          <Link href="/painel/recebimentos" className="mt-auto block rounded-2xl bg-gradient-to-br from-[#1f56e8] to-[#0d3aa8] p-4 ring-1 ring-white/10 hover:brightness-110">
+            <p className="text-sm font-semibold">Ative os recebimentos</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/75">Sem isso, o motorista não consegue pagar pelo Pix. Leva 2 minutos.</p>
+          </Link>
+        )}
         <form action="/sair" method="post" className="mt-3">
           <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
             <LogOut size={18} aria-hidden /> Sair

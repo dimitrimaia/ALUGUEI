@@ -9,10 +9,10 @@ export function FormularioComecar() {
   return (
     <form action={enviar} className="flex flex-col gap-4">
       {estado.mensagem && <Aviso tom="perigo">{estado.mensagem}</Aviso>}
-      <Campo rotulo="Nome ou razão social" erro={estado.erros?.nome}>
+      <Campo rotulo="Nome da locadora" dica="Seu nome completo (pessoa física) ou a razão social da empresa." erro={estado.erros?.nome}>
         <input name="nome" className={classeEntrada} required />
       </Campo>
-      <Campo rotulo="CPF ou CNPJ" erro={estado.erros?.documento}>
+      <Campo rotulo="CPF ou CNPJ" dica="Só números. Use o CPF se aluga como pessoa física." erro={estado.erros?.documento}>
         <input name="documento" inputMode="numeric" className={classeEntrada} required />
       </Campo>
       <div className="grid grid-cols-[1fr_5rem] gap-3">
@@ -23,7 +23,7 @@ export function FormularioComecar() {
           <input name="uf" maxLength={2} className={`${classeEntrada} uppercase`} required />
         </Campo>
       </div>
-      <Botao disabled={enviando}>{enviando ? "Criando…" : "Criar conta"}</Botao>
+      <Botao tamanho="lg" disabled={enviando}>{enviando ? "Criando…" : "Criar conta e continuar"}</Botao>
     </form>
   );
 }

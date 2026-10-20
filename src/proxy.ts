@@ -41,7 +41,8 @@ export async function proxy(request: NextRequest) {
   if (protegida && !data?.claims) {
     const destino = request.nextUrl.clone();
     destino.pathname = "/entrar";
-    destino.search = `?voltar=${encodeURIComponent(caminho)}`;
+    const perfil = caminho.startsWith("/painel") ? "locador" : "motorista";
+    destino.search = `?perfil=${perfil}&voltar=${encodeURIComponent(caminho)}`;
     return NextResponse.redirect(destino);
   }
   return resposta;

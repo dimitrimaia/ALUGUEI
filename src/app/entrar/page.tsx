@@ -1,25 +1,56 @@
-import { CalendarCheck, Camera, ShieldCheck } from "lucide-react";
+import { CalendarCheck, Camera, FileSignature, ShieldCheck, Wallet } from "lucide-react";
+import Link from "next/link";
 import { Marca } from "@/components/ui";
 import { FormularioEntrar } from "./formulario";
 
-export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string }> }) {
-  const { voltar, erro } = await searchParams;
+const PERFIS = {
+  locador: {
+    titulo: "Área do locador",
+    texto: "Entre ou crie a conta da sua locadora. É o mesmo passo: enviamos um código e pronto.",
+    itens: [
+      { icone: FileSignature, texto: "Contrato gerado com os seus valores e assinado pelo celular" },
+      { icone: Wallet, texto: "Aluguel cobrado no Pix toda semana, com baixa automática" },
+      { icone: ShieldCheck, texto: "Vistorias e aceites guardados como prova" },
+    ],
+  },
+  motorista: {
+    titulo: "Área do motorista",
+    texto: "Acompanhe seu aluguel, pague no Pix e veja seu contrato. Primeira vez? Abra o link do convite que o locador mandou.",
+    itens: [
+      { icone: Wallet, texto: "Pague o aluguel no Pix em segundos" },
+      { icone: FileSignature, texto: "Contrato e extrato sempre à mão" },
+      { icone: Camera, texto: "Vistoria e fotos do carro registradas com data e local" },
+    ],
+  },
+  geral: {
+    titulo: "Bem-vindo ao Aluguei",
+    texto: "Entre com um código no e-mail ou no celular. Sem senha para lembrar.",
+    itens: [
+      { icone: CalendarCheck, texto: "Cobrança semanal e lembretes automáticos" },
+      { icone: Camera, texto: "Vistorias com fotos guiadas" },
+      { icone: ShieldCheck, texto: "Provas com data, hora, local e código de verificação" },
+    ],
+  },
+} as const;
+
+export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string; perfil?: string }> }) {
+  const { voltar, erro, perfil } = await searchParams;
   // Só aceita caminhos internos, para o link de login não virar redirecionamento aberto.
-  const destino = voltar?.startsWith("/") && !voltar.startsWith("//") ? voltar : "/m";
+  const tipo = perfil === "locador" || perfil === "motorista" ? perfil : "geral";
+  const padrao = tipo === "locador" ? "/painel" : tipo === "motorista" ? "/m" : "/inicio";
+  const destino = voltar?.startsWith("/") && !voltar.startsWith("//") ? voltar : padrao;
+  const p = PERFIS[tipo];
+
   return (
     <main className="min-h-dvh bg-cartao lg:grid lg:grid-cols-2">
       <section className="fundo-marca relative overflow-hidden px-6 pt-10 pb-24 lg:flex lg:flex-col lg:justify-between lg:p-14">
         <div className="grade-sutil absolute inset-0 [mask-image:radial-gradient(70%_70%_at_30%_20%,black,transparent)]" aria-hidden />
-        <div className="relative"><Marca inverso /></div>
+        <Link href="/" className="relative w-fit"><Marca inverso /></Link>
         <div className="relative mt-10 lg:mt-0">
-          <h1 className="text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl lg:text-5xl">Bem-vindo de volta.</h1>
-          <p className="mt-3 max-w-md text-white/80 lg:text-lg">Entre com um código no celular ou no e-mail. Sem senha para lembrar.</p>
+          <h1 className="text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl lg:text-5xl">{p.titulo}</h1>
+          <p className="mt-3 max-w-md text-white/80 lg:text-lg">{p.texto}</p>
           <ul className="mt-10 hidden flex-col gap-4 lg:flex">
-            {[
-              { icone: CalendarCheck, texto: "Cobrança semanal e lembretes automáticos" },
-              { icone: Camera, texto: "Check-in e vistorias com fotos guiadas" },
-              { icone: ShieldCheck, texto: "Provas com data, hora, local e código de verificação" },
-            ].map(({ icone: Icone, texto }) => (
+            {p.itens.map(({ icone: Icone, texto }) => (
               <li key={texto} className="flex items-center gap-3 text-white/90">
                 <span className="grid size-10 place-items-center rounded-xl bg-white/12 ring-1 ring-white/20"><Icone size={20} /></span>
                 {texto}
@@ -31,9 +62,16 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
       </section>
       <section className="relative -mt-14 px-4 pb-10 lg:mt-0 lg:grid lg:place-items-center lg:p-14">
         <div className="mx-auto w-full max-w-sm rounded-[1.5rem] border border-borda bg-cartao p-6 shadow-flutuante lg:border-0 lg:p-0 lg:shadow-none">
-          <h2 className="text-xl font-extrabold tracking-tight">Entrar</h2>
-          <p className="mt-1 mb-6 text-sm text-suave">Enviamos um código para confirmar que é você.</p>
+          <h2 className="text-xl font-extrabold tracking-tight">{tipo === "locador" ? "Entrar ou criar conta" : "Entrar"}</h2>
+          <p className="mt-1 mb-6 text-sm text-suave">Vamos enviar um código de 6 dígitos para confirmar que é você.</p>
           <FormularioEntrar destino={destino} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um código novo." : undefined} />
+          <p className="mt-6 text-center text-sm text-suave">
+            {tipo === "motorista" ? (
+              <>É locador? <Link href="/entrar?perfil=locador" className="font-semibold text-marca">Entre aqui</Link></>
+            ) : (
+              <>É motorista? <Link href="/entrar?perfil=motorista" className="font-semibold text-marca">Entre aqui</Link></>
+            )}
+          </p>
         </div>
       </section>
     </main>

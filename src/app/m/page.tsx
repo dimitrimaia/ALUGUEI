@@ -92,7 +92,9 @@ export default async function Motorista() {
 
       <div className="relative -mt-4 flex flex-col gap-4 px-4">
         {!cadastros.length && (
-          <Vazio icone={Inbox} titulo="Nenhum convite por aqui">Para alugar, peça ao locador o link de convite e abra pelo celular.</Vazio>
+          <Vazio icone={Inbox} titulo="Nenhum convite por aqui" acao={<BotaoLink href="/bem-vindo" variante="secundario" tamanho="sm">Sou locador</BotaoLink>}>
+            Para alugar, peça ao locador o link de convite e abra neste celular. Você entrou como {usuario.email ?? usuario.telefone}.
+          </Vazio>
         )}
 
         {principal && (

@@ -10,7 +10,8 @@ type Canal = "celular" | "email";
 
 export function FormularioEntrar({ destino, erroInicial }: { destino: string; erroInicial?: string }) {
   const router = useRouter();
-  const [canal, setCanal] = useState<Canal>("celular");
+  // E-mail primeiro: o SMS depende do plano pago do Twilio.
+  const [canal, setCanal] = useState<Canal>("email");
   const [contato, setContato] = useState("");
   const [enviadoPara, setEnviadoPara] = useState<string | null>(null);
   const [codigo, setCodigo] = useState("");
@@ -90,7 +91,7 @@ export function FormularioEntrar({ destino, erroInicial }: { destino: string; er
   return (
     <form onSubmit={enviarCodigo} className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-cartao-2 p-1" role="tablist">
-        {(["celular", "email"] as const).map((c) => (
+        {(["email", "celular"] as const).map((c) => (
           <button
             key={c}
             type="button"

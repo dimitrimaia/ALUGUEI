@@ -1,10 +1,12 @@
 import { NavegacaoPainel } from "@/components/painel/navegacao";
+import { contaDoLocador } from "@/lib/cobrancas";
 import { exigirEquipe } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 
 export default async function LayoutPainel({ children }: { children: React.ReactNode }) {
   const { organizacao, usuario } = await exigirEquipe();
   const supabase = await supabaseServidor();
+  const conta = await contaDoLocador(organizacao.id).catch(() => null);
   const { count } = await supabase
     .from("locatarios")
     .select("id", { count: "exact", head: true })
@@ -13,7 +15,7 @@ export default async function LayoutPainel({ children }: { children: React.React
 
   return (
     <div className="min-h-dvh lg:flex">
-      <NavegacaoPainel organizacao={organizacao.nome} usuario={usuario.email ?? usuario.telefone ?? "Conta"} pendentes={count ?? 0} />
+      <NavegacaoPainel organizacao={organizacao.nome} usuario={usuario.email ?? usuario.telefone ?? "Conta"} pendentes={count ?? 0} recebimentosAtivos={Boolean(conta)} />
       <main className="pb-barra mx-auto w-full max-w-[84rem] px-4 pt-6 sm:px-6 lg:px-10 lg:pt-24 lg:pb-14">{children}</main>
     </div>
   );

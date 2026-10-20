@@ -234,9 +234,9 @@ export function Simbolo({ className = "size-9" }: { className?: string }) {
 
 export function Marca({ className = "", inverso = false }: { className?: string; inverso?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-2.5 text-[1.15rem] font-extrabold tracking-tight ${inverso ? "text-white" : "text-texto"} ${className}`}>
+    <span className={`inline-flex items-center gap-2.5 text-[1.05rem] font-extrabold tracking-[0.08em] ${inverso ? "text-white" : "text-texto"} ${className}`} aria-label="Aluguei">
       <Simbolo />
-      Aluguei
+      <span aria-hidden>ALUGUEI</span>
     </span>
   );
 }
