@@ -69,6 +69,8 @@ export const cobrancas = pgTable(
     provedorId: text("provedor_id"),
     valor: integer("valor_centavos").notNull(),
     vencimento: date("vencimento").notNull(),
+    /** Parte da plataforma nesta cobrança (taxaPlataformaDoPeriodo). Zero em caução, multa e juros. */
+    splitPlataforma: integer("split_plataforma_centavos").notNull().default(0),
     status: text("status").notNull().default("emitida"),
     pixCopiaECola: text("pix_copia_e_cola"),
     linkPagamento: text("link_pagamento"),

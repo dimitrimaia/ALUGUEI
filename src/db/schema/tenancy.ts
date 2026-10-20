@@ -1,4 +1,4 @@
-import { boolean, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { criadoEm, id } from "./comum";
 
 /** O locador (PF ou PJ). É o tenant: cada um tem sua subconta no provedor de pagamento. */
@@ -11,6 +11,8 @@ export const organizacoes = pgTable("organizacoes", {
   subcontaPagamentoId: text("subconta_pagamento_id"),
   /** Enquanto ligado, cobranças extras e notificações formais passam pela fila de aprovação. */
   modoAssistido: boolean("modo_assistido").notNull().default(true),
+  /** Mensalidade por carro com contrato ativo, cobrada por split em cada aluguel pago. */
+  mensalidadePorCarro: integer("mensalidade_por_carro_centavos").notNull().default(25000),
   criadoEm: criadoEm(),
 });
 

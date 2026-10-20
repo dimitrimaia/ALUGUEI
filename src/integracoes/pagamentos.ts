@@ -17,6 +17,8 @@ export interface ProvedorPagamentos {
     valor: Centavos;
     vencimento: DataISO;
     descricao: string;
+    /** Valor que vai para a carteira da plataforma quando a cobrança for paga. */
+    splitPlataforma: Centavos;
   }): Promise<{ id: string; pixCopiaECola: string | null; link: string }>;
   cancelarCobranca(id: string): Promise<void>;
   /** Valida autenticidade do webhook e normaliza o evento. Nulo = evento que ignoramos. */

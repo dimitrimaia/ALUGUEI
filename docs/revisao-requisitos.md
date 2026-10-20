@@ -77,7 +77,7 @@ número) e a numeração que pula alíneas (resolvido na renderização do model
   o produto reduzir a inadimplência e o trabalho manual de forma visível.
   Precisa ser validado na descoberta.
 - **Recomendação: cobrar só por carro com contrato ativo**, e cobrar via
-  **split automático** em cada Pix semanal (cerca de R$ 57,70 por semana). A
+  **split automático** em cada Pix semanal (R$ 57,53 por semana cheia; ver `taxaPlataformaDoPeriodo`). A
   plataforma recebe sem emitir fatura e sem correr atrás do locador, e o
   dinheiro do aluguel continua indo direto para a subconta dele. Com isso o
   **RF-062 (split) passa de S para M.**
@@ -109,3 +109,4 @@ lançados à mão como cobrança extra (RF-056), com justificativa e prova.
 7. Requisitos locais para carro alugado em app: placa, seguro APP e documentos
    que Uber e 99 pedem.
 8. Responsabilidade da plataforma (fornecedora de ferramenta) nos termos de uso.
+9. Cláusula 1.2: notificações e cobranças feitas pelo app em nome do locador (a plataforma não é mandatária).

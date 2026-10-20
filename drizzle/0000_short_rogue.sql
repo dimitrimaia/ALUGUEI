@@ -23,6 +23,7 @@ CREATE TABLE "organizacoes" (
 	"uf" text NOT NULL,
 	"subconta_pagamento_id" text,
 	"modo_assistido" boolean DEFAULT true NOT NULL,
+	"mensalidade_por_carro_centavos" integer DEFAULT 25000 NOT NULL,
 	"criado_em" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -156,6 +157,7 @@ CREATE TABLE "cobrancas" (
 	"provedor_id" text,
 	"valor_centavos" integer NOT NULL,
 	"vencimento" date NOT NULL,
+	"split_plataforma_centavos" integer DEFAULT 0 NOT NULL,
 	"status" text DEFAULT 'emitida' NOT NULL,
 	"pix_copia_e_cola" text,
 	"link_pagamento" text,

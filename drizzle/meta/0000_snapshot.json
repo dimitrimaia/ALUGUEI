@@ -1,5 +1,5 @@
 {
-  "id": "5f0c5619-6552-48fb-b859-304d4c450f31",
+  "id": "f7032da8-1542-4430-96dd-201055efd651",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -133,6 +133,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "mensalidade_por_carro_centavos": {
+          "name": "mensalidade_por_carro_centavos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 25000
         },
         "criado_em": {
           "name": "criado_em",
@@ -1090,6 +1097,13 @@
           "type": "date",
           "primaryKey": false,
           "notNull": true
+        },
+        "split_plataforma_centavos": {
+          "name": "split_plataforma_centavos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "status": {
           "name": "status",

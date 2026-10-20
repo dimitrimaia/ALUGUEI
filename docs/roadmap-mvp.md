@@ -8,7 +8,8 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 
 - [ ] Entrevistar 5 a 10 locadores e 10 a 15 motoristas, e acompanhar o fluxo manual do locador piloto.
 - [ ] Medir a linha de base das métricas (tempo do locador por carro/semana, inadimplência acima de 5 dias, check-ins no prazo).
-- [ ] Validar o preço de R$ 250/carro ativo/mês e quem paga a tarifa do Pix.
+- [x] Preço: R$ 250/carro com contrato ativo, por split semanal proporcional (ver decisoes.md).
+- [ ] Confirmar com o Asaas: split por valor fixo, tarifa do Pix e baixa manual.
 - [ ] Mandar ao advogado o modelo de contrato e a lista de pontos da revisão (seção 7).
 - [ ] Abrir as contas: Asaas (plataforma + subconta do piloto), ZapSign (sandbox), Meta WhatsApp Business (verificação + modelos).
 - [ ] Nomear o DPO e redigir a política de privacidade e os termos de uso.
@@ -43,7 +44,7 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 ## Semanas 7–9: dinheiro e régua
 
 - [ ] Agenda de obrigações gerada na assinatura (já implementada em `gerarAgenda`).
-- [ ] Cobrança semanal Pix/boleto na subconta do locador, com split da mensalidade (RF-050, RF-051, RF-062).
+- [ ] Cobrança semanal Pix na subconta do locador, com split da mensalidade (RF-050, RF-051 só Pix, RF-062).
 - [ ] Webhook com deduplicação, baixa automática e conciliação diária (RF-052, RNF-033).
 - [ ] Multa, juros (já implementados) e correção monetária (RF-054).
 - [ ] Caução: parcelas, saldo e status (RF-053).
@@ -70,5 +71,4 @@ requisito "M" que não aparece aqui está listado com sua decisão em
 - [ ] Comparar as métricas com a linha de base.
 
 **Risco de prazo:** as semanas 7–9 e 10–11 estão cheias. Se atrasar, o
-primeiro corte é a renovação e o alerta de área, e o segundo é o boleto (fica
-só Pix).
+primeiro corte é a renovação e o alerta de área,.

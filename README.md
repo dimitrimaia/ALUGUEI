@@ -12,6 +12,7 @@ o marketplace fica para a Fase 3.
 
 - [Revisão dos requisitos](docs/revisao-requisitos.md): o que faltava na proposta, correções e decisões em aberto
 - [Roadmap do MVP](docs/roadmap-mvp.md): 12 semanas, com rastreio dos requisitos
+- [Decisões de produto](docs/decisoes.md): Pix, PWA, mensalidade por split, o app como administrador
 - [Arquitetura](docs/arquitetura.md): os quatro pilares e as camadas
 
 ## Stack
