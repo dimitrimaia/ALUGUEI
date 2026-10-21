@@ -4,6 +4,7 @@ import type { ParametrosContrato } from "@/dominio/contrato/parametros";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { MARCA_TRANSFERENCIA, historicoParaModelo, humanoAssumiu } from "@/dominio/suporte/conversa";
 import { enviarEmail } from "@/integracoes/email";
+import { enviarTextoWhatsApp } from "@/integracoes/whatsapp";
 import { contaDoLocador } from "./cobrancas";
 import { emailsDaEquipe } from "./equipe-aluguei";
 import { locadoraDoUsuario } from "./modos";
@@ -17,7 +18,14 @@ import { supabaseAdmin } from "./supabase/admin";
  * nada: explica, orienta e, quando o assunto pede uma pessoa, passa para a equipe.
  */
 
-const MODELO = "claude-opus-5-5";
+/**
+ * Modelo e esforço do assistente. Padrão: Claude Haiku 5.5, o mais barato
+ * ($0,10 por milhão de tokens de entrada e $0,50 de saída), com esforço baixo
+ * (pensa pouco, responde rápido). Para respostas mais elaboradas, troque nas
+ * variáveis da Vercel: SUPORTE_MODELO=claude-sonnet-5-5 ou claude-opus-5-5.
+ */
+const MODELO = process.env.SUPORTE_MODELO ?? "claude-haiku-5-5";
+const ESFORCO = (process.env.SUPORTE_ESFORCO ?? "low") as "low" | "medium" | "high";
 const MAX_VOLTAS = 6;
 
 // Texto fixo: fica em cache entre atendimentos (nada que mude por pessoa ou por dia aqui).
@@ -78,8 +86,11 @@ const FERRAMENTAS: Anthropic.Beta.BetaTool[] = [
 const br = (iso: string | null | undefined) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 
 /** Tudo é lido com a chave do servidor, mas sempre filtrado pelo dono do atendimento. */
-async function executar(nome: string, usuarioId: string): Promise<unknown> {
+async function executar(nome: string, usuarioId: string | null): Promise<unknown> {
   const admin = supabaseAdmin();
+  if (!usuarioId) {
+    return { contaVinculada: false, orientacao: "Este número de WhatsApp não está ligado a uma conta do Aluguei. Para ver dados do aluguel, a pessoa confirma este celular no app (Conta → Verificação da conta → Celular) ou continua pelo chat de suporte do app." };
+  }
   if (nome === "ver_conta") {
     const [{ data: u }, locadora] = await Promise.all([admin.auth.admin.getUserById(usuarioId), locadoraDoUsuario(usuarioId)]);
     const meta = (u.user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -178,7 +189,13 @@ export async function responderComAgente(atendimentoId: string): Promise<void> {
   const client = new Anthropic();
   const conversa: Anthropic.Beta.BetaMessageParam[] = historicoParaModelo(mensagens);
   // Contexto que muda por atendimento vai numa mensagem de sistema no fim, para não quebrar o cache do prefixo.
-  const contexto = `Atendimento aberto no modo ${a.modo === "locador" ? "locador" : "motorista"}, assunto "${a.assunto}". Hoje é ${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`;
+  const whatsapp = a.canal === "whatsapp";
+  const contexto = [
+    whatsapp
+      ? `Atendimento pelo WhatsApp${a.usuario_id ? "" : ", de um número sem conta no app"}. Escreva texto simples, sem títulos e sem tabelas; para destacar, use *asteriscos*. Mensagens curtas.`
+      : `Atendimento no chat do app, aberto no modo ${a.modo === "locador" ? "locador" : "motorista"}, assunto "${a.assunto}".`,
+    `Hoje é ${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`,
+  ].join(" ");
   conversa.push({ role: "system", content: contexto } as unknown as Anthropic.Beta.BetaMessageParam);
 
   let transferencia: { motivo: string; resumo: string } | null = null;
@@ -188,9 +205,9 @@ export async function responderComAgente(atendimentoId: string): Promise<void> {
       const r = await client.beta.messages.create({
         model: MODELO,
         max_tokens: 16000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        output_config: { effort: "medium" },
+        // Se o modelo recusar, o servidor tenta outro (o Haiku não tem essa troca: aí a equipe assume).
+        ...(MODELO.startsWith("claude-haiku") ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }),
+        output_config: { effort: ESFORCO },
         cache_control: { type: "ephemeral" },
         system: SISTEMA,
         tools: FERRAMENTAS,
@@ -234,14 +251,23 @@ export async function responderComAgente(atendimentoId: string): Promise<void> {
   const agora = new Date().toISOString();
   const linhas = [];
   if (resposta) linhas.push({ atendimento_id: atendimentoId, autor: "agente" as const, texto: resposta.slice(0, 4000) });
-  if (transferencia) linhas.push({ atendimento_id: atendimentoId, autor: "sistema" as const, texto: `${MARCA_TRANSFERENCIA}: ${transferencia.motivo} Uma pessoa responde por aqui em horário comercial, em dias úteis.` });
+  const avisoTransferencia = "Uma pessoa da equipe responde por aqui em horário comercial, em dias úteis.";
+  if (transferencia) linhas.push({ atendimento_id: atendimentoId, autor: "sistema" as const, texto: `${MARCA_TRANSFERENCIA}: ${transferencia.motivo} ${avisoTransferencia}` });
   if (!linhas.length) return;
   await admin.from("mensagens_suporte").insert(linhas);
   await admin.from("atendimentos").update({ ultima_mensagem_em: agora, status: transferencia ? "aberto" : "respondido" }).eq("id", atendimentoId);
 
+  if (whatsapp && a.telefone) {
+    // No WhatsApp a resposta vai pelo próprio WhatsApp (dentro da janela de 24 h, porque a pessoa acabou de escrever).
+    const texto = resposta || (transferencia ? `Recebemos sua mensagem. ${avisoTransferencia}` : "");
+    if (texto) {
+      const envio = await enviarTextoWhatsApp(a.telefone, texto);
+      if (!envio.ok) await admin.from("mensagens_suporte").insert({ atendimento_id: atendimentoId, autor: "sistema", texto: `Falha ao enviar pelo WhatsApp: ${envio.erro}` });
+    }
+  }
   if (transferencia) {
-    await avisarEquipe(atendimentoId, `Suporte: atendimento transferido (${a.assunto})`, `${transferencia.motivo}\n\n${transferencia.resumo}`);
-  } else {
+    await avisarEquipe(atendimentoId, `Suporte: atendimento transferido (${whatsapp ? "WhatsApp" : a.assunto})`, `${transferencia.motivo}\n\n${transferencia.resumo}`);
+  } else if (a.usuario_id && !whatsapp) {
     await notificar({ usuarioId: a.usuario_id, organizacaoId: a.organizacao_id, modelo: "suporte.resposta", titulo: "O suporte respondeu", texto: resposta.length > 120 ? `${resposta.slice(0, 117)}…` : resposta, link: `${a.modo === "locador" ? "/painel" : "/m"}/suporte/${atendimentoId}`, assunto: "mensagens", chave: `suporte:agente:${ultimaDaPessoa.id}` });
   }
 }

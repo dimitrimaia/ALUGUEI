@@ -17,7 +17,7 @@ export default async function AtendimentoEquipe({ params }: { params: Promise<{ 
   const admin = supabaseAdmin();
   const [{ data: mensagens }, { data: u }, { data: org }] = await Promise.all([
     admin.from("mensagens_suporte").select("*").eq("atendimento_id", id).order("criado_em"),
-    admin.auth.admin.getUserById(a.usuario_id),
+    a.usuario_id ? admin.auth.admin.getUserById(a.usuario_id) : Promise.resolve({ data: { user: null } }),
     a.organizacao_id ? admin.from("organizacoes").select("nome").eq("id", a.organizacao_id).single() : Promise.resolve({ data: null }),
   ]);
   await admin.from("atendimentos").update({ lido_equipe_em: new Date().toISOString() }).eq("id", id);
@@ -33,6 +33,7 @@ export default async function AtendimentoEquipe({ params }: { params: Promise<{ 
         <dl className="divide-y divide-borda">
           <DadoRotulado rotulo="Pessoa">{(u.user?.user_metadata?.nome as string) ?? "—"}</DadoRotulado>
           <DadoRotulado rotulo="E-mail">{u.user?.email ?? "—"}</DadoRotulado>
+          <DadoRotulado rotulo="Canal">{a.canal === "whatsapp" ? `WhatsApp · +${a.telefone}` : "Chat do app"}</DadoRotulado>
           <DadoRotulado rotulo="Modo">{a.modo === "locador" ? "Locador" : "Motorista"}</DadoRotulado>
           {org && <DadoRotulado rotulo="Locadora">{org.nome}</DadoRotulado>}
         </dl>

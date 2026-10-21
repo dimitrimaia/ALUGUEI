@@ -19,8 +19,12 @@ suporte", e Conta → Ajuda).
 segundos no mesmo chat ("Suporte Aluguei · assistente"), enquanto a tela mostra
 "respondendo…".
 
-- **Modelo:** Claude Opus 5.5 (`claude-opus-5-5`), esforço `medium`, com a troca
-  automática de modelo do servidor se ele recusar (`fallbacks: "default"`).
+- **Modelo:** Claude Haiku 5.5 (`claude-haiku-5-5`), o mais barato, com esforço
+  `low`. Dá para trocar sem mexer no código: `SUPORTE_MODELO` (ex.:
+  `claude-sonnet-5-5`) e `SUPORTE_ESFORCO` (`low`, `medium` ou `high`). Nos modelos
+  maiores, a troca automática de modelo do servidor entra se ele recusar.
+- **Canais:** o chat do app e o WhatsApp (ver `whatsapp.md`). É o mesmo assistente e
+  a mesma fila da equipe em `/admin/suporte`.
 - **Ferramentas, todas só de leitura e presas à conta de quem abriu o atendimento:**
   - `ver_conta`: nome, e-mail, verificação e modos ativos;
   - `ver_aluguel`: cadastros, contratos, próximos vencimentos, saldo, último
@@ -41,9 +45,30 @@ segundos no mesmo chat ("Suporte Aluguei · assistente"), enquanto a tela mostra
 - **Custo:** o texto fixo das instruções e as ferramentas ficam em cache entre os
   atendimentos. O que muda (modo, assunto e data) vai numa mensagem de sistema no fim.
 
-**Para ligar:** crie `ANTHROPIC_API_KEY` na Vercel (chave em console.anthropic.com).
-Sem ela, o atendimento recebe a resposta automática e vai direto para a equipe.
-Para desligar sem apagar a chave: `SUPORTE_AGENTE=desligado`.
+### Como ligar (passo a passo)
+
+1. Entre em **console.anthropic.com** e crie a conta (ou entre com a sua). Se pedir,
+   crie a organização (pode ser "Aluguei").
+2. **Créditos:** menu **Settings → Billing** → **Buy credits** (ou "Add funds").
+   Cadastre o cartão e coloque um valor pequeno para começar (ex.: US$ 10). Ligue a
+   recarga automática só se quiser.
+3. **Limite de gasto (recomendado):** **Settings → Limits** → defina um limite mensal
+   (ex.: US$ 20). Se passar, a API para e o suporte cai na equipe, sem susto na fatura.
+4. **Chave:** **Settings → API Keys** → **Create Key**. Nome: `aluguei-producao`.
+   Workspace: o padrão. Clique em criar e **copie na hora**: ela começa com
+   `sk-ant-` e não aparece de novo. Não mande por chat nem coloque no código.
+5. **Vercel:** projeto → **Settings → Environment Variables** → **Add**:
+   - Key `ANTHROPIC_API_KEY`, Value a chave copiada, ambiente **Production** (e
+     Preview, se quiser testar lá). Salve.
+6. **Redeploy:** aba **Deployments** → no último deploy, **⋯ → Redeploy**. Variável
+   nova só vale depois de um deploy.
+7. **Teste:** no app, Conta → Ajuda e suporte → abra um atendimento. O assistente
+   responde em poucos segundos. Em `/admin/suporte` a conversa aparece para a equipe.
+
+Sem a chave, o atendimento recebe a resposta automática e vai direto para a equipe.
+Para a equipe receber o e-mail das transferências, `RESEND_API_KEY` e `ADMINS`
+precisam estar na Vercel. Para desligar sem apagar a chave: `SUPORTE_AGENTE=desligado`.
+Se a chave vazar, apague em API Keys e crie outra.
 
 **Para melhorar as respostas:** o conhecimento do app está nas instruções do
 arquivo. Quando surgir uma dúvida que ele não sabe responder, acrescente lá.

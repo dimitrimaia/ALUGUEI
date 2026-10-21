@@ -6,6 +6,8 @@ import { after } from "next/server";
 import { z } from "zod";
 import type { Linha } from "@/db/tipos";
 import { enviarEmail } from "@/integracoes/email";
+import { dentroDaJanela } from "@/dominio/whatsapp/mensagens";
+import { enviarTextoWhatsApp } from "@/integracoes/whatsapp";
 import { agenteLigado, humanoAssumiu, responderComAgente } from "./agente-suporte";
 import { emailsDaEquipe } from "./equipe-aluguei";
 import { locadoraDoUsuario } from "./modos";
@@ -56,7 +58,12 @@ export async function enviarMensagemSuporte(atendimentoId: string, texto: string
     .update({ ultima_mensagem_em: agora, status: lado === "equipe" ? "respondido" : "aberto", ...(lado === "equipe" ? { lido_equipe_em: agora } : { lido_usuario_em: agora }) })
     .eq("id", atendimentoId);
   const a = acesso.atendimento;
-  if (lado === "equipe") {
+  if (lado === "equipe" && a.canal === "whatsapp" && a.telefone) {
+    // Resposta da equipe a quem escreveu pelo WhatsApp: vai pelo WhatsApp.
+    const { data: ultima } = await admin.from("mensagens_suporte").select("criado_em").eq("atendimento_id", atendimentoId).eq("autor", "usuario").order("criado_em", { ascending: false }).limit(1).maybeSingle();
+    const envio = ultima && dentroDaJanela(new Date(ultima.criado_em)) ? await enviarTextoWhatsApp(a.telefone, limpo) : { ok: false as const, erro: "Passaram mais de 24 h da última mensagem da pessoa: a Meta só aceita um modelo aprovado." };
+    if (!envio.ok) await admin.from("mensagens_suporte").insert({ atendimento_id: atendimentoId, autor: "sistema", texto: `Não foi entregue no WhatsApp: ${envio.erro}` });
+  } else if (lado === "equipe" && a.usuario_id) {
     await notificar({ usuarioId: a.usuario_id, organizacaoId: a.organizacao_id, modelo: "suporte.resposta", titulo: "O suporte respondeu", texto: limpo.length > 120 ? `${limpo.slice(0, 117)}…` : limpo, link: `${a.modo === "locador" ? "/painel" : "/m"}/suporte/${atendimentoId}`, assunto: "mensagens", porEmail: true, chave: `suporte:${data.id}` });
   } else {
     const { data: todas } = await admin.from("mensagens_suporte").select("autor, texto").eq("atendimento_id", atendimentoId);

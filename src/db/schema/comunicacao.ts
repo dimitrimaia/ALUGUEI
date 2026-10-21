@@ -89,7 +89,12 @@ export const atendimentos = pgTable(
   "atendimentos",
   {
     id: id(),
-    usuarioId: uuid("usuario_id").notNull(),
+    /** Nulo quando o contato veio do WhatsApp de um número sem conta no app. */
+    usuarioId: uuid("usuario_id"),
+    /** Por onde a conversa acontece: no chat do app ou no WhatsApp. */
+    canal: text("canal").notNull().default("app"),
+    /** Número do WhatsApp (só dígitos, como a Meta envia), nos atendimentos desse canal. */
+    telefone: text("telefone"),
     /** Modo em que a pessoa abriu o atendimento: motorista ou locador. */
     modo: text("modo").notNull(),
     organizacaoId: uuid("organizacao_id"),
@@ -100,7 +105,7 @@ export const atendimentos = pgTable(
     lidoEquipeEm: timestamp("lido_equipe_em", { withTimezone: true }),
     criadoEm: criadoEm(),
   },
-  (t) => [index("atendimentos_usuario").on(t.usuarioId, t.ultimaMensagemEm), index("atendimentos_status").on(t.status, t.ultimaMensagemEm)],
+  (t) => [index("atendimentos_usuario").on(t.usuarioId, t.ultimaMensagemEm), index("atendimentos_status").on(t.status, t.ultimaMensagemEm), index("atendimentos_telefone").on(t.canal, t.telefone)],
 );
 
 export const mensagensSuporte = pgTable(

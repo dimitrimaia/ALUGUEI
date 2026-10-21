@@ -17,9 +17,9 @@ export type Database = {
         Relationships: [];
       };
       atendimentos: {
-        Row: { id: string; usuario_id: string; modo: string; organizacao_id: string | null; assunto: string; status: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em: string; lido_usuario_em: string | null; lido_equipe_em: string | null; criado_em: string };
-        Insert: { id?: string; usuario_id: string; modo: string; organizacao_id?: string | null; assunto: string; status?: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em?: string; lido_usuario_em?: string | null; lido_equipe_em?: string | null; criado_em?: string };
-        Update: { id?: string; usuario_id?: string; modo?: string; organizacao_id?: string | null; assunto?: string; status?: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em?: string; lido_usuario_em?: string | null; lido_equipe_em?: string | null; criado_em?: string };
+        Row: { id: string; usuario_id: string | null; canal: string; telefone: string | null; modo: string; organizacao_id: string | null; assunto: string; status: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em: string; lido_usuario_em: string | null; lido_equipe_em: string | null; criado_em: string };
+        Insert: { id?: string; usuario_id?: string | null; canal?: string; telefone?: string | null; modo: string; organizacao_id?: string | null; assunto: string; status?: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em?: string; lido_usuario_em?: string | null; lido_equipe_em?: string | null; criado_em?: string };
+        Update: { id?: string; usuario_id?: string | null; canal?: string; telefone?: string | null; modo?: string; organizacao_id?: string | null; assunto?: string; status?: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em?: string; lido_usuario_em?: string | null; lido_equipe_em?: string | null; criado_em?: string };
         Relationships: [];
       };
       auditoria: {

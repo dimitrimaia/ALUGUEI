@@ -23,7 +23,7 @@ export default async function FilaSuporte() {
             <Link key={a.id} href={`/admin/suporte/${a.id}` as Route} className="flex items-center gap-3 px-4 py-3 hover:bg-cartao-2">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{a.assunto}</span>
-                <span className="block text-xs text-suave">{a.modo === "locador" ? "Locador" : "Motorista"} · {new Date(a.ultima_mensagem_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}</span>
+                <span className="block text-xs text-suave">{a.canal === "whatsapp" ? "WhatsApp" : a.modo === "locador" ? "Locador" : "Motorista"} · {new Date(a.ultima_mensagem_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}</span>
               </span>
               <Selo tom={a.status === "aberto" ? "alerta" : a.status === "respondido" ? "ok" : "neutro"}>{a.status === "aberto" ? "Responder" : a.status === "respondido" ? "Respondido" : "Encerrado"}</Selo>
             </Link>
