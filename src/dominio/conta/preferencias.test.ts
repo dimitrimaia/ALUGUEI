@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PREFERENCIAS_PADRAO, iniciais, nomeDeExibicao, normalizarPreferencias } from "./preferencias";
+import { PREFERENCIAS_PADRAO, iniciais, nomeDeExibicao, normalizarPreferencias, primeiroNome } from "./preferencias";
 
 describe("normalizarPreferencias", () => {
   it("sem nada salvo, usa o padrão (tema claro)", () => {
@@ -36,5 +36,14 @@ describe("nome e iniciais", () => {
   it("iniciais do primeiro e do último nome", () => {
     expect(iniciais("João da Silva")).toBe("JS");
     expect(iniciais("dimitri")).toBe("DI");
+  });
+});
+
+describe("primeiroNome", () => {
+  it("pega o primeiro nome com inicial maiúscula", () => {
+    expect(primeiroNome("dimitri silva")).toBe("Dimitri");
+    expect(primeiroNome("  élida ")).toBe("Élida");
+    expect(primeiroNome("")).toBe("");
+    expect(primeiroNome(undefined)).toBe("");
   });
 });

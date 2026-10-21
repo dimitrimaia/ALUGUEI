@@ -14,7 +14,7 @@ export default async function ContaMotorista() {
   const locadora = await locadoraDoUsuario(perfil.id);
   return (
     <>
-      <CabecalhoMotorista titulo="Perfil e configurações" />
+      <CabecalhoMotorista raiz titulo="Perfil e configurações" />
       <IndiceConta perfil={perfil} base="/m/conta" locadora={locadora} verificacao={await verificacaoDaConta(perfil, "/m/conta", locadora?.id ?? null)} />
     </>
   );

@@ -20,7 +20,7 @@ export default async function Motoristas() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Motoristas" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Cadastrar</BotaoLink>} />
+      <CabecalhoPagina voltar={{ href: "/painel", rotulo: "Início" }} titulo="Motoristas" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Cadastrar</BotaoLink>} />
       {!motoristas.length ? (
         <Vazio icone={Users} titulo="Nenhum motorista ainda" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Cadastrar motorista</BotaoLink>}>
           Os motoristas chegam pelos seus anúncios e pelo chat. Se você já conhece alguém, mande o link de cadastro pelo WhatsApp.

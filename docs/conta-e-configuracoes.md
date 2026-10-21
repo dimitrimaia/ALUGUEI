@@ -8,7 +8,11 @@ locador** (anunciar e alugar os próprios carros, `/painel`) criando a locadora 
 `/painel/comecar`, como pessoa física ou empresa. Quem é locador também pode alugar
 o carro de outro locador.
 
-- A troca de modo fica no menu ☰ e na Conta (Motorista · Locador).
+- A troca de modo fica no menu ☰, na Conta e na **foto da aba Conta**: dois toques
+  trocam de modo; tocar e segurar abre a escolha entre os dois (como no Instagram).
+- Ao trocar, a pessoa vai para a **tela equivalente** do outro modo quando ela existe
+  (Conta, Conversas, Meus carros/Frota); senão, para o início do modo
+  (`src/lib/modo-equivalente.ts`, com teste). Com o menu aberto, ele continua aberto.
 - O último modo usado fica no cookie `aluguei_modo`; "Minha área" e `/inicio` voltam
   para ele.
 - O perfil (foto, nome, verificação, preferências) é um só para os dois modos, com as
@@ -83,14 +87,18 @@ locador tem também **Dados da locadora**.
 - **Logo** leva ao início do app (`/m` ou `/painel`). "Início" não aparece no menu ☰.
 - **Menu ☰** abre pela direita, no mesmo estilo do menu do site: caixa do perfil no
   topo (leva à conta), opções em faixas por seção, "Ver o site", "Sair" e rodapé.
+- **Cabeçalho e rodapé são os mesmos componentes nos dois modos**
+  (`src/components/app/barras.tsx`). Telas das abas mostram o logo no topo e o título
+  na página; telas internas mostram voltar + título no topo. Só as abas mudam.
 - **Voltar** (seta do topo) volta para a tela anterior, como o voltar do celular. Só
   quando a pessoa chegou direto por um link ele vai para a tela-mãe.
 - **Menu ☰** cabe inteiro na tela, sem rolar, inclusive em celulares pequenos, e abre
   sempre por cima da página (vai direto para o `<body>`).
 - **Abas do motorista:** Início, Buscar, Meus carros, Conversas (com contador) e Conta.
+- **Abas do locador:** Início, Frota, botão +, Financeiro e Conta. Conversas,
+  Motoristas, Contratos, Anúncios e Recebimentos ficam no menu ☰ (com contador).
   A busca de carros tem versão dentro do app (`/m/buscar`), com as abas.
-- **Abas do locador:** Início, Frota, botão de criar, Financeiro e Conversas (com
-  contador). Motoristas, Contratos, Anúncios e Recebimentos ficam no menu ☰.
+
 
 ## Velocidade
 

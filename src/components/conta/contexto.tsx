@@ -10,9 +10,11 @@ export interface ContaApp {
   modo: "motorista" | "locador";
   /** Nome da locadora, se o modo locador estiver ativado. */
   locadora: string | null;
+  /** Pendências mostradas como um ponto no ☰. */
+  avisos: number;
 }
 
-const Contexto = createContext<ContaApp>({ perfil: { nome: "Sua conta", foto: null, detalhe: "" }, naoLidas: 0, modo: "motorista", locadora: null });
+const Contexto = createContext<ContaApp>({ perfil: { nome: "Sua conta", foto: null, detalhe: "" }, naoLidas: 0, modo: "motorista", locadora: null, avisos: 0 });
 
 /**
  * Dados da conta para o menu e as abas, carregados uma vez pelo layout.

@@ -16,6 +16,7 @@ o marketplace fica para a Fase 3.
 - [Configurar o Supabase](docs/configurar-supabase.md): banco, login, modelos de e-mail, SMS
 - [Conta, perfil e configurações](docs/conta-e-configuracoes.md): requisitos RF-130 a RF-139 e navegação das áreas logadas
 - [Busca de carros e chat](docs/marketplace-chat.md)
+- [Check-in semanal](docs/checkin.md)
 - [Integrações e pendências](docs/integracoes-e-pendencias.md): placa, documentos, rastreador, Pix sem custo, SMS e o que falta
 - [Hospedagem e domínio](docs/hospedagem.md)
 - [Arquitetura](docs/arquitetura.md): os quatro pilares e as camadas

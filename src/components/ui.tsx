@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { BarraTopoInterna } from "./app/barra-interna";
 import { BotaoVoltar } from "./voltar";
 import type { ComponentProps, ReactNode } from "react";
 
@@ -29,22 +30,30 @@ export function CabecalhoPagina({
   subtitulo,
   voltar,
   acao,
+  tituloCurto,
 }: {
   titulo: ReactNode;
   subtitulo?: ReactNode;
   voltar?: { href: string; rotulo: string };
   acao?: ReactNode;
+  /** Título da barra do topo no celular, quando `titulo` não é texto simples. */
+  tituloCurto?: string;
 }) {
+  const textoBarra = tituloCurto ?? (typeof titulo === "string" ? titulo : voltar?.rotulo);
   return (
     <header className="mb-5">
       {voltar && (
-        <BotaoVoltar destino={voltar.href} className="mb-2 inline-flex items-center gap-1 text-sm text-suave hover:text-texto">
-          <ChevronLeft size={16} aria-hidden /> {voltar.rotulo}
-        </BotaoVoltar>
+        <>
+          {/* No celular, a tela interna usa a mesma barra do topo do modo motorista: voltar + título. */}
+          <BarraTopoInterna voltar={voltar.href} titulo={textoBarra ?? ""} />
+          <BotaoVoltar destino={voltar.href} className="mb-2 hidden items-center gap-1 text-sm text-suave hover:text-texto lg:inline-flex">
+            <ChevronLeft size={16} aria-hidden /> {voltar.rotulo}
+          </BotaoVoltar>
+        </>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[1.35rem] leading-tight font-extrabold tracking-tight sm:text-[1.7rem]">{titulo}</h1>
+          <h1 className={`text-[1.35rem] leading-tight font-bold tracking-tight sm:text-[1.7rem] ${voltar && typeof titulo === "string" ? "hidden lg:block" : ""}`}>{titulo}</h1>
           {subtitulo && <p className="mt-1 text-sm text-suave">{subtitulo}</p>}
         </div>
         {acao && <div className="flex shrink-0 flex-wrap gap-2">{acao}</div>}
@@ -211,7 +220,7 @@ export function ItemLista({
 }
 
 export function Lista({ children }: { children: ReactNode }) {
-  return <div className="divide-y divide-borda overflow-hidden rounded-2xl border border-borda bg-cartao shadow-cartao">{children}</div>;
+  return <div className="divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao">{children}</div>;
 }
 
 export function DadoRotulado({ rotulo, children }: { rotulo: string; children: ReactNode }) {

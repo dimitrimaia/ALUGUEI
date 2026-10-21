@@ -20,13 +20,14 @@ export default async function LayoutPainel({ children }: { children: React.React
     naoLidas,
     modo: "locador" as const,
     locadora: organizacao.nome,
+    avisos: naoLidas + (count ?? 0),
   };
 
   return (
     <ProvedorConta valor={valor} tema={perfil?.tema ?? "claro"}>
       <div className="min-h-dvh lg:flex">
         <NavegacaoPainel organizacao={organizacao.nome} pendentes={count ?? 0} recebimentosAtivos={Boolean(conta)} />
-        <main className="pb-barra mx-auto w-full max-w-[84rem] px-5 pt-5 sm:px-6 lg:px-10 lg:pt-24 lg:pb-14">{children}</main>
+        <main className="pb-barra mx-auto w-full max-w-[84rem] px-4 pt-4 sm:px-6 lg:px-10 lg:pt-24 lg:pb-14">{children}</main>
       </div>
     </ProvedorConta>
   );

@@ -15,7 +15,7 @@ export default async function Recebimentos() {
 
   return (
     <div className="max-w-4xl">
-      <CabecalhoPagina titulo="Recebimentos" subtitulo="Onde cai o Pix que os motoristas pagam." />
+      <CabecalhoPagina voltar={{ href: "/painel", rotulo: "Início" }} titulo="Recebimentos" subtitulo="Onde cai o Pix que os motoristas pagam." />
 
       <div className="mb-5 grid gap-2.5 sm:grid-cols-3">
         {[

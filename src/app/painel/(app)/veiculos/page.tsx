@@ -42,7 +42,7 @@ export default async function Veiculos() {
               <Link
                 key={v.id}
                 href={`/painel/veiculos/${v.id}`}
-                className="group overflow-hidden rounded-[1.25rem] border border-borda bg-cartao shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante"
+                className="group overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante"
               >
                 <div className="relative flex h-28 items-end justify-between bg-gradient-to-br from-marca-suave to-cartao-2 px-5 pb-4">
                   <Car className="absolute top-4 right-5 text-marca/25 transition-transform group-hover:translate-x-1" size={64} strokeWidth={1.4} aria-hidden />

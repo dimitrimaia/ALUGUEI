@@ -10,7 +10,7 @@ export async function BuscaCarros({ cidade, base }: { cidade?: string; base: "/c
   const [anuncios, cidades] = await Promise.all([buscarAnuncios(cidade), cidadesComAnuncios()]);
   return (
     <>
-      <form className="mt-5 flex gap-2" action={base}>
+      <form className={`flex gap-2 ${base === "/carros" ? "mt-5" : ""}`} action={base}>
         <label className="relative flex-1">
           <span className="sr-only">Cidade</span>
           <Search size={17} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />

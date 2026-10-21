@@ -1,11 +1,12 @@
 "use client";
 
-import { Car, ChevronDown, ChevronRight, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle, Plus, Settings, UserPlus, UserRound, Users, X } from "lucide-react";
+import { Car, ChevronDown, ChevronRight, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, MessageCircle, Plus, Settings, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useConta } from "@/components/conta/contexto";
+import { BarraInferior, BarraTopo, BotaoCentral } from "@/components/app/barras";
 import { useMenu } from "@/components/menu-app";
 import { Avatar, Marca } from "@/components/ui";
 
@@ -23,9 +24,6 @@ const DINHEIRO = [
   { href: "/painel/financeiro", rotulo: "Financeiro", icone: CircleDollarSign },
   { href: "/painel/recebimentos", rotulo: "Recebimentos", icone: Landmark },
 ] as const;
-// Celular: as mesmas abas do modo motorista, com o Financeiro e o + no lugar de Buscar e Conversas.
-const ABAS_MOVEIS = [GESTAO[0], { ...GESTAO[1], rotulo: "Frota" }] as const;
-const ABAS_MOVEIS_DIREITA = [DINHEIRO[0], { href: "/painel/conta", rotulo: "Conta", icone: UserRound }] as const;
 
 const ACOES = [
   { href: "/painel/veiculos/novo", rotulo: "Cadastrar veículo", detalhe: "Placa, modelo e km", icone: Car },
@@ -55,7 +53,7 @@ export function NavegacaoPainel({
   const caminho = usePathname();
   const { perfil, naoLidas, locadora } = useConta();
   const [acoesAbertas, setAcoesAbertas] = useState(false);
-  const { abrir, aberto: maisAberto } = useMenu({
+  useMenu({
     modo: "locador",
     locadora,
     inicio: "/painel",
@@ -176,43 +174,16 @@ export function NavegacaoPainel({
         </Link>
       </div>
 
-      {/* Celular: cabeçalho fixo (não rola com a página) */}
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-borda bg-cartao/90 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
-        <div className="flex h-14 items-center gap-1 pr-3 pl-5">
-          <Link href="/painel" className="flex-1" aria-label="Início do painel"><Marca /></Link>
-          <Link href="/painel/conversas" aria-label="Conversas" className="relative grid size-10 place-items-center rounded-xl hover:bg-cartao-2">
-            <MessageCircle size={21} />
-            {naoLidas > 0 && <span className="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-[#ffb020] px-1 text-[0.6rem] font-bold text-[#3a2500] ring-2 ring-cartao">{naoLidas}</span>}
-          </Link>
-          <button onClick={abrir} aria-label="Abrir menu" aria-expanded={maisAberto} className="relative grid size-10 place-items-center rounded-xl hover:bg-cartao-2">
-            <Menu size={22} />
-            {pendentes > 0 && <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-[#ffb020] ring-2 ring-cartao" />}
-          </button>
-        </div>
-      </header>
-      <div className="h-[calc(3.5rem+env(safe-area-inset-top))] lg:hidden" aria-hidden />
-
-      <nav
-        aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-borda bg-cartao/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
-      >
-        <div className="relative grid grid-cols-5">
-          {ABAS_MOVEIS.map((item) => (
-            <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} />
-          ))}
-          <div className="flex justify-center">
-            <button
-              onClick={() => setAcoesAbertas(true)}
-              aria-label="Criar novo"
-              className="-mt-6 grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[#3b74ff] to-[#1641b8] text-white shadow-marca ring-4 ring-cartao"
-            >
-              <Plus size={26} aria-hidden />
-            </button>
-          </div>
-          {ABAS_MOVEIS_DIREITA.map((item) => <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} foto={item.href === "/painel/conta" ? perfil : undefined} />)}
-        </div>
-      </nav>
-
+      {/* Celular: o mesmo cabeçalho e o mesmo rodapé do modo motorista, com as abas do locador. */}
+      <BarraTopo className="lg:hidden" />
+      <BarraInferior
+        abas={[
+          { href: "/painel", rotulo: "Início", icone: LayoutDashboard, ativo: (c) => c === "/painel" },
+          { href: "/painel/veiculos", rotulo: "Frota", icone: Car, ativo: (c) => c.startsWith("/painel/veiculos") },
+          { href: "/painel/financeiro", rotulo: "Financeiro", icone: CircleDollarSign, ativo: (c) => c.startsWith("/painel/financeiro") },
+        ]}
+        central={<BotaoCentral aoTocar={() => setAcoesAbertas(true)} />}
+      />
 
       {acoesAbertas && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Criar novo">
@@ -238,22 +209,5 @@ export function NavegacaoPainel({
         </div>
       )}
     </>
-  );
-}
-
-function AbaMovel({ href, rotulo, icone: Icone, atual, contador = 0, foto }: { href: string; rotulo: string; icone: typeof Car; atual: boolean; contador?: number; foto?: { nome: string; foto: string | null } }) {
-  return (
-    <Link
-      href={href as Route}
-      prefetch
-      aria-current={atual ? "page" : undefined}
-      className={`relative flex flex-col items-center gap-1 pt-2.5 pb-2 text-[0.68rem] font-semibold ${atual ? "text-marca" : "text-suave"}`}
-    >
-      <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${atual ? "bg-marca-suave" : ""}`}>
-        {foto?.foto ? <Avatar nome={foto.nome} foto={foto.foto} className={`!size-6 ${atual ? "ring-2 ring-marca" : ""}`} /> : <Icone size={21} aria-hidden />}
-      </span>
-      {rotulo}
-      {contador > 0 && <span className="absolute top-1.5 left-1/2 ml-3 size-2.5 rounded-full bg-[#ffb020] ring-2 ring-cartao" />}
-    </Link>
   );
 }

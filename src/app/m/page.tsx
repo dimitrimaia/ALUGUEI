@@ -4,11 +4,13 @@ import Link from "next/link";
 import { ListaConversas } from "@/components/motorista/lista-conversas";
 import { CabecalhoInicio } from "@/components/motorista/cabecalho";
 import { BotaoEmergencia } from "@/components/motorista/emergencia";
-import { BotaoLink, Placa, Selo, Suave } from "@/components/ui";
+import { Aviso, BotaoLink, Placa, Selo, Suave } from "@/components/ui";
+import { diasDeAtraso, situacaoCheckin } from "@/dominio/checkin/checkin";
 import type { Linha } from "@/db/tipos";
 import { nomeDiaDaSemana } from "@/dominio/contrato/variaveis";
 import { data, diaDaSemana, formatarData, hoje, somarDias } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { primeiroNome } from "@/dominio/conta/preferencias";
 import { perfilResumido } from "@/lib/conta";
 import { conversasDoMotorista } from "@/lib/conversas";
 import { locadoraDoUsuario } from "@/lib/modos";
@@ -28,7 +30,8 @@ function etapaAtual(cadastro: Linha<"locatarios">, contrato?: Linha<"contratos">
 }
 
 /** Início do motorista (RF-121): um resumo do que importa agora, no estilo de app de banco. */
-export default async function Motorista() {
+export default async function Motorista({ searchParams }: { searchParams: Promise<{ checkin?: string }> }) {
+  const checkinEnviado = (await searchParams).checkin === "ok";
   const usuario = await exigirUsuario("/m");
   const [cadastros, contratos, perfil, conversas, locadora] = await Promise.all([
     cadastrosDoMotorista(usuario.id),
@@ -49,7 +52,7 @@ export default async function Motorista() {
   ]);
 
   const nomeOrg = (id: string) => orgs?.find((o) => o.id === id)?.nome ?? "Locador";
-  const primeiroNome = (perfil?.nomeInformado || cadastros[0]?.nome || "").split(" ")[0];
+  const nome = primeiroNome(perfil?.nomeInformado || cadastros[0]?.nome);
   const principal = cadastros[0];
   const contrato = principal && contratos.find((k) => k.locatario_id === principal.id);
   const etapa = principal ? etapaAtual(principal, contrato) : 0;
@@ -57,13 +60,15 @@ export default async function Motorista() {
   const proximoPagamento = (obrigacoes ?? []).find((o) => o.contrato_id === contrato?.id && o.tipo !== "checkin");
   const veiculo = contrato && veiculos?.find((x) => x.id === contrato.veiculo_id);
   const vistoriaPendente = contrato && vistorias?.find((v) => v.contrato_id === contrato.id && !v.aceite_locatario_evidencia_id);
+  const proximoCheckin = ativo ? (obrigacoes ?? []).find((o) => o.contrato_id === contrato.id && o.tipo === "checkin") : undefined;
+  const situacao = proximoCheckin ? situacaoCheckin(data(proximoCheckin.vencimento), dia, false) : null;
 
   return (
     <div className="flex flex-col gap-4">
-      <CabecalhoInicio inicio="/m" />
+      <CabecalhoInicio />
 
       <div>
-        <p className="text-sm text-suave">Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
+        <p className="text-sm text-suave">Olá{nome ? `, ${nome}` : ""} 👋</p>
         <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight">{ativo ? "Seu aluguel em dia" : principal && principal.status !== "recusado" ? "Acompanhe seu aluguel" : "Encontre seu carro"}</h1>
       </div>
 
@@ -87,7 +92,7 @@ export default async function Motorista() {
           </div>
         </section>
       ) : principal && principal.status !== "recusado" ? (
-        <section className="rounded-[1.25rem] border border-borda bg-cartao p-5 shadow-cartao">
+        <section className="rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao">
           <p className="text-xs font-semibold text-suave">Seu andamento · etapa {etapa + 1} de {ETAPAS.length}</p>
           <p className="mt-0.5 text-xl font-bold tracking-tight">{ETAPAS[etapa]}</p>
           <ol className="mt-4 flex gap-1.5" aria-label="Andamento">
@@ -114,6 +119,19 @@ export default async function Motorista() {
       )}
 
       <div className="flex flex-col gap-4">
+        {checkinEnviado && <Aviso tom="ok" titulo="Check-in enviado">Obrigado! O locador recebe as fotos e o km agora.</Aviso>}
+
+        {proximoCheckin && (situacao === "aberto" || situacao === "atrasado") && (
+          <Acao
+            icone={Camera}
+            titulo={situacao === "atrasado" ? `Check-in atrasado há ${diasDeAtraso(data(proximoCheckin.vencimento), dia)} ${diasDeAtraso(data(proximoCheckin.vencimento), dia) === 1 ? "dia" : "dias"}` : "Hora do check-in da semana"}
+            texto="Fotos do painel, do óleo e do arrefecimento, e um vídeo dando a volta no carro."
+            destaque
+          >
+            <BotaoLink href={`/m/checkin/${proximoCheckin.id}` as Route} tamanho="lg" className="w-full"><Camera size={18} /> Fazer check-in</BotaoLink>
+          </Acao>
+        )}
+
         {principal && (
           <>
             {principal.status === "em_cadastro" && (
@@ -157,21 +175,21 @@ export default async function Motorista() {
         {ativo && (
           <div className="grid grid-cols-4 gap-2">
             {[
-              { icone: Camera, rotulo: "Check-in", href: null },
+              { icone: Camera, rotulo: "Check-in", href: proximoCheckin && situacao !== "futuro" ? `/m/checkin/${proximoCheckin.id}` : null, quando: proximoCheckin ? formatarData(data(proximoCheckin.vencimento)).slice(0, 5) : undefined },
               { icone: FileText, rotulo: "Contrato", href: `/m/contrato/${contrato.id}` },
               { icone: ClipboardCheck, rotulo: "Vistoria", href: vistorias?.find((v) => v.contrato_id === contrato.id) ? `/m/vistoria/${vistorias.find((v) => v.contrato_id === contrato.id)!.id}` : null },
-            ].map(({ icone: Icone, rotulo, href }) => {
+            ].map(({ icone: Icone, rotulo, href, quando }: { icone: typeof Camera; rotulo: string; href: string | null; quando?: string }) => {
               const conteudo = (
                 <>
                   <span className="grid size-12 place-items-center rounded-2xl bg-marca-suave text-marca"><Icone size={22} /></span>
                   <span className="text-xs font-semibold">{rotulo}</span>
-                  {!href && <span className="text-[0.6rem] text-suave">em breve</span>}
+                  {!href && quando && <span className="-mt-1 text-[0.6rem] text-suave">{quando}</span>}
                 </>
               );
               return href ? (
-                <Link key={rotulo} href={href as Route} className="flex flex-col items-center gap-2 rounded-[1.25rem] border border-borda bg-cartao p-3 shadow-cartao active:scale-[0.98]">{conteudo}</Link>
+                <Link key={rotulo} href={href as Route} className="flex flex-col items-center gap-2 rounded-[1.1rem] border border-borda bg-cartao p-3 shadow-cartao active:scale-[0.98]">{conteudo}</Link>
               ) : (
-                <span key={rotulo} className="flex flex-col items-center gap-2 rounded-[1.25rem] border border-borda bg-cartao p-3 opacity-60">{conteudo}</span>
+                <span key={rotulo} className="flex flex-col items-center gap-2 rounded-[1.1rem] border border-borda bg-cartao p-3 opacity-60">{conteudo}</span>
               );
             })}
             <BotaoEmergencia />
@@ -181,7 +199,7 @@ export default async function Motorista() {
         {!!conversas.length && (
           <section>
             <div className="mt-1 mb-2.5 flex items-center justify-between">
-              <h2 className="font-bold">Conversas</h2>
+              <h2 className="text-base font-bold tracking-tight">Conversas</h2>
               <Link href="/m/conversas" className="text-sm font-semibold text-marca">Ver todas</Link>
             </div>
             <ListaConversas conversas={conversas} />
@@ -201,8 +219,8 @@ export default async function Motorista() {
         )}
 
         {!cadastros.length && (
-          <section className="rounded-[1.25rem] border border-borda bg-cartao p-5 shadow-cartao">
-            <h2 className="font-bold">Como funciona</h2>
+          <section className="rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao">
+            <h2 className="text-base font-bold tracking-tight">Como funciona</h2>
             <ol className="mt-3 flex flex-col gap-3">
               {[
                 { icone: Search, titulo: "Encontre um carro", texto: "Veja valor da semana, caução e fotos." },
@@ -221,8 +239,8 @@ export default async function Motorista() {
 
         {!!obrigacoes?.length && (
           <section>
-            <h2 className="mt-2 mb-3 font-bold">Próximos compromissos</h2>
-            <div className="divide-y divide-borda overflow-hidden rounded-[1.25rem] border border-borda bg-cartao shadow-cartao">
+            <h2 className="mt-1 mb-2.5 text-base font-bold tracking-tight">Próximos compromissos</h2>
+            <div className="divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao">
               {obrigacoes.slice(0, 6).map((o) => (
                 <div key={o.id} className="flex items-center gap-3 px-4 py-3">
                   <span className="grid size-10 place-items-center rounded-xl bg-cartao-2 text-suave">
@@ -245,7 +263,7 @@ export default async function Motorista() {
 
 function Acao({ icone: Icone, titulo, texto, destaque = false, children }: { icone: typeof Check; titulo: string; texto: string; destaque?: boolean; children?: React.ReactNode }) {
   return (
-    <div className={`flex flex-col gap-4 rounded-[1.25rem] border bg-cartao p-5 shadow-cartao ${destaque ? "border-marca/40 ring-4 ring-marca/10" : "border-borda"}`}>
+    <div className={`flex flex-col gap-4 rounded-[1.1rem] border bg-cartao p-4 shadow-cartao ${destaque ? "border-marca/40 ring-4 ring-marca/10" : "border-borda"}`}>
       <div className="flex gap-3">
         <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${destaque ? "bg-marca text-white shadow-marca" : "bg-marca-suave text-marca"}`}><Icone size={22} aria-hidden /></span>
         <div>

@@ -41,7 +41,7 @@ export default async function Extrato() {
       {!lista.length ? (
         <Vazio icone={Receipt} titulo="Nada por aqui ainda">As cobranças aparecem aqui quando forem geradas.</Vazio>
       ) : (
-        <div className="divide-y divide-borda overflow-hidden rounded-[1.25rem] border border-borda bg-cartao shadow-cartao">
+        <div className="divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao">
           {lista.map((l) => {
             const credito = l.valor_centavos < 0;
             return (

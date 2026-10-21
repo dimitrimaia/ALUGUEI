@@ -23,7 +23,7 @@ export default async function MeusCarros({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <CabecalhoMotorista titulo="Meus carros" />
+      <CabecalhoMotorista raiz titulo="Meus carros" />
       <AbasMeusCarros atual={aba} />
       {aba === "alugados" ? <Alugados usuarioId={usuario.id} /> : <Anunciados usuarioId={usuario.id} admin={admin} />}
     </>

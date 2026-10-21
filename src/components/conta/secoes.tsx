@@ -50,7 +50,7 @@ function Grupo({ titulo, children }: { titulo?: string; children: React.ReactNod
   return (
     <section>
       {titulo && <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-suave uppercase">{titulo}</h2>}
-      <div className="divide-y divide-borda overflow-hidden rounded-2xl border border-borda bg-cartao shadow-cartao">{children}</div>
+      <div className="divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao">{children}</div>
     </section>
   );
 }
@@ -83,7 +83,7 @@ export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: P
   const nomeTema = TEMAS.find((t) => t.id === perfil.preferencias.tema)?.rotulo;
   return (
     <div className="flex flex-col gap-5">
-      <Link href={`${base}/perfil` as Route} className="flex items-center gap-4 rounded-2xl border border-borda bg-cartao p-4 shadow-cartao transition-colors hover:bg-cartao-2">
+      <Link href={`${base}/perfil` as Route} className="flex items-center gap-4 rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao transition-colors hover:bg-cartao-2">
         <Avatar nome={perfil.nome} foto={perfil.foto} tamanho="lg" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-bold tracking-tight">{perfil.nome}</span>
@@ -96,7 +96,7 @@ export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: P
         <ChevronRight size={18} className="shrink-0 text-suave" />
       </Link>
 
-      <Link href={`${base}/verificacao` as Route} className="rounded-2xl border border-borda bg-cartao p-4 shadow-cartao transition-colors hover:bg-cartao-2">
+      <Link href={`${base}/verificacao` as Route} className="rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao transition-colors hover:bg-cartao-2">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={18} className={feitos === verificacao.length ? "text-ok" : "text-marca"} /> Verificação da conta</span>
           <span className="text-xs font-semibold text-suave">{feitos} de {verificacao.length}</span>
@@ -128,7 +128,7 @@ export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: P
       ))}
 
       <form action="/sair" method="post">
-        <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-borda bg-cartao py-3.5 text-sm font-semibold text-perigo shadow-cartao hover:bg-cartao-2"><LogOut size={17} /> Sair da conta</button>
+        <button className="flex w-full items-center justify-center gap-2 rounded-[1.1rem] border border-borda bg-cartao py-3.5 text-sm font-semibold text-perigo shadow-cartao hover:bg-cartao-2"><LogOut size={17} /> Sair da conta</button>
       </form>
       <p className="text-center text-xs text-suave">Aluguei · versão {process.env.NEXT_PUBLIC_VERSAO ?? "0.1"} · conta criada em {new Date(perfil.criadoEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
     </div>

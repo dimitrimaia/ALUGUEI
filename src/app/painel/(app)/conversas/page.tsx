@@ -17,7 +17,7 @@ export default async function Conversas() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Conversas" subtitulo="Motoristas que se interessaram pelos seus anúncios." />
+      <CabecalhoPagina voltar={{ href: "/painel", rotulo: "Início" }} titulo="Conversas" subtitulo="Motoristas que se interessaram pelos seus anúncios." />
       {!lista.length ? (
         <Vazio icone={MessageCircle} titulo="Nenhuma conversa ainda" acao={<BotaoLink href="/painel/anuncios">Anunciar um carro</BotaoLink>}>
           Quando um motorista tocar em “Tenho interesse” num anúncio, a conversa aparece aqui.

@@ -12,8 +12,8 @@ export default async function ConversasMotorista() {
   const lista = await conversasDoMotorista(usuario.id);
 
   return (
-    <div className="flex flex-col gap-4">
-      <CabecalhoMotorista titulo="Conversas" />
+    <>
+      <CabecalhoMotorista raiz titulo="Conversas" />
       {!lista.length ? (
         <Vazio icone={MessageCircle} titulo="Nenhuma conversa ainda" acao={<BotaoLink href="/m/buscar" icone={Search}>Buscar carros</BotaoLink>}>
           Encontre um carro na sua cidade e fale com o locador por aqui.
@@ -21,9 +21,9 @@ export default async function ConversasMotorista() {
       ) : (
         <>
           <ListaConversas conversas={lista} />
-          <BotaoLink href="/m/buscar" variante="secundario" icone={Search}>Buscar mais carros</BotaoLink>
+          <BotaoLink href="/m/buscar" variante="secundario" icone={Search} className="mt-4 w-full">Buscar mais carros</BotaoLink>
         </>
       )}
-    </div>
+    </>
   );
 }

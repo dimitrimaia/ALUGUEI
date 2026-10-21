@@ -1,13 +1,13 @@
 "use client";
 
-import { Car, ClipboardCheck, FileText, Menu, MessageCircle, Search, Wallet } from "lucide-react";
+import { Camera, Car, ClipboardCheck, FileText, MessageCircle, Search, Wallet } from "lucide-react";
 import { useConta } from "@/components/conta/contexto";
 import { useMenu } from "@/components/menu-app";
 
-/** Botão ☰ do app no modo motorista. O menu em si mora no layout raiz. */
-export function MenuMotorista({ claro = false }: { claro?: boolean }) {
+/** Informa ao menu ☰ (que mora no layout raiz) as opções do modo motorista. */
+export function RegistrarMenuMotorista() {
   const { perfil, naoLidas, locadora } = useConta();
-  const { abrir, aberto } = useMenu({
+  useMenu({
     modo: "motorista",
     locadora,
     inicio: "/m",
@@ -18,6 +18,7 @@ export function MenuMotorista({ claro = false }: { claro?: boolean }) {
         titulo: "Meu aluguel",
         itens: [
           { href: "/m/carros", rotulo: "Meus carros", icone: Car, tambem: ["/m/carro"] },
+          { href: "/m/checkin", rotulo: "Check-in semanal", icone: Camera },
           { href: "/m/extrato", rotulo: "Pagamentos", icone: Wallet, tambem: ["/m/pagar"] },
           { href: "/m/meu-contrato", rotulo: "Contrato", icone: FileText, tambem: ["/m/contrato"] },
           { href: "/m/minha-vistoria", rotulo: "Vistoria do carro", icone: ClipboardCheck, tambem: ["/m/vistoria"] },
@@ -32,15 +33,5 @@ export function MenuMotorista({ claro = false }: { claro?: boolean }) {
       },
     ],
   });
-  return (
-    <button
-      onClick={abrir}
-      aria-label="Abrir menu"
-      aria-expanded={aberto}
-      className={`relative grid size-10 place-items-center rounded-full ${claro ? "bg-white/10 text-white ring-1 ring-white/15" : "hover:bg-cartao-2"}`}
-    >
-      <Menu size={20} />
-      {naoLidas > 0 && <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-[#ffb020] ring-2 ring-cartao" />}
-    </button>
-  );
+  return null;
 }

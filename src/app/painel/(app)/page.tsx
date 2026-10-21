@@ -1,10 +1,11 @@
-import { ArrowRight, Wallet, CalendarClock, Car, CheckCircle2, ClipboardCheck, FileSignature, KeyRound, Plus, UserCheck, UserPlus, Wrench } from "lucide-react";
+import { ArrowRight, Camera, TriangleAlert, Wallet, CalendarClock, Car, CheckCircle2, ClipboardCheck, FileSignature, KeyRound, Plus, UserCheck, UserPlus, Wrench } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { BotaoLink, Cartao, ItemLista, Lista, Placa, Selo, Vazio } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { data, formatarData, hoje, somarDias } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { primeiroNome } from "@/dominio/conta/preferencias";
 import { perfilResumido } from "@/lib/conta";
 import { exigirEquipe } from "@/lib/sessao";
 import { STATUS_VEICULO, TIPO_OBRIGACAO } from "@/lib/rotulos";
@@ -18,10 +19,10 @@ function saudacao() {
 /** Painel do locador (RF-120): o que precisa de atenção hoje, e a semana que vem. */
 export default async function VisaoGeral() {
   const [{ organizacao }, perfil] = await Promise.all([exigirEquipe(), perfilResumido()]);
-  const primeiroNome = (perfil?.nomeInformado || "").split(" ")[0];
+  const nome = primeiroNome(perfil?.nomeInformado);
   const supabase = await supabaseServidor();
   const dia = hoje();
-  const [{ data: veiculos }, { data: motoristas }, { data: contratos }, { data: proximas }, { data: informados }] = await Promise.all([
+  const [{ data: veiculos }, { data: motoristas }, { data: contratos }, { data: proximas }, { data: informados }, { data: paraRevisar }, { data: decisoes }, { data: semCheckin }] = await Promise.all([
     supabase.from("veiculos").select("id, status, placa, modelo, odometro_atual").eq("organizacao_id", organizacao.id).order("criado_em"),
     supabase.from("locatarios").select("id, nome, status").eq("organizacao_id", organizacao.id),
     supabase.from("contratos").select("id, status, locatario_id, veiculo_id").eq("organizacao_id", organizacao.id),
@@ -35,6 +36,9 @@ export default async function VisaoGeral() {
       .order("vencimento")
       .limit(8),
     supabase.from("obrigacoes").select("id, contrato_id, valor_centavos").eq("organizacao_id", organizacao.id).in("status", ["pendente", "atrasada"]).not("pagamento_informado_em", "is", null),
+    supabase.from("checkins").select("id, contrato_id, referencia").eq("organizacao_id", organizacao.id).is("revisado_por", null).order("enviado_em"),
+    supabase.from("acoes_pendentes").select("id, contrato_id, motivo").eq("organizacao_id", organizacao.id).eq("status", "pendente"),
+    supabase.from("obrigacoes").select("id, contrato_id, vencimento").eq("organizacao_id", organizacao.id).eq("tipo", "checkin").in("status", ["pendente", "atrasada"]).lt("vencimento", dia),
   ]);
 
   const v = veiculos ?? [];
@@ -57,6 +61,9 @@ export default async function VisaoGeral() {
   const feitos = passos.filter((p) => p.feito).length;
 
   const pendencias = [
+    ...(decisoes ?? []).map((a) => ({ id: a.id, href: `/painel/contratos/${a.contrato_id}`, icone: TriangleAlert, titulo: nomeMotorista(a.contrato_id ?? ""), detalhe: a.motivo, tom: "perigo" as const, selo: "Decidir" })),
+    ...(semCheckin ?? []).map((o) => ({ id: o.id, href: `/painel/contratos/${o.contrato_id}`, icone: Camera, titulo: nomeMotorista(o.contrato_id), detalhe: `Check-in de ${formatarData(data(o.vencimento))} não enviado`, tom: "alerta" as const, selo: "Atrasado" })),
+    ...(paraRevisar ?? []).map((k) => ({ id: k.id, href: `/painel/contratos/${k.contrato_id}/checkins/${k.id}`, icone: Camera, titulo: nomeMotorista(k.contrato_id), detalhe: `Check-in de ${formatarData(data(k.referencia))} enviado`, tom: "info" as const, selo: "Revisar" })),
     ...(informados ?? []).map((o) => ({ id: o.id, href: "/painel/financeiro", icone: Wallet, titulo: `${nomeMotorista(o.contrato_id)} avisou que pagou`, detalhe: `Pix direto de ${formatarBRL(o.valor_centavos ?? 0)}: confira no banco e dê baixa`, tom: "ok" as const, selo: "Conferir" })),
     ...m.filter((x) => x.status === "em_analise").map((x) => ({ id: x.id, href: `/painel/motoristas/${x.id}`, icone: UserCheck, titulo: x.nome, detalhe: "Cadastro para analisar", tom: "alerta" as const, selo: "Analisar" })),
     ...c.filter((x) => x.status === "aguardando_assinatura").map((x) => ({ id: x.id, href: `/painel/contratos/${x.id}`, icone: FileSignature, titulo: m.find((y) => y.id === x.locatario_id)?.nome ?? "Contrato", detalhe: "Aguardando a assinatura do motorista", tom: "neutro" as const, selo: "Assinatura" })),
@@ -67,13 +74,13 @@ export default async function VisaoGeral() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="-mb-2">
-        <p className="text-sm text-suave">{saudacao()}{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
+    <div className="flex flex-col gap-4 lg:gap-6">
+      <div>
+        <p className="text-sm text-suave">{saudacao()}{nome ? `, ${nome}` : ""} 👋</p>
         <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight">{organizacao.nome} hoje</h1>
       </div>
       {/* Destaque */}
-      <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante sm:p-7">
+      <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante lg:p-7">
         <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(70%_80%_at_80%_20%,black,transparent)]" aria-hidden />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -123,8 +130,8 @@ export default async function VisaoGeral() {
         </Cartao>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="flex flex-col gap-4 lg:gap-6">
           <section>
             <CabecalhoSecao titulo="Precisa de você" />
             {pendencias.length ? (
@@ -207,7 +214,7 @@ export default async function VisaoGeral() {
 
 function CabecalhoSecao({ titulo, acao }: { titulo: string; acao?: React.ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
+    <div className="mt-1 mb-2.5 flex items-center justify-between">
       <h2 className="text-base font-bold tracking-tight">{titulo}</h2>
       {acao}
     </div>

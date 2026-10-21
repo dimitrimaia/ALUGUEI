@@ -85,7 +85,7 @@ export function PaginaPerfil({ c }: { c: ConteudoPerfil }) {
         <Titulo selo="Como funciona" titulo={c.passos.titulo} />
         <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {c.passos.itens.map(({ icone: Icone, titulo, texto }, i) => (
-            <li key={titulo} className="relative rounded-[1.25rem] border border-borda bg-fundo p-5">
+            <li key={titulo} className="relative rounded-[1.1rem] border border-borda bg-fundo p-5">
               <span className="absolute top-4 right-5 text-4xl font-extrabold text-marca/10">{i + 1}</span>
               <span className="grid size-11 place-items-center rounded-xl bg-marca text-white shadow-marca"><Icone size={20} /></span>
               <p className="mt-4 font-bold">{titulo}</p>
@@ -118,7 +118,7 @@ export function PaginaPerfil({ c }: { c: ConteudoPerfil }) {
         <Titulo selo="Recursos" titulo={c.recursos.titulo} />
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {c.recursos.itens.map(({ icone: Icone, titulo, texto, breve }) => (
-            <div key={titulo} className="flex flex-col rounded-[1.25rem] border border-borda bg-cartao p-5 shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante">
+            <div key={titulo} className="flex flex-col rounded-[1.1rem] border border-borda bg-cartao p-5 shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante">
               <div className="flex items-start justify-between gap-2">
                 <span className="grid size-10 place-items-center rounded-xl bg-marca-suave text-marca"><Icone size={20} /></span>
                 {breve && <span className="rounded-full bg-alerta-suave px-2 py-0.5 text-[0.7rem] font-bold text-alerta">Em breve</span>}

@@ -9,8 +9,7 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<{
   const { cidade } = await searchParams;
   return (
     <>
-      <CabecalhoMotorista titulo="Buscar carros" />
-      <p className="-mt-1 text-sm text-suave">Encontre um carro na sua cidade e converse com o locador por aqui.</p>
+      <CabecalhoMotorista raiz titulo="Buscar carros" subtitulo="Encontre um carro na sua cidade e converse com o locador por aqui." />
       <BuscaCarros cidade={cidade} base="/m/buscar" />
     </>
   );

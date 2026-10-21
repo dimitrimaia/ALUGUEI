@@ -1,5 +1,6 @@
 import { ProvedorConta } from "@/components/conta/contexto";
 import { AbasMotorista } from "@/components/motorista/abas";
+import { RegistrarMenuMotorista } from "@/components/motorista/menu";
 import { perfilResumido } from "@/lib/conta";
 import { conversasNaoLidasDoMotorista } from "@/lib/conversas";
 import { locadoraDoUsuario } from "@/lib/modos";
@@ -14,6 +15,7 @@ export default async function LayoutMotorista({ children }: { children: React.Re
     naoLidas,
     modo: "motorista" as const,
     locadora: locadora?.nome ?? null,
+    avisos: naoLidas,
   };
   return (
     <ProvedorConta valor={valor} tema={perfil?.tema ?? "claro"}>
@@ -22,6 +24,7 @@ export default async function LayoutMotorista({ children }: { children: React.Re
           {children}
         </main>
         <AbasMotorista />
+        <RegistrarMenuMotorista />
       </div>
     </ProvedorConta>
   );

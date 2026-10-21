@@ -19,7 +19,7 @@ export default async function Anuncios() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Anúncios" subtitulo="Carros que aparecem na busca de motoristas em aluguei.xyz/carros." acao={<BotaoLink href="/carros" variante="secundario" icone={ExternalLink}>Ver a busca</BotaoLink>} />
+      <CabecalhoPagina voltar={{ href: "/painel", rotulo: "Início" }} titulo="Anúncios" subtitulo="Carros que aparecem na busca de motoristas em aluguei.xyz/carros." acao={<BotaoLink href="/carros" variante="secundario" icone={ExternalLink}>Ver a busca</BotaoLink>} />
       {!veiculos?.length ? (
         <Vazio icone={Car} titulo="Cadastre um carro primeiro" acao={<BotaoLink href="/painel/veiculos/novo">Cadastrar veículo</BotaoLink>}>Depois é só anunciar.</Vazio>
       ) : (
@@ -33,14 +33,15 @@ export default async function Anuncios() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {foto ? <img src={urlFoto(foto)} alt="" className="size-full object-cover" /> : <Car size={22} className="text-suave" />}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                   <p className="truncate text-sm font-semibold">{v.modelo}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Placa placa={v.placa} tamanho="sm" />
                     {a ? <span className="text-xs text-suave">{formatarBRL(a.aluguel_semanal_centavos)}/sem · {a.cidade}/{a.uf}</span> : null}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                {/* No celular as ações descem para a linha de baixo, em vez de espremer o nome do carro. */}
+                <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                   {v.status !== "disponivel" ? (
                     <Selo tom="neutro">{v.status === "alugado" ? "Alugado" : "Indisponível"}</Selo>
                   ) : a ? (

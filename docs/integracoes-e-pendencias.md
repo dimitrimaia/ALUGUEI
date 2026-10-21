@@ -75,8 +75,13 @@ Antes de ligar: o motorista precisa concordar no contrato com o rastreamento
   - Nesse modo, a mensalidade da plataforma precisa ser cobrada à parte (ainda a fazer).
 - **Pix com baixa automática e baixo custo:** a API Pix de bancos como Inter
   (conta PJ) e Efí manda um aviso a cada Pix recebido. Dá para ligar a baixa
-  automática sem o Asaas. Custo baixo ou zero, mas cada locador precisa de conta
-  PJ no banco.
+  automática sem o Asaas. Custo baixo ou zero.
+  - **Quem paga** pode usar qualquer banco: o QR Code é o padrão do Banco Central.
+  - **Quem recebe** (o locador) precisa de conta no banco integrado. Cada banco tem
+    a sua API e o seu cadastro (certificado digital, chave da API).
+  - Para "todos os bancos", o caminho é um intermediário (Asaas, Efí, Mercado Pago)
+    ou o Open Finance. Este último ainda não oferece aviso de Pix recebido para
+    qualquer conta.
 - **Asaas (atual):** baixa automática e split, com tarifa por Pix recebido.
 
 ## SMS sem custo
@@ -93,7 +98,7 @@ Sugestão: e-mail para login e WhatsApp para avisos. SMS só como reserva.
 ## O que falta no projeto (revisão geral)
 
 **Para o piloto:**
-1. **Check-in semanal** com fotos guiadas (hoje aparece "em breve").
+1. ~~Check-in semanal~~ (feito, ver `checkin.md`).
 2. **Notificações**: lembrete de vencimento, mensagem nova no chat e aviso de atraso,
    por WhatsApp, e-mail e push.
 3. **Devolução e encerramento**: vistoria de saída, demonstrativo de pendências,

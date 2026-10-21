@@ -22,7 +22,7 @@ export default async function Contratos() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Contratos" />
+      <CabecalhoPagina voltar={{ href: "/painel", rotulo: "Início" }} titulo="Contratos" />
       {!contratos?.length ? (
         <Vazio icone={FileText} titulo="Nenhum contrato ainda">Aprove um motorista e gere o contrato pela ficha dele.</Vazio>
       ) : (

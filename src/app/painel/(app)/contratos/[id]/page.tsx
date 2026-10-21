@@ -1,4 +1,5 @@
 import type { Route } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClipboardCheck, FileText } from "lucide-react";
 import { BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Selo, Suave } from "@/components/ui";
@@ -10,6 +11,7 @@ import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { BotaoAcao } from "@/components/painel/botao-acao";
 import { ResumoVistoria } from "@/components/resumo-vistoria";
 import { gerarPix } from "../../financeiro/acoes";
+import { decidirAcao } from "./checkins/acoes";
 import type { ChecklistVistoria } from "@/dominio/vistoria/roteiro";
 import { linkTemporario } from "@/lib/evidencias";
 import { fotosDaVistoria } from "@/lib/vistorias";
@@ -35,9 +37,11 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
     supabase.from("obrigacoes").select("id, tipo, vencimento, valor_centavos, status").eq("contrato_id", id).order("vencimento").limit(40),
     supabase.from("vistorias").select("*").eq("contrato_id", id).eq("tipo", "entrega").maybeSingle(),
   ]);
-  const [{ data: cobrancas }, { data: lancamentos }] = await Promise.all([
+  const [{ data: cobrancas }, { data: lancamentos }, { data: checkins }, { data: acoes }] = await Promise.all([
     supabase.from("cobrancas").select("id, obrigacao_id, status, valor_pago_centavos").eq("contrato_id", id),
     supabase.from("lancamentos").select("id, descricao, valor_centavos, competencia, tipo").eq("contrato_id", id).order("competencia", { ascending: false }).order("criado_em", { ascending: false }),
+    supabase.from("checkins").select("id, obrigacao_id, odometro_informado, revisado_por").eq("contrato_id", id),
+    supabase.from("acoes_pendentes").select("id, tipo, motivo, criado_em").eq("contrato_id", id).eq("status", "pendente").order("criado_em"),
   ]);
   const saldoAberto = (lancamentos ?? []).reduce((s, l) => s + l.valor_centavos, 0);
   const dia = hoje();
@@ -53,6 +57,7 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
     <>
       <CabecalhoPagina
         voltar={{ href: "/painel/contratos", rotulo: "Contratos" }}
+        tituloCurto={l?.nome ?? "Contrato"}
         titulo={<span className="flex flex-wrap items-center gap-3">{l?.nome} <Selo tom={status.tom}>{status.rotulo}</Selo></span>}
         subtitulo={v ? `${formatarPlaca(v.placa)} · ${v.modelo}` : undefined}
         acao={c.status === "assinado" ? <BotaoLink href={`/painel/contratos/${c.id}/vistoria` as Route} icone={ClipboardCheck}>Fazer vistoria de entrega</BotaoLink> : undefined}
@@ -120,6 +125,21 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
             <ResumoVistoria checklist={checklist} odometro={vistoria.odometro} combustivel={vistoria.combustivel_oitavos} fotos={fotosVistoria} />
           </section>
         )}
+        {!!acoes?.length && (
+          <Cartao className="flex flex-col gap-3 lg:col-span-2">
+            <p className="font-semibold">Decisões pendentes</p>
+            {acoes.map((a) => (
+              <div key={a.id} className="flex flex-col gap-2 rounded-xl bg-alerta-suave p-3 sm:flex-row sm:items-center">
+                <p className="flex-1 text-sm">{a.motivo}</p>
+                <div className="flex gap-2">
+                  <BotaoAcao acao={decidirAcao.bind(null, a.id, "registrar")} rotulo="Registrar infração" variante="secundario" confirmar="Registrar como infração no histórico do contrato?" />
+                  <BotaoAcao acao={decidirAcao.bind(null, a.id, "dispensar")} rotulo="Dispensar" />
+                </div>
+              </div>
+            ))}
+            <p className="text-xs text-suave">O app só registra. Notificação formal, multa ou rescisão continuam sendo decisão sua.</p>
+          </Cartao>
+        )}
         {!!agenda?.length && (
           <Cartao className="lg:col-span-2">
             <p className="mb-2 font-semibold">Agenda do contrato</p>
@@ -133,13 +153,19 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
                     <span className="flex-1">{TIPO_OBRIGACAO[o.tipo]}</span>
                     <span className="w-24 text-right font-semibold tabular-nums">{o.valor_centavos !== null ? formatarBRL(o.valor_centavos) : ""}</span>
                     <span className="flex w-36 justify-end">
-                      {o.status === "cumprida" ? (
+                      {o.tipo === "checkin" ? (
+                        (() => {
+                          const ck = checkins?.find((x) => x.obrigacao_id === o.id);
+                          if (ck) return <Link href={`/painel/contratos/${id}/checkins/${ck.id}` as Route} className="text-sm font-semibold text-marca">{ck.revisado_por ? "Ver fotos" : "Revisar fotos"}</Link>;
+                          return o.vencimento < dia ? <Selo tom="perigo">Não enviado</Selo> : null;
+                        })()
+                      ) : o.status === "cumprida" ? (
                         <Selo tom="ok">Pago</Selo>
                       ) : cob ? (
                         <Selo tom={o.vencimento < dia ? "perigo" : "neutro"}>{o.vencimento < dia ? "Pix vencido" : "Pix enviado"}</Selo>
                       ) : cobravel && c.status === "ativo" ? (
                         <BotaoAcao acao={gerarPix.bind(null, o.id)} rotulo="Gerar Pix" />
-                      ) : o.tipo !== "checkin" && o.vencimento < dia ? (
+                      ) : o.vencimento < dia ? (
                         <Selo tom="perigo">Em atraso</Selo>
                       ) : null}
                     </span>

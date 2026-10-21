@@ -157,7 +157,7 @@ export function FormNotificacoes({
     iniciar(async () => setEstado((await salvarPreferencias(novo)).ok ? "salvo" : "erro"));
   }
 
-  const lista = "divide-y divide-borda overflow-hidden rounded-2xl border border-borda bg-cartao shadow-cartao";
+  const lista = "divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao";
   return (
     <div className="flex flex-col gap-5">
       <section>

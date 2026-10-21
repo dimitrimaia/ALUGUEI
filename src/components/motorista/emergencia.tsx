@@ -41,7 +41,7 @@ export function BotaoEmergencia({ variante = "bloco" }: { variante?: "bloco" | "
   return (
     <>
       {variante === "bloco" ? (
-        <button onClick={() => setAberto(true)} className="flex flex-col items-center gap-2 rounded-[1.25rem] border border-perigo/25 bg-cartao p-3 shadow-cartao active:scale-[0.98]">
+        <button onClick={() => setAberto(true)} className="flex flex-col items-center gap-2 rounded-[1.1rem] border border-perigo/25 bg-cartao p-3 shadow-cartao active:scale-[0.98]">
           <span className="grid size-12 place-items-center rounded-2xl bg-perigo-suave text-perigo"><ShieldAlert size={22} /></span>
           <span className="text-xs font-semibold">Emergência</span>
         </button>

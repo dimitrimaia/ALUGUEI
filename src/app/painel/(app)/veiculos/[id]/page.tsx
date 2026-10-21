@@ -36,6 +36,7 @@ export default async function FichaVeiculo({ params }: { params: Promise<{ id: s
     <>
       <CabecalhoPagina
         voltar={{ href: "/painel/veiculos", rotulo: "Veículos" }}
+        tituloCurto={v.modelo}
         titulo={<span className="flex flex-wrap items-center gap-3"><Placa placa={v.placa} tamanho="lg" /> {v.modelo} <Selo tom={status.tom}>{status.rotulo}</Selo></span>}
         acao={v.status === "disponivel" ? <BotaoLink href={`/painel/motoristas/convidar?veiculo=${v.id}`} icone={UserPlus}>Cadastrar motorista</BotaoLink> : undefined}
       />

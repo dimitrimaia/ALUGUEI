@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, type ReactNode, type RefObject, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useConta } from "@/components/conta/contexto";
 import { Gaveta } from "@/components/gaveta";
+import { telaNoOutroModo } from "@/lib/modo-equivalente";
 import { Avatar, Marca } from "@/components/ui";
 
 export type Modo = "motorista" | "locador";
@@ -40,7 +41,7 @@ function atual(caminho: string, item: ItemMenu) {
 }
 
 /** Troca entre os dois modos da conta: alugar carros (motorista) e anunciar os seus (locador). */
-export function TrocaModo({ modo, locadora, escuro = false, aoTrocar }: { modo: Modo; locadora: string | null; escuro?: boolean; aoTrocar?: (m: Modo, href: string) => void }) {
+export function TrocaModo({ modo, locadora, escuro = false, aoTrocar }: { modo: Modo; locadora: string | null; escuro?: boolean; aoTrocar?: (m: Modo) => void }) {
   const opcoes = [
     { id: "motorista", rotulo: "Motorista", detalhe: "Alugar carro", href: "/m", icone: Car },
     { id: "locador", rotulo: "Locador", detalhe: locadora ? "Meus carros" : "Ativar", href: locadora ? "/painel" : "/painel/comecar", icone: Building2 },
@@ -57,10 +58,9 @@ export function TrocaModo({ modo, locadora, escuro = false, aoTrocar }: { modo: 
             aria-selected={ativo}
             onClick={(e) => {
               if (ativo) return e.preventDefault();
-              // Para um modo já ativo, troca por trás com o menu aberto; "Ativar" abre a tela de ativação.
-              if (aoTrocar && (id === "motorista" || locadora !== null)) {
+              if (aoTrocar) {
                 e.preventDefault();
-                aoTrocar(id, href);
+                aoTrocar(id);
               }
             }}
             className={`flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${ativo ? (escuro ? "bg-white text-[#0b2a6b]" : "bg-cartao text-texto shadow-cartao") : escuro ? "text-white/80" : "text-suave"}`}
@@ -77,13 +77,24 @@ export function TrocaModo({ modo, locadora, escuro = false, aoTrocar }: { modo: 
   );
 }
 
-/** A troca de modo da tela Conta, com os dados do layout. */
+/** A troca de modo da tela Conta: vai para a Conta do outro modo. */
 export function TrocaModoDaConta() {
   const { modo, locadora } = useConta();
-  return <TrocaModo modo={modo} locadora={locadora} />;
+  const { trocarModo } = useContext(Contexto);
+  return <TrocaModo modo={modo} locadora={locadora} aoTrocar={trocarModo} />;
 }
 
-const Contexto = createContext<{ abrir: () => void; registrar: (d: DadosMenu) => void; aberto: boolean }>({ abrir: () => {}, registrar: () => {}, aberto: false });
+interface ValorMenu {
+  abrir: () => void;
+  registrar: (d: DadosMenu) => void;
+  aberto: boolean;
+  /** Troca de modo indo para a tela equivalente do outro lado; com o menu aberto, ele continua aberto. */
+  trocarModo: (m: Modo) => void;
+}
+
+const Contexto = createContext<ValorMenu>({ abrir: () => {}, registrar: () => {}, aberto: false, trocarModo: () => {} });
+
+export const useAcoesMenu = () => useContext(Contexto);
 
 /**
  * O menu ☰ mora no layout raiz, acima dos dois modos. Assim, ao trocar de
@@ -101,16 +112,23 @@ export function ProvedorMenu({ children }: { children: ReactNode }) {
     setTrocando((t) => (t === d.modo ? null : t));
   }, []);
 
-  function trocar(m: Modo, href: string) {
-    manter.current = true;
-    setTrocando(m);
-    router.push(href as Route);
-  }
+  const trocarModo = useCallback(
+    (m: Modo) => {
+      if (dados?.modo === m) return;
+      if (m === "locador" && !dados?.locadora) return router.push("/painel/comecar");
+      if (aberto) {
+        manter.current = true;
+        setTrocando(m);
+      }
+      router.push(telaNoOutroModo(location.pathname, m) as Route);
+    },
+    [aberto, dados?.modo, dados?.locadora, router],
+  );
 
   return (
-    <Contexto.Provider value={{ abrir: () => setAberto(true), registrar, aberto }}>
+    <Contexto.Provider value={{ abrir: () => setAberto(true), registrar, aberto, trocarModo }}>
       {children}
-      {dados && <MenuApp aberto={aberto} aoFechar={() => setAberto(false)} dados={dados} trocando={trocando} aoTrocar={trocar} manterAberto={manter} />}
+      {dados && <MenuApp aberto={aberto} aoFechar={() => setAberto(false)} dados={dados} trocando={trocando} aoTrocar={trocarModo} manterAberto={manter} />}
     </Contexto.Provider>
   );
 }
@@ -142,7 +160,7 @@ function MenuApp({
   aoFechar: () => void;
   dados: DadosMenu;
   trocando: Modo | null;
-  aoTrocar: (m: Modo, href: string) => void;
+  aoTrocar: (m: Modo) => void;
   manterAberto: RefObject<boolean>;
 }) {
   const caminho = usePathname();

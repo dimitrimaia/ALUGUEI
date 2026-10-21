@@ -49,3 +49,9 @@ export function iniciais(nome: string): string {
   const letras = partes.length > 1 ? partes[0]![0]! + partes[partes.length - 1]![0]! : (partes[0] ?? "A").slice(0, 2);
   return letras.toUpperCase();
 }
+
+/** Primeiro nome para a saudação, com a inicial maiúscula ("dimitri silva" → "Dimitri"). */
+export function primeiroNome(nome: string | null | undefined): string {
+  const p = (nome ?? "").trim().split(/\s+/)[0] ?? "";
+  return p ? p[0]!.toLocaleUpperCase("pt-BR") + p.slice(1) : "";
+}
