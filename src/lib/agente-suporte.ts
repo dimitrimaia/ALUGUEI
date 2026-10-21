@@ -4,6 +4,7 @@ import type { ParametrosContrato } from "@/dominio/contrato/parametros";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { MARCA_TRANSFERENCIA, historicoParaModelo, humanoAssumiu } from "@/dominio/suporte/conversa";
 import { enviarEmail } from "@/integracoes/email";
+import { conversarComGemini, geminiConfigurado, paraFerramentaGemini } from "@/integracoes/gemini";
 import { enviarTextoWhatsApp } from "@/integracoes/whatsapp";
 import { contaDoLocador } from "./cobrancas";
 import { emailsDaEquipe } from "./equipe-aluguei";
@@ -19,12 +20,15 @@ import { supabaseAdmin } from "./supabase/admin";
  */
 
 /**
- * Modelo e esforço do assistente. Padrão: Claude Haiku 5.5, o mais barato
- * ($0,10 por milhão de tokens de entrada e $0,50 de saída), com esforço baixo
- * (pensa pouco, responde rápido). Para respostas mais elaboradas, troque nas
- * variáveis da Vercel: SUPORTE_MODELO=claude-sonnet-5-5 ou claude-opus-5-5.
+ * Provedor, modelo e esforço do assistente.
+ * - Claude (ANTHROPIC_API_KEY): padrão Haiku 5.5, o mais barato, com esforço baixo.
+ *   Para respostas mais elaboradas: SUPORTE_MODELO=claude-sonnet-5-5.
+ * - Gemini (GEMINI_API_KEY): nível gratuito do Google AI Studio, padrão gemini-2.5-flash.
+ * Com as duas chaves, vale o Claude, a menos que SUPORTE_PROVEDOR=gemini.
  */
-const MODELO = process.env.SUPORTE_MODELO ?? "claude-haiku-5-5";
+const PROVEDOR: "claude" | "gemini" | null =
+  process.env.SUPORTE_PROVEDOR === "gemini" && geminiConfigurado() ? "gemini" : process.env.ANTHROPIC_API_KEY ? "claude" : geminiConfigurado() ? "gemini" : null;
+const MODELO = process.env.SUPORTE_MODELO ?? (PROVEDOR === "gemini" ? "gemini-2.5-flash" : "claude-haiku-5-5");
 const ESFORCO = (process.env.SUPORTE_ESFORCO ?? "low") as "low" | "medium" | "high";
 const MAX_VOLTAS = 6;
 
@@ -164,7 +168,7 @@ async function executar(nome: string, usuarioId: string | null): Promise<unknown
 }
 
 export function agenteLigado() {
-  return Boolean(process.env.ANTHROPIC_API_KEY) && process.env.SUPORTE_AGENTE !== "desligado";
+  return PROVEDOR !== null && process.env.SUPORTE_AGENTE !== "desligado";
 }
 
 async function avisarEquipe(atendimentoId: string, assunto: string, texto: string) {
@@ -186,8 +190,7 @@ export async function responderComAgente(atendimentoId: string): Promise<void> {
   const ultimaDaPessoa = [...mensagens].reverse().find((m) => m.autor === "usuario");
   if (!ultimaDaPessoa || mensagens.at(-1)?.autor !== "usuario") return;
 
-  const client = new Anthropic();
-  const conversa: Anthropic.Beta.BetaMessageParam[] = historicoParaModelo(mensagens);
+  const historico = historicoParaModelo(mensagens);
   // Contexto que muda por atendimento vai numa mensagem de sistema no fim, para não quebrar o cache do prefixo.
   const whatsapp = a.canal === "whatsapp";
   const contexto = [
@@ -196,12 +199,29 @@ export async function responderComAgente(atendimentoId: string): Promise<void> {
       : `Atendimento no chat do app, aberto no modo ${a.modo === "locador" ? "locador" : "motorista"}, assunto "${a.assunto}".`,
     `Hoje é ${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`,
   ].join(" ");
-  conversa.push({ role: "system", content: contexto } as unknown as Anthropic.Beta.BetaMessageParam);
 
   let transferencia: { motivo: string; resumo: string } | null = null;
   let resposta = "";
   try {
-    for (let volta = 0; volta < MAX_VOLTAS; volta++) {
+    if (PROVEDOR === "gemini") {
+      const r = await conversarComGemini({
+        modelo: MODELO,
+        sistema: `${SISTEMA}\n\n${contexto}`,
+        historico,
+        ferramentas: FERRAMENTAS.map(paraFerramentaGemini),
+        maxVoltas: MAX_VOLTAS,
+        executar: async (nome, args) => {
+          if (nome !== "transferir_para_equipe") return executar(nome, a.usuario_id);
+          transferencia = { motivo: String(args.motivo ?? "").slice(0, 300), resumo: String(args.resumo ?? "").slice(0, 2000) };
+          return "Transferido. Agora avise a pessoa que a equipe responde por aqui, em horário comercial, em dias úteis.";
+        },
+      });
+      resposta = r.texto;
+      if (r.bloqueado) transferencia = { motivo: "O assistente não pôde responder a esta mensagem.", resumo: ultimaDaPessoa.texto.slice(0, 500) };
+    }
+    const client = PROVEDOR === "claude" ? new Anthropic() : null;
+    const conversa: Anthropic.Beta.BetaMessageParam[] = [...historico, { role: "system", content: contexto } as unknown as Anthropic.Beta.BetaMessageParam];
+    for (let volta = 0; client && volta < MAX_VOLTAS; volta++) {
       const r = await client.beta.messages.create({
         model: MODELO,
         max_tokens: 16000,

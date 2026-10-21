@@ -30,6 +30,7 @@ ou um blog.
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`: notificação no celular (ver `notificacoes.md`).
    - `RESEND_API_KEY`: e-mails de aviso pelo Resend.
    - `ANTHROPIC_API_KEY`: assistente do suporte (Claude). Opcionais: `SUPORTE_MODELO`, `SUPORTE_ESFORCO` e `SUPORTE_AGENTE=desligado` (ver `suporte.md`).
+   - `GEMINI_API_KEY`: alternativa grátis ao Claude para o assistente (ver `suporte.md`).
    - `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`: suporte pelo WhatsApp (ver `whatsapp.md`).
    - `NEXT_PUBLIC_SITE_URL` = `https://aluguei.xyz` (só em Production; nas prévias o app usa o endereço acessado)
 3. *Deploy*.

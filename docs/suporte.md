@@ -45,7 +45,22 @@ segundos no mesmo chat ("Suporte Aluguei · assistente"), enquanto a tela mostra
 - **Custo:** o texto fixo das instruções e as ferramentas ficam em cache entre os
   atendimentos. O que muda (modo, assunto e data) vai numa mensagem de sistema no fim.
 
-### Como ligar (passo a passo)
+### Opção grátis: Gemini
+
+O assistente também funciona com o Gemini do Google, no nível gratuito
+(`src/integracoes/gemini.ts`).
+
+1. Entre em **aistudio.google.com** com a conta Google.
+2. **Get API key → Create API key** (ele cria um projeto no Google Cloud, sem cartão).
+3. Na Vercel: `GEMINI_API_KEY` = a chave, em Production. Redeploy.
+
+Limites do gratuito: poucos pedidos por minuto e por dia (o suficiente para o
+piloto), e o Google pode usar as conversas para melhorar os produtos dele. Para
+produção com dados de clientes, ligue o faturamento no projeto do Google ou use o
+Claude. Com as duas chaves, vale o Claude (ou `SUPORTE_PROVEDOR=gemini`).
+Modelo padrão `gemini-2.5-flash`; troca com `SUPORTE_MODELO`.
+
+### Como ligar o Claude (passo a passo)
 
 1. Entre em **console.anthropic.com** e crie a conta (ou entre com a sua). Se pedir,
    crie a organização (pode ser "Aluguei").
