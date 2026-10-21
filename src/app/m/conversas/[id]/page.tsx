@@ -21,9 +21,10 @@ export default async function ConversaMotorista({ params }: { params: Promise<{ 
   await marcarLida(id, "motorista");
 
   return (
-    <div className="flex h-[calc(100dvh-6rem)] flex-col">
+    // Tela cheia e fixa: só a lista de mensagens rola, e o campo fica colado embaixo.
+    <div className="fixed inset-0 z-30 mx-auto flex max-w-[30rem] flex-col bg-fundo px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <CabecalhoMotorista titulo={org?.nome ?? "Conversa"} voltar="/m/conversas" />
-      <div className="-mt-2 rounded-xl border border-borda bg-cartao px-3 py-2 text-xs">
+      <div className="-mt-3 rounded-xl border border-borda bg-cartao px-3 py-2 text-xs">
         <span className="font-semibold">{v?.modelo}</span>
         {anuncio && <span className="text-suave"> · {formatarBRL(anuncio.aluguel_semanal_centavos)}/semana · {anuncio.cidade}/{anuncio.uf}</span>}
       </div>

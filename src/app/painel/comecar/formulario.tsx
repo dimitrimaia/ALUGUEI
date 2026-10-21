@@ -4,13 +4,13 @@ import { useActionState } from "react";
 import { Aviso, Botao, Campo, classeEntrada } from "@/components/ui";
 import { criarOrganizacao, type EstadoComecar } from "./acoes";
 
-export function FormularioComecar() {
+export function FormularioComecar({ nomeInicial = "" }: { nomeInicial?: string }) {
   const [estado, enviar, enviando] = useActionState<EstadoComecar, FormData>(criarOrganizacao, {});
   return (
     <form action={enviar} className="flex flex-col gap-4">
       {estado.mensagem && <Aviso tom="perigo">{estado.mensagem}</Aviso>}
-      <Campo rotulo="Nome da locadora" dica="Seu nome completo (pessoa física) ou a razão social da empresa." erro={estado.erros?.nome}>
-        <input name="nome" className={classeEntrada} required />
+      <Campo rotulo="Nome do locador" dica="Seu nome completo (pessoa física) ou a razão social da empresa." erro={estado.erros?.nome}>
+        <input name="nome" defaultValue={nomeInicial} className={classeEntrada} required />
       </Campo>
       <Campo rotulo="CPF ou CNPJ" dica="Só números. Use o CPF se aluga como pessoa física." erro={estado.erros?.documento}>
         <input name="documento" inputMode="numeric" className={classeEntrada} required />
@@ -23,7 +23,7 @@ export function FormularioComecar() {
           <input name="uf" maxLength={2} className={`${classeEntrada} uppercase`} required />
         </Campo>
       </div>
-      <Botao tamanho="lg" disabled={enviando}>{enviando ? "Criando…" : "Criar conta e continuar"}</Botao>
+      <Botao tamanho="lg" disabled={enviando}>{enviando ? "Ativando…" : "Ativar modo locador"}</Botao>
     </form>
   );
 }

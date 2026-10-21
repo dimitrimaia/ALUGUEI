@@ -8,11 +8,11 @@ import { useEffect, useRef, useState } from "react";
 export const ACOES_PERFIL = {
   entrar: [
     { href: "/entrar?perfil=locador", rotulo: "Entrar como locador", detalhe: "Painel da locadora", icone: Building2 },
-    { href: "/entrar?perfil=motorista", rotulo: "Entrar como motorista", detalhe: "Pagamentos e contrato", icone: Car },
+    { href: "/entrar?perfil=motorista", rotulo: "Entrar como motorista", detalhe: "Buscar e alugar carros", icone: Car },
   ],
   criar: [
     { href: "/entrar?perfil=locador&novo=1", rotulo: "Sou locador", detalhe: "Tenho carros para alugar", icone: Building2 },
-    { href: "/entrar?perfil=motorista&novo=1", rotulo: "Sou motorista", detalhe: "Recebi um convite do locador", icone: Car },
+    { href: "/entrar?perfil=motorista&novo=1", rotulo: "Sou motorista", detalhe: "Quero alugar um carro", icone: Car },
   ],
 } as const;
 

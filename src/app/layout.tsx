@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
 import { BarraProgresso } from "@/components/barra-progresso";
+import { RegistroNavegacao } from "@/components/voltar";
 import { SCRIPT_TEMA } from "@/lib/tema";
 import "./globals.css";
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh font-sans antialiased">
         <Suspense>
           <BarraProgresso />
+          <RegistroNavegacao />
         </Suspense>
         {children}
       </body>

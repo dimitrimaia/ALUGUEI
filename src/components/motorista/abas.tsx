@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, MessageCircle, Search, UserRound, Wallet } from "lucide-react";
+import { Car, Home, MessageCircle, Search, UserRound } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,10 +8,10 @@ import { useConta } from "@/components/conta/contexto";
 import { Avatar } from "@/components/ui";
 
 const ABAS = [
-  { href: "/m", rotulo: "Início", icone: Home, ativo: (c: string) => c === "/m" || c.startsWith("/m/carro") || c.startsWith("/m/contrato") || c.startsWith("/m/vistoria") },
+  { href: "/m", rotulo: "Início", icone: Home, ativo: (c: string) => c === "/m" },
   { href: "/m/buscar", rotulo: "Buscar", icone: Search, ativo: (c: string) => c.startsWith("/m/buscar") },
+  { href: "/m/carros", rotulo: "Meus carros", icone: Car, ativo: (c: string) => /^\/m\/(carros?|contrato|vistoria|extrato|pagar)(\/|$)/.test(c) },
   { href: "/m/conversas", rotulo: "Conversas", icone: MessageCircle, ativo: (c: string) => c.startsWith("/m/conversas") },
-  { href: "/m/extrato", rotulo: "Pagamentos", icone: Wallet, ativo: (c: string) => c.startsWith("/m/extrato") || c.startsWith("/m/pagar") },
   { href: "/m/conta", rotulo: "Conta", icone: UserRound, ativo: (c: string) => c.startsWith("/m/conta") },
 ] as const;
 

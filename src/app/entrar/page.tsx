@@ -89,16 +89,12 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
           <h2 className="mb-5 text-xl font-extrabold tracking-tight">{tipo === "motorista" ? "Acesse sua conta de motorista" : tipo === "locador" ? "Acesse sua locadora" : "Acesse sua conta"}</h2>
           {tipo === "motorista" && novo && (
             <p className="mb-5 rounded-xl bg-marca-suave p-3 text-sm">
-              <strong>Primeira vez?</strong> Crie a conta e busque carros na sua cidade. Se recebeu um convite do locador, abra o link dele neste celular.
+              <strong>Primeira vez?</strong> Crie a conta e busque carros na sua cidade. Se o locador mandou um link de cadastro, abra o link neste celular.
             </p>
           )}
           <FormularioEntrar destino={destino} modoInicial={modoInicial} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um novo." : undefined} />
           <p className="mt-6 text-center text-sm text-suave">
-            {tipo === "motorista" ? (
-              <>É locador? <Link href="/entrar?perfil=locador" className="font-semibold text-marca">Entre pela área do locador</Link></>
-            ) : (
-              <>É motorista? <Link href="/entrar?perfil=motorista" className="font-semibold text-marca">Entre pela área do motorista</Link></>
-            )}
+            Uma conta só para alugar carros e para anunciar os seus. Você troca de modo no app.
           </p>
         </div>
       </section>

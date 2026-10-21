@@ -207,7 +207,6 @@ export function NavegacaoPainel({
           { titulo: "Gestão", itens: GESTAO.slice(1).map((i) => ({ ...i, contador: i.href === "/painel/motoristas" ? pendentes : 0 })) },
           { titulo: "Busca de carros", itens: BUSCA.map((i) => ({ ...i, contador: i.href === "/painel/conversas" ? naoLidas : 0 })) },
           { titulo: "Dinheiro", itens: DINHEIRO },
-          { titulo: "Conta", itens: [{ href: "/painel/conta", rotulo: "Perfil e configurações", icone: Settings }] },
         ]}
       />
 

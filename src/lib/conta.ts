@@ -49,6 +49,39 @@ export const perfilDaConta = cache(async (): Promise<PerfilConta | null> => {
   };
 });
 
+export interface PerfilResumido {
+  nome: string;
+  nomeInformado: string;
+  foto: string | null;
+  email: string | null;
+  telefone: string | null;
+  tema: Preferencias["tema"];
+}
+
+/**
+ * Versão rápida para menus e cabeçalhos: lê do token da sessão, sem ir ao
+ * servidor de autenticação. As ações que mudam nome, foto ou tema renovam o
+ * token, então ele está sempre em dia.
+ */
+export const perfilResumido = cache(async (): Promise<PerfilResumido | null> => {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase.auth.getClaims();
+  const c = data?.claims;
+  if (!c?.sub) return null;
+  const meta = ((c as Record<string, unknown>).user_metadata ?? {}) as Record<string, unknown>;
+  const email = (c.email as string) || null;
+  const telefone = (c.phone as string) || null;
+  const fotoCaminho = typeof meta.foto === "string" && meta.foto.startsWith(`${c.sub}/`) ? meta.foto : null;
+  return {
+    nome: nomeDeExibicao(meta.nome, email, telefone),
+    nomeInformado: typeof meta.nome === "string" ? meta.nome : "",
+    foto: urlAvatar(fotoCaminho),
+    email,
+    telefone,
+    tema: normalizarPreferencias(meta.preferencias).tema,
+  };
+});
+
 /** Cria o bucket público das fotos de perfil na primeira vez que alguém envia uma. */
 export async function garantirBucketAvatares() {
   const admin = supabaseAdmin();

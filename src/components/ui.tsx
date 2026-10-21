@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { BotaoVoltar } from "./voltar";
 import type { ComponentProps, ReactNode } from "react";
 
 export type Tom = "neutro" | "ok" | "alerta" | "perigo" | "marca" | "info";
@@ -37,9 +38,9 @@ export function CabecalhoPagina({
   return (
     <header className="mb-5">
       {voltar && (
-        <Link href={voltar.href as Route} className="mb-2 inline-flex items-center gap-1 text-sm text-suave hover:text-texto">
+        <BotaoVoltar destino={voltar.href} className="mb-2 inline-flex items-center gap-1 text-sm text-suave hover:text-texto">
           <ChevronLeft size={16} aria-hidden /> {voltar.rotulo}
-        </Link>
+        </BotaoVoltar>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">

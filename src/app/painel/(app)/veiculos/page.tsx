@@ -25,9 +25,14 @@ export default async function Veiculos() {
         subtitulo={veiculos?.length ? `${veiculos.length} na frota · ${contagem("alugado")} alugado(s) · ${contagem("disponivel")} disponível(is)` : "Sua frota em um só lugar"}
         acao={<BotaoLink href="/painel/veiculos/novo" icone={Plus}>Novo veículo</BotaoLink>}
       />
+      {/* O outro lado de "Meus carros": os carros que eu alugo de outros locadores. */}
+      <div className="mb-4 grid max-w-md grid-cols-2 gap-1 rounded-xl bg-cartao-2 p-1 ring-1 ring-borda" role="tablist">
+        <span role="tab" aria-selected className="rounded-lg bg-cartao py-2 text-center text-sm font-semibold shadow-cartao">Minha frota</span>
+        <Link href="/m/carros" role="tab" aria-selected={false} className="rounded-lg py-2 text-center text-sm font-semibold text-suave">Que eu aluguei</Link>
+      </div>
       {!veiculos?.length ? (
         <Vazio icone={Car} titulo="Nenhum veículo ainda" acao={<BotaoLink href="/painel/veiculos/novo" icone={Plus}>Cadastrar veículo</BotaoLink>}>
-          Cadastre o carro com placa e km atual. Depois é só convidar o motorista.
+          Cadastre o carro com placa e km atual. Depois anuncie na busca ou cadastre o motorista.
         </Vazio>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -17,9 +17,10 @@ async function exigirPerfil() {
   return perfil;
 }
 
-function atualizarTelas() {
-  revalidatePath("/m", "layout");
-  revalidatePath("/painel", "layout");
+/** Renova o token (que carrega nome, foto e tema para os menus) e atualiza as telas. */
+async function atualizarTelas() {
+  await (await supabaseServidor()).auth.refreshSession();
+  revalidatePath("/", "layout");
 }
 
 export async function salvarNome(_: Resultado | null, dados: FormData): Promise<Resultado> {
@@ -29,7 +30,7 @@ export async function salvarNome(_: Resultado | null, dados: FormData): Promise<
   if (nome.length > 60) return { ok: false, erro: "Use até 60 caracteres." };
   const { error } = await (await supabaseServidor()).auth.updateUser({ data: { nome } });
   if (error) return { ok: false, erro: "Não foi possível salvar. Tente de novo." };
-  atualizarTelas();
+  await atualizarTelas();
   return { ok: true, mensagem: "Nome salvo." };
 }
 
@@ -50,7 +51,7 @@ export async function salvarFoto(caminho: string | null): Promise<Resultado> {
   if (error) return { ok: false, erro: "Não foi possível salvar a foto." };
   // A foto anterior não serve mais para nada.
   if (perfil.fotoCaminho && perfil.fotoCaminho !== caminho) await supabaseAdmin().storage.from(BUCKET_AVATARES).remove([perfil.fotoCaminho]);
-  atualizarTelas();
+  await atualizarTelas();
   return { ok: true, mensagem: caminho ? "Foto atualizada." : "Foto removida." };
 }
 
@@ -59,7 +60,7 @@ export async function salvarPreferencias(valor: unknown): Promise<Resultado> {
   const preferencias = normalizarPreferencias(valor);
   const { error } = await (await supabaseServidor()).auth.updateUser({ data: { preferencias } });
   if (error) return { ok: false, erro: "Não foi possível salvar. Tente de novo." };
-  atualizarTelas();
+  await atualizarTelas();
   return { ok: true };
 }
 

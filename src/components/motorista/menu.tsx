@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, ClipboardCheck, FileText, Menu, MessageCircle, Search, Settings, Wallet } from "lucide-react";
+import { Car, ClipboardCheck, FileText, Menu, MessageCircle, Search, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useConta } from "@/components/conta/contexto";
 import { MenuApp } from "@/components/menu-app";
@@ -30,7 +30,7 @@ export function MenuMotorista({ claro = false }: { claro?: boolean }) {
           {
             titulo: "Meu aluguel",
             itens: [
-              { href: "/m/carro", rotulo: "Meu carro", icone: Car },
+              { href: "/m/carros", rotulo: "Meus carros", icone: Car, tambem: ["/m/carro"] },
               { href: "/m/extrato", rotulo: "Pagamentos", icone: Wallet, tambem: ["/m/pagar"] },
               { href: "/m/meu-contrato", rotulo: "Contrato", icone: FileText, tambem: ["/m/contrato"] },
               { href: "/m/minha-vistoria", rotulo: "Vistoria do carro", icone: ClipboardCheck, tambem: ["/m/vistoria"] },
@@ -43,7 +43,6 @@ export function MenuMotorista({ claro = false }: { claro?: boolean }) {
               { href: "/m/conversas", rotulo: "Conversas", icone: MessageCircle, contador: naoLidas },
             ],
           },
-          { titulo: "Conta", itens: [{ href: "/m/conta", rotulo: "Perfil e configurações", icone: Settings }] },
         ]}
       />
     </>

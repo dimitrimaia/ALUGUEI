@@ -65,7 +65,7 @@ export function Chat({ conversaId, papel, iniciais, linkify = true }: { conversa
   let diaAnterior = "";
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-1 py-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-1 py-3">
         {mensagens.map((m) => {
           const d = dia(m.criado_em);
           const separador = d !== diaAnterior;

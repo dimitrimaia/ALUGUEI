@@ -45,11 +45,11 @@ export default async function Conversa({ params }: { params: Promise<{ id: strin
           </Cartao>
           <Cartao className="flex flex-col gap-3">
             <p className="text-sm font-bold">Fechou negócio?</p>
-            <p className="text-xs text-suave">O convite usa as condições do anúncio. O motorista faz o cadastro pelo link que aparece na conversa, e depois segue o fluxo normal: análise, contrato e vistoria.</p>
+            <p className="text-xs text-suave">Aprove o motorista com as condições do anúncio. Ele recebe aqui na conversa o pedido de CNH e documentos; você analisa, gera o contrato e faz a vistoria.</p>
             {c.locatario_id ? (
               <Link href={`/painel/motoristas/${c.locatario_id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-marca"><UserCheck size={16} /> Ver cadastro do motorista</Link>
             ) : (
-              <BotaoAcao acao={enviarConviteDaConversa.bind(null, id)} rotulo="Enviar convite" variante="primario" tamanho="md" confirmar="Enviar o convite?" />
+              <BotaoAcao acao={enviarConviteDaConversa.bind(null, id)} rotulo="Aprovar para alugar" variante="primario" tamanho="md" confirmar="Aprovar este motorista e pedir os documentos?" />
             )}
           </Cartao>
         </div>

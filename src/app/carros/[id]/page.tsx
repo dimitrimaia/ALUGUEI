@@ -6,6 +6,8 @@ import { BotaoLink, Cartao, DadoRotulado } from "@/components/ui";
 import { placaParcial } from "@/dominio/marketplace/cidade";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { anuncioPublico } from "@/lib/marketplace";
+import { locadoraDoUsuario } from "@/lib/modos";
+import { usuarioAtual } from "@/lib/sessao";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +30,16 @@ export default async function Anuncio({ params, searchParams }: { params: Promis
   const doApp = (await searchParams).de === "app";
   const a = await anuncioPublico(id);
   if (!a) notFound();
+  // O dono do anúncio vê a página como os motoristas veem, mas com o atalho para editar.
+  const usuario = await usuarioAtual();
+  const meu = usuario ? (await locadoraDoUsuario(usuario.id))?.id === a.organizacaoId : false;
+  const acao = meu
+    ? <BotaoLink href={`/painel/anuncios/${a.veiculoId}`} tamanho="lg" variante="secundario" className="w-full">Este anúncio é seu · Editar</BotaoLink>
+    : <BotaoLink href={`/carros/${a.id}/interesse`} tamanho="lg" className="w-full"><MessageCircle size={18} /> Tenho interesse</BotaoLink>;
 
   return (
     <div className="tema-claro min-h-dvh bg-fundo">
-      <CabecalhoPublico voltar={doApp ? { href: "/m/buscar", rotulo: "Buscar carros" } : { href: "/carros", rotulo: "Carros" }} />
+      <CabecalhoPublico voltar={doApp ? { href: "/m/buscar", rotulo: "Voltar" } : { href: "/carros", rotulo: "Carros" }} />
       <main className="mx-auto max-w-5xl px-5 pt-5 pb-28 lg:grid lg:grid-cols-[1.3fr_1fr] lg:gap-8 lg:pb-16">
         <div>
           <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-[1.1rem]">
@@ -63,9 +71,7 @@ export default async function Anuncio({ params, searchParams }: { params: Promis
               <DadoRotulado rotulo="Prazo mínimo">{a.prazoMinimoMeses} {a.prazoMinimoMeses === 1 ? "mês" : "meses"}</DadoRotulado>
               <DadoRotulado rotulo="Km atual">{a.veiculo.odometro.toLocaleString("pt-BR")} km</DadoRotulado>
             </dl>
-            <div className="mt-5 hidden lg:block">
-              <BotaoLink href={`/carros/${a.id}/interesse`} tamanho="lg" className="w-full"><MessageCircle size={18} /> Tenho interesse</BotaoLink>
-            </div>
+            <div className="mt-5 hidden lg:block">{acao}</div>
           </Cartao>
           <Cartao className="flex flex-col gap-3 text-sm">
             {[
@@ -81,7 +87,7 @@ export default async function Anuncio({ params, searchParams }: { params: Promis
         </aside>
       </main>
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-borda bg-cartao/95 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
-        <BotaoLink href={`/carros/${a.id}/interesse`} tamanho="lg" className="w-full"><MessageCircle size={18} /> Tenho interesse</BotaoLink>
+        {acao}
       </div>
     </div>
   );

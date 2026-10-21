@@ -1,9 +1,9 @@
 # Busca de carros e chat
 
-Hoje o motorista só entra por convite. Com a busca, quem procura carro encontra os
-anúncios da cidade, conversa com o locador dentro do app e, fechado o negócio, o
-locador transforma a conversa em convite. A partir daí o fluxo é o mesmo de sempre:
-cadastro, análise, contrato e vistoria.
+Quem procura carro encontra os anúncios da cidade, conversa com o locador dentro do
+app e, fechado o negócio, o locador **aprova para alugar** na própria conversa. Não
+precisa de convite nem de indicação: quem decide confiar é o locador. A partir daí:
+cadastro (CNH e documentos), análise, contrato e vistoria.
 
 Antecipa os requisitos RF-021 (busca de veículos) e RF-113 (chat), que no documento
 v0.1 estavam como S e C.
@@ -18,9 +18,9 @@ v0.1 estavam como S e C.
    conversa com uma primeira mensagem pronta. Uma conversa por anúncio e motorista.
 4. **Conversa** em tempo real dentro do app, dos dois lados: painel do locador
    (`/painel/conversas`) e app do motorista (`/m/conversas`).
-5. **"Enviar convite"** na conversa: o locador cria o convite com as condições do
-   anúncio, já ligado à conta do motorista. A conversa recebe uma mensagem com o
-   link do cadastro e segue aberta durante todo o processo.
+5. **"Aprovar para alugar"** na conversa: cria o cadastro do motorista com as
+   condições do anúncio, já ligado à conta dele. A conversa recebe o pedido de CNH e
+   documentos com o link e segue aberta durante todo o processo.
 
 ## Regras
 
@@ -32,8 +32,10 @@ v0.1 estavam como S e C.
   (RLS no banco, verificado também no servidor).
 - Mensagens não são apagadas nem editadas. Ficam como histórico da negociação
   (útil como prova, como as demais evidências).
-- Valores combinados no chat não mudam nada sozinhos. O que vale é o convite e,
-  depois, o contrato assinado.
+- Valores combinados no chat não mudam nada sozinhos. O que vale é a aprovação, com as
+  condições do anúncio, e depois o contrato assinado.
+- Qualquer conta pode anunciar (modo locador) e alugar (modo motorista). O dono de um
+  anúncio não consegue abrir conversa com ele mesmo.
 
 ## Modelo de dados (migração 0004)
 

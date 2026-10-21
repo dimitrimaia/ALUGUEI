@@ -19,7 +19,7 @@ export default async function Anuncios() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Anúncios" subtitulo="Carros que aparecem na busca de motoristas em aluguei.xyz/carros." acao={<BotaoLink href="/carros" variante="secundario" icone={ExternalLink} target="_blank">Ver a busca</BotaoLink>} />
+      <CabecalhoPagina titulo="Anúncios" subtitulo="Carros que aparecem na busca de motoristas em aluguei.xyz/carros." acao={<BotaoLink href="/carros" variante="secundario" icone={ExternalLink}>Ver a busca</BotaoLink>} />
       {!veiculos?.length ? (
         <Vazio icone={Car} titulo="Cadastre um carro primeiro" acao={<BotaoLink href="/painel/veiculos/novo">Cadastrar veículo</BotaoLink>}>Depois é só anunciar.</Vazio>
       ) : (

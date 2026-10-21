@@ -3,7 +3,7 @@ import { SECOES, SecaoConta, eSecao } from "@/components/conta/secoes";
 import { CabecalhoPagina } from "@/components/ui";
 import { perfilDaConta } from "@/lib/conta";
 import { exigirEquipe } from "@/lib/sessao";
-import { verificacaoLocador } from "@/lib/verificacao-conta";
+import { verificacaoDaConta } from "@/lib/verificacao-conta";
 
 export async function generateMetadata({ params }: { params: Promise<{ secao: string }> }) {
   const { secao } = await params;
@@ -24,7 +24,7 @@ export default async function SecaoLocador({ params }: { params: Promise<{ secao
         perfil={perfil}
         papel="locador"
         base="/painel/conta"
-        verificacao={secao === "verificacao" ? await verificacaoLocador(perfil, organizacao.id) : []}
+        verificacao={secao === "verificacao" ? await verificacaoDaConta(perfil, "/painel/conta", organizacao.id) : []}
         locadora={{ nome: organizacao.nome, cidade: organizacao.cidade, uf: organizacao.uf, documento: organizacao.documento, modoAssistido: organizacao.modo_assistido, podeEditar: papel === "dono" }}
       />
     </div>

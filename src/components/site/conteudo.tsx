@@ -11,15 +11,15 @@ export const LOCADOR: ConteudoPerfil = {
   marcas: ["Sem planilha", "Pix direto na sua conta", "Carro parado não paga"],
   mockup: <MockupLocador />,
   destaques: [
-    { icone: Smartphone, titulo: "Cadastro em 5 minutos", texto: "o motorista se cadastra pelo celular, a partir do seu convite" },
-    { icone: FileSignature, titulo: "Zero papel", texto: "convite, contrato, vistoria e pagamento acontecem no app" },
+    { icone: Smartphone, titulo: "Cadastro em 5 minutos", texto: "o motorista envia CNH e documentos pelo celular" },
+    { icone: FileSignature, titulo: "Zero papel", texto: "negociação, contrato, vistoria e pagamento acontecem no app" },
     { icone: Car, titulo: "Carro parado não paga", texto: "você só paga pelos carros que estão rodando" },
     { icone: Landmark, titulo: "Pix na sua conta", texto: "o aluguel cai direto para você, com baixa automática" },
   ],
   passos: {
-    titulo: "Do convite ao carro rodando, sem papel",
+    titulo: "Do anúncio ao carro rodando, sem papel",
     itens: [
-      { icone: MessageCircle, titulo: "Anuncie ou convide", texto: "Publique o carro na busca de motoristas ou mande o convite pelo WhatsApp para quem você já conhece." },
+      { icone: MessageCircle, titulo: "Anuncie e negocie", texto: "Publique o carro na busca e converse com os interessados pelo chat. Conhece o motorista? Cadastre direto por um link." },
       { icone: UserCheck, titulo: "Analise o cadastro", texto: "O motorista manda CNH, comprovantes e o print do app. O sistema aponta pendências e você decide." },
       { icone: FileSignature, titulo: "Assine e vistorie", texto: "O contrato sai pronto com os valores combinados. Na retirada, a vistoria com fotos fica registrada." },
       { icone: Wallet, titulo: "Receba toda semana", texto: "O Pix é gerado antes do vencimento e a baixa é automática. Atrasos aparecem no painel." },
@@ -44,7 +44,7 @@ export const LOCADOR: ConteudoPerfil = {
       { icone: Wallet, titulo: "Cobrança no Pix", texto: "Pix antes do vencimento, encargos do contrato no atraso e baixa automática." },
       { icone: Receipt, titulo: "Financeiro", texto: "Recebido, a receber e em atraso, com exportação para planilha." },
       { icone: Camera, titulo: "Check-in de segunda", texto: "Fotos do painel, óleo, água e vídeo do carro toda semana.", breve: true },
-      { icone: Megaphone, titulo: "Anúncio e chat", texto: "Anuncie o carro na busca de motoristas e negocie pelo chat. Fechou, vira convite." },
+      { icone: Megaphone, titulo: "Anúncio e chat", texto: "Anuncie o carro na busca de motoristas e negocie pelo chat. Aprovou, ele já faz o cadastro." },
       { icone: Gauge, titulo: "Km e revisões", texto: "Km do mês contra a franquia e alerta da próxima revisão.", breve: true },
     ],
   },
@@ -79,7 +79,7 @@ export const LOCADOR: ConteudoPerfil = {
   ],
   final: {
     titulo: "Comece pelo primeiro carro",
-    texto: "Crie a conta, cadastre o carro e mande o convite para o motorista. Leva poucos minutos.",
+    texto: "Crie a conta, cadastre o carro e anuncie. Leva poucos minutos.",
     ctas: [{ rotulo: "Criar conta de locador", href: "/entrar?perfil=locador&novo=1" }, { rotulo: "Já tenho conta", href: "/entrar?perfil=locador" }],
   },
 };
@@ -99,9 +99,9 @@ export const MOTORISTA: ConteudoPerfil = {
     { icone: Receipt, titulo: "Extrato completo", texto: "cada aluguel, pagamento e encargo com data e motivo" },
   ],
   passos: {
-    titulo: "Do convite ao carro na sua mão",
+    titulo: "Da busca ao carro na sua mão",
     itens: [
-      { icone: Search, titulo: "Encontre o carro", texto: "Busque pela sua cidade e converse com o locador pelo chat do app. Ou abra o convite que ele te mandou." },
+      { icone: Search, titulo: "Encontre o carro", texto: "Busque pela sua cidade e converse com o locador pelo chat do app." },
       { icone: UserCheck, titulo: "Faça o cadastro", texto: "CNH, comprovante de endereço e o print do seu perfil no Uber ou 99. Leva uns 5 minutos." },
       { icone: FileSignature, titulo: "Assine pelo celular", texto: "Antes de assinar, você vê um resumo do contrato em linguagem simples." },
       { icone: ClipboardCheck, titulo: "Retire o carro", texto: "Vocês fazem a vistoria juntos e você confirma as fotos no seu celular." },
@@ -151,7 +151,7 @@ export const MOTORISTA: ConteudoPerfil = {
   },
   duvidas: [
     { p: "Preciso baixar algum aplicativo?", r: "Não. Tudo funciona no navegador do celular. Se quiser, adicione o Aluguei à tela inicial para abrir como um app." },
-    { p: "Como encontro um carro?", r: "Busque pela sua cidade em Buscar carros, toque em “Tenho interesse” e converse com o locador. Quando combinarem, ele manda o convite pelo próprio chat." },
+    { p: "Como encontro um carro?", r: "Busque pela sua cidade em Buscar carros, toque em “Tenho interesse” e converse com o locador. Quando ele aprovar, você envia a CNH e os documentos pelo próprio chat." },
     { p: "Quais documentos preciso?", r: "CNH com a observação EAR, comprovante de endereço e um print do seu perfil no Uber ou 99." },
     { p: "Como pago o aluguel?", r: "Pelo Pix, com QR Code ou código copia e cola. A confirmação chega em segundos e fica no seu extrato." },
     { p: "E se eu atrasar?", r: "O Pix aplica a multa e os juros previstos no contrato, e eles aparecem separados no extrato." },
@@ -160,7 +160,7 @@ export const MOTORISTA: ConteudoPerfil = {
   ],
   final: {
     titulo: "Encontre seu próximo carro",
-    texto: "Veja os carros da sua cidade e converse com o locador pelo app. Recebeu um convite? Abra o link no celular.",
+    texto: "Veja os carros da sua cidade e converse com o locador pelo app. Tem carro? Com a mesma conta você também anuncia.",
     ctas: [{ rotulo: "Buscar carros", href: "/carros" }, { rotulo: "Já tenho conta", href: "/entrar?perfil=motorista" }],
   },
 };

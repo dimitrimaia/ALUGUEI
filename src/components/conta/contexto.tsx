@@ -7,9 +7,12 @@ import { type Tema, aplicarTema, lerTema } from "@/lib/tema";
 export interface ContaApp {
   perfil: PerfilMenu;
   naoLidas: number;
+  modo: "motorista" | "locador";
+  /** Nome da locadora, se o modo locador estiver ativado. */
+  locadora: string | null;
 }
 
-const Contexto = createContext<ContaApp>({ perfil: { nome: "Sua conta", foto: null, detalhe: "" }, naoLidas: 0 });
+const Contexto = createContext<ContaApp>({ perfil: { nome: "Sua conta", foto: null, detalhe: "" }, naoLidas: 0, modo: "motorista", locadora: null });
 
 /**
  * Dados da conta para o menu e as abas, carregados uma vez pelo layout.

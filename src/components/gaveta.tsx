@@ -2,11 +2,14 @@
 
 import { X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Menu lateral (gaveta) para o celular: desliza da lateral, fecha no X, no
  * fundo, no Esc e ao trocar de página, e trava a rolagem da página atrás.
+ * Vai direto para o <body> (portal): dentro de um cabeçalho fixo ela ficaria
+ * presa ao empilhamento dele e apareceria por baixo da página.
  */
 export function Gaveta({
   aberta,
@@ -27,6 +30,8 @@ export function Gaveta({
   const painel = useRef<HTMLDivElement>(null);
   const fechar = useRef(aoFechar);
   fechar.current = aoFechar;
+  const [montada, setMontada] = useState(false);
+  useEffect(() => setMontada(true), []);
 
   useEffect(() => {
     fechar.current();
@@ -45,7 +50,8 @@ export function Gaveta({
     };
   }, [aberta]);
 
-  return (
+  if (!montada) return null;
+  return createPortal(
     // overflow-hidden + invisible: fechada, a gaveta não pode ficar fora da tela alargando a página.
     <div className={`fixed inset-0 z-50 overflow-hidden ${aberta ? "visible" : "pointer-events-none invisible delay-300"}`} aria-hidden={!aberta}>
       <button
@@ -59,7 +65,7 @@ export function Gaveta({
         role="dialog"
         aria-modal="true"
         aria-label={rotulo}
-        className={`absolute inset-y-0 flex w-[min(20rem,86vw)] flex-col overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-flutuante transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${lado === "esquerda" ? "left-0" : "right-0"} ${escura ? "fundo-navy" : "bg-cartao text-texto"} ${aberta ? "translate-x-0 opacity-100" : lado === "esquerda" ? "-translate-x-6 opacity-0" : "translate-x-6 opacity-0"}`}
+        className={`absolute inset-y-0 flex w-[min(20rem,86vw)] flex-col overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-flutuante transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${lado === "esquerda" ? "left-0" : "right-0"} ${escura ? "fundo-navy" : "bg-cartao text-texto"} ${aberta ? "translate-x-0 opacity-100" : lado === "esquerda" ? "-translate-x-6 opacity-0" : "translate-x-6 opacity-0"}`}
       >
         <button
           tabIndex={aberta ? 0 : -1}
@@ -71,6 +77,7 @@ export function Gaveta({
         </button>
         {aberta && children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

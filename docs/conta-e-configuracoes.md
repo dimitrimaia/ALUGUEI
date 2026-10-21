@@ -1,5 +1,25 @@
 # Conta, perfil e configurações
 
+## Uma conta, dois modos
+
+Como no BlaBlaCar, a mesma pessoa pode oferecer e pegar. Toda conta tem o **modo
+motorista** (buscar e alugar carros, `/m`). Qualquer conta pode ativar o **modo
+locador** (anunciar e alugar os próprios carros, `/painel`) criando a locadora em
+`/painel/comecar`, como pessoa física ou empresa. Quem é locador também pode alugar
+o carro de outro locador.
+
+- A troca de modo fica no menu ☰ e na Conta (Motorista · Locador).
+- O último modo usado fica no cookie `aluguei_modo`; "Minha área" e `/inicio` voltam
+  para ele.
+- O perfil (foto, nome, verificação, preferências) é um só para os dois modos, com as
+  etiquetas "Motorista" e "Locador".
+- **Meus carros** tem duas abas nos dois modos: "Que eu aluguei" e "Que eu anuncio".
+- No anúncio do próprio carro, o dono vê "Este anúncio é seu · Editar" em vez de
+  "Tenho interesse".
+- Não existe mais a exigência de convite: o motorista encontra o carro, conversa, e o
+  locador **aprova para alugar** na conversa. O link de cadastro continua existindo
+  para quem o locador já conhece fora do app.
+
 Área da conta para motoristas (`/m/conta`) e locadores (`/painel/conta`). Ela abre
 pela caixa do perfil no menu ☰, pelo avatar no topo e pela aba **Conta** do app do
 motorista. As telas são as mesmas para os dois perfis, com textos de cada um. O
@@ -63,10 +83,24 @@ locador tem também **Dados da locadora**.
 - **Logo** leva ao início do app (`/m` ou `/painel`). "Início" não aparece no menu ☰.
 - **Menu ☰** abre pela direita, no mesmo estilo do menu do site: caixa do perfil no
   topo (leva à conta), opções em faixas por seção, "Ver o site", "Sair" e rodapé.
-- **Abas do motorista:** Início, Buscar, Conversas (com contador), Pagamentos e Conta.
+- **Voltar** (seta do topo) volta para a tela anterior, como o voltar do celular. Só
+  quando a pessoa chegou direto por um link ele vai para a tela-mãe.
+- **Menu ☰** cabe inteiro na tela, sem rolar, inclusive em celulares pequenos, e abre
+  sempre por cima da página (vai direto para o `<body>`).
+- **Abas do motorista:** Início, Buscar, Meus carros, Conversas (com contador) e Conta.
   A busca de carros tem versão dentro do app (`/m/buscar`), com as abas.
 - **Abas do locador:** Início, Frota, botão de criar, Financeiro e Conversas (com
   contador). Motoristas, Contratos, Anúncios e Recebimentos ficam no menu ☰.
+
+## Velocidade
+
+- Telas já vistas voltam na hora por 30 s (`staleTimes` do Next).
+- Menus e cabeçalhos leem nome, foto e tema do token da sessão, sem ir ao servidor de
+  autenticação; as ações que mudam esses dados renovam o token.
+- Consultas repetidas na mesma tela são feitas uma vez só (`cache` do React), e as
+  independentes vão em paralelo.
+- A região das funções da Vercel precisa ser a mesma do banco do Supabase: cada tela
+  faz várias consultas, e cada ida e volta entre continentes custa ~120 ms.
 
 ## Próximas etapas
 

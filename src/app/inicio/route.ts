@@ -1,21 +1,18 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { COOKIE_MODO, locadoraDoUsuario } from "@/lib/modos";
 import { usuarioAtual } from "@/lib/sessao";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Para onde vai quem acabou de entrar sem destino definido: locador vai para o
- * painel, motorista para o app; quem ainda não é nenhum dos dois escolhe.
+ * "Minha área": volta para o último modo usado. Sem histórico, quem tem
+ * locadora vai para o painel; os demais, para o app de quem aluga.
  */
 export async function GET(request: Request) {
   const base = new URL(request.url).origin;
   const usuario = await usuarioAtual();
   if (!usuario) return NextResponse.redirect(new URL("/entrar", base));
-  const admin = supabaseAdmin();
-  const [{ data: membro }, { data: locatario }] = await Promise.all([
-    admin.from("membros").select("id").eq("usuario_id", usuario.id).limit(1).maybeSingle(),
-    admin.from("locatarios").select("id").eq("usuario_id", usuario.id).limit(1).maybeSingle(),
-  ]);
-  if (membro) return NextResponse.redirect(new URL("/painel", base));
-  if (locatario) return NextResponse.redirect(new URL("/m", base));
-  return NextResponse.redirect(new URL("/bem-vindo", base));
+  const modo = (await cookies()).get(COOKIE_MODO)?.value;
+  if (modo === "motorista") return NextResponse.redirect(new URL("/m", base));
+  const locadora = await locadoraDoUsuario(usuario.id);
+  return NextResponse.redirect(new URL(locadora ? "/painel" : "/m", base));
 }

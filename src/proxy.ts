@@ -44,6 +44,11 @@ export async function proxy(request: NextRequest) {
     destino.search = `?perfil=${perfil}&voltar=${encodeURIComponent(caminho)}`;
     return NextResponse.redirect(destino);
   }
+  // Lembra o último modo usado (locador ou motorista), para "Minha área" e o /inicio voltarem para ele.
+  const modo = caminho === "/painel" || (caminho.startsWith("/painel/") && !caminho.startsWith("/painel/comecar")) ? "locador" : caminho === "/m" || caminho.startsWith("/m/") ? "motorista" : null;
+  if (modo && request.cookies.get("aluguei_modo")?.value !== modo) {
+    resposta.cookies.set("aluguei_modo", modo, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  }
   return resposta;
 }
 

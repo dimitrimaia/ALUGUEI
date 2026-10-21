@@ -30,23 +30,15 @@ export interface Equipe {
   papel: Linha<"membros">["papel"];
 }
 
-/** Membro da equipe de um locador. Sem organização, manda para o cadastro do locador. */
+/** Membro da equipe de um locador. Sem locadora, manda ativar o modo locador. */
 export const exigirEquipe = cache(async (): Promise<Equipe> => {
   const usuario = await exigirUsuario("/painel");
   const supabase = await supabaseServidor();
-  const { data: membro } = await supabase
-    .from("membros")
-    .select("papel, organizacao_id")
-    .eq("usuario_id", usuario.id)
-    .order("criado_em")
-    .limit(1)
-    .maybeSingle();
-  if (!membro) redirect("/painel/comecar");
-  const { data: organizacao } = await supabase
-    .from("organizacoes")
-    .select("*")
-    .eq("id", membro.organizacao_id)
-    .single();
-  if (!organizacao) redirect("/painel/comecar");
+  // O RLS só devolve a locadora do próprio usuário, então as duas consultas vão juntas.
+  const [{ data: membro }, { data: organizacao }] = await Promise.all([
+    supabase.from("membros").select("papel, organizacao_id").eq("usuario_id", usuario.id).order("criado_em").limit(1).maybeSingle(),
+    supabase.from("organizacoes").select("*").order("criado_em").limit(1).maybeSingle(),
+  ]);
+  if (!membro || !organizacao || organizacao.id !== membro.organizacao_id) redirect("/painel/comecar");
   return { usuario, organizacao, papel: membro.papel };
 });

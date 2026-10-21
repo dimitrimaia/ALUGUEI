@@ -7,14 +7,15 @@ import { exigirEquipe } from "@/lib/sessao";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Transforma a conversa em convite: cria o cadastro do motorista já ligado à
- * conta dele, com as condições do anúncio, e avisa na própria conversa.
+ * O locador aprova o motorista para alugar: cria o cadastro já ligado à conta
+ * dele, com as condições do anúncio, e pede os documentos na própria conversa.
+ * Não precisa de convite nem indicação: quem decide confiar é o locador.
  */
 export async function enviarConviteDaConversa(conversaId: string): Promise<{ erro?: string; ok?: string }> {
   const { organizacao, usuario } = await exigirEquipe();
   const p = await participacao(conversaId, usuario);
   if (!p || p.papel !== "locador" || p.conversa.organizacao_id !== organizacao.id) return { erro: "Conversa não encontrada." };
-  if (p.conversa.locatario_id) return { ok: "O convite já foi enviado." };
+  if (p.conversa.locatario_id) return { ok: "O motorista já foi aprovado para o cadastro." };
 
   const admin = supabaseAdmin();
   const { data: anuncio } = await admin.from("anuncios").select("*").eq("id", p.conversa.anuncio_id).single();
@@ -48,13 +49,13 @@ export async function enviarConviteDaConversa(conversaId: string): Promise<{ err
       })
       .select("id")
       .single();
-    if (error || !l) return { erro: "Não foi possível criar o convite." };
+    if (error || !l) return { erro: "Não foi possível aprovar agora. Tente de novo." };
     locatarioId = l.id;
   }
 
   await admin.from("conversas").update({ locatario_id: locatarioId }).eq("id", conversaId);
-  await registrarMensagem(conversaId, "sistema", null, `${organizacao.nome} enviou o convite. Faça seu cadastro para seguir com o aluguel: /m/cadastro/${locatarioId}`);
-  await auditar({ organizacaoId: organizacao.id, usuarioId: usuario.id, acao: "conversa.convite", entidade: "locatarios", entidadeId: locatarioId, depois: { conversaId } });
+  await registrarMensagem(conversaId, "sistema", null, `${organizacao.nome} aprovou o seu interesse. Envie a CNH e os documentos para seguir com o aluguel: /m/cadastro/${locatarioId}`);
+  await auditar({ organizacaoId: organizacao.id, usuarioId: usuario.id, acao: "conversa.aprovar", entidade: "locatarios", entidadeId: locatarioId, depois: { conversaId } });
   revalidatePath(`/painel/conversas/${conversaId}`);
-  return { ok: "Convite enviado na conversa." };
+  return { ok: "Aprovado. O pedido de cadastro foi enviado na conversa." };
 }

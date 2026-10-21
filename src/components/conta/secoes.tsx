@@ -6,6 +6,7 @@ import { FormularioNovaSenha } from "@/app/nova-senha/formulario";
 import { sairDeTodosOsAparelhos } from "@/lib/acoes-conta";
 import type { PerfilConta } from "@/lib/conta";
 import { TEMAS } from "@/lib/tema";
+import { TrocaModo } from "@/components/menu-app";
 import { FormAparencia, FormEmail, FormFoto, FormLocadora, FormNome, FormNotificacoes, VerificarCelular } from "./formularios";
 
 export type Papel = "motorista" | "locador";
@@ -27,19 +28,14 @@ export function eSecao(v: string, papel: Papel): v is ChaveSecao {
   return v in SECOES && (v !== "locadora" || papel === "locador");
 }
 
-const GRUPOS: Record<Papel, readonly { titulo: string; itens: readonly ChaveSecao[] }[]> = {
-  motorista: [
+function grupos(temLocadora: boolean): { titulo: string; itens: readonly ChaveSecao[] }[] {
+  return [
     { titulo: "Conta", itens: ["perfil", "verificacao", "seguranca"] },
+    ...(temLocadora ? [{ titulo: "Locadora", itens: ["locadora"] as const }] : []),
     { titulo: "Preferências", itens: ["aparencia", "notificacoes"] },
     { titulo: "Mais", itens: ["privacidade", "ajuda"] },
-  ],
-  locador: [
-    { titulo: "Conta", itens: ["perfil", "verificacao", "seguranca"] },
-    { titulo: "Locadora", itens: ["locadora"] },
-    { titulo: "Preferências", itens: ["aparencia", "notificacoes"] },
-    { titulo: "Mais", itens: ["privacidade", "ajuda"] },
-  ],
-};
+  ];
+}
 
 export interface ItemVerificacao {
   rotulo: string;
@@ -82,7 +78,7 @@ const ICONE_ESTADO = { ok: CheckCircle2, andamento: Hourglass, pendente: CircleD
 const COR_ESTADO = { ok: "text-ok", andamento: "text-alerta", pendente: "text-suave" } as const;
 
 /** Tela inicial de Conta: cartão do perfil, verificação e a lista de configurações. */
-export function IndiceConta({ perfil, papel, base, verificacao, rotuloPapel }: { perfil: PerfilConta; papel: Papel; base: string; verificacao: ItemVerificacao[]; rotuloPapel: string }) {
+export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: PerfilConta; base: string; verificacao: ItemVerificacao[]; locadora: { nome: string; papel: "dono" | "operador" } | null }) {
   const feitos = verificacao.filter((v) => v.estado === "ok").length;
   const nomeTema = TEMAS.find((t) => t.id === perfil.preferencias.tema)?.rotulo;
   return (
@@ -92,7 +88,10 @@ export function IndiceConta({ perfil, papel, base, verificacao, rotuloPapel }: {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-bold tracking-tight">{perfil.nome}</span>
           <span className="block truncate text-sm text-suave">{perfil.email ?? perfil.telefone}</span>
-          <span className="mt-1.5 inline-flex"><Selo tom="marca">{rotuloPapel}</Selo></span>
+          <span className="mt-1.5 flex flex-wrap gap-1.5">
+            <Selo tom="marca">Motorista</Selo>
+            {locadora && <Selo tom="ok">Locador{locadora.papel === "operador" ? " · operador" : ""}</Selo>}
+          </span>
         </span>
         <ChevronRight size={18} className="shrink-0 text-suave" />
       </Link>
@@ -110,10 +109,20 @@ export function IndiceConta({ perfil, papel, base, verificacao, rotuloPapel }: {
         </p>
       </Link>
 
-      {GRUPOS[papel].map((g) => (
+      <section>
+        <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-suave uppercase">Modo do app</h2>
+        <TrocaModo />
+        <p className="mt-2 px-1 text-xs text-suave">
+          {locadora
+            ? `Uma conta só: alugue carros como motorista e gerencie ${locadora.nome} como locador.`
+            : "Tem carro para alugar? Ative o modo locador e anuncie. Você continua podendo alugar carros."}
+        </p>
+      </section>
+
+      {grupos(Boolean(locadora)).map((g) => (
         <Grupo key={g.titulo} titulo={g.titulo}>
           {g.itens.map((k) => (
-            <Linha key={k} href={`${base}/${k}`} icone={SECOES[k].icone} titulo={SECOES[k].titulo} detalhe={k === "aparencia" ? `Tema ${nomeTema?.toLowerCase()}` : SECOES[k].detalhe} />
+            <Linha key={k} href={k === "locadora" ? "/painel/conta/locadora" : `${base}/${k}`} icone={SECOES[k].icone} titulo={SECOES[k].titulo} detalhe={k === "aparencia" ? `Tema ${nomeTema?.toLowerCase()}` : SECOES[k].detalhe} />
           ))}
         </Grupo>
       ))}

@@ -11,6 +11,8 @@ export function urlFoto(caminho: string): string {
 
 export interface AnuncioPublico {
   id: string;
+  organizacaoId: string;
+  veiculoId: string;
   cidade: string;
   uf: string;
   aluguelSemanal: number;
@@ -37,6 +39,8 @@ async function montar(linhas: { id: string; organizacao_id: string; veiculo_id: 
     if (!v || !o || v.status !== "disponivel") return [];
     return [{
       id: l.id,
+      organizacaoId: l.organizacao_id,
+      veiculoId: l.veiculo_id,
       cidade: l.cidade,
       uf: l.uf,
       aluguelSemanal: l.aluguel_semanal_centavos,

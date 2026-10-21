@@ -1,4 +1,4 @@
-import { CalendarClock, Camera, ChevronRight, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, MessageCircle, Search, Ticket, UserRoundPen, Wallet, XCircle } from "lucide-react";
+import { Building2, CalendarClock, Camera, ChevronRight, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, MessageCircle, Search, UserRoundPen, Wallet, XCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { ListaConversas } from "@/components/motorista/lista-conversas";
@@ -8,8 +8,9 @@ import type { Linha } from "@/db/tipos";
 import { nomeDiaDaSemana } from "@/dominio/contrato/variaveis";
 import { data, diaDaSemana, formatarData, hoje, somarDias } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
-import { perfilDaConta } from "@/lib/conta";
+import { perfilResumido } from "@/lib/conta";
 import { conversasDoMotorista } from "@/lib/conversas";
+import { locadoraDoUsuario } from "@/lib/modos";
 import { exigirUsuario } from "@/lib/sessao";
 import { cadastrosDoMotorista, contratosDoMotorista } from "@/lib/motorista";
 import { TIPO_OBRIGACAO } from "@/lib/rotulos";
@@ -28,20 +29,22 @@ function etapaAtual(cadastro: Linha<"locatarios">, contrato?: Linha<"contratos">
 /** Início do motorista (RF-121): um resumo do que importa agora, no estilo de app de banco. */
 export default async function Motorista() {
   const usuario = await exigirUsuario("/m");
-  const [cadastros, contratos, perfil, conversas] = await Promise.all([
+  const [cadastros, contratos, perfil, conversas, locadora] = await Promise.all([
     cadastrosDoMotorista(usuario.id),
     contratosDoMotorista(usuario.id),
-    perfilDaConta(),
+    perfilResumido(),
     conversasDoMotorista(usuario.id, 3),
+    locadoraDoUsuario(usuario.id),
   ]);
   const admin = supabaseAdmin();
   const ids = contratos.map((c) => c.id);
   const dia = hoje();
-  const [{ data: orgs }, { data: vistorias }, { data: obrigacoes }, { data: veiculos }] = await Promise.all([
+  const [{ data: orgs }, { data: vistorias }, { data: obrigacoes }, { data: veiculos }, { count: frota }] = await Promise.all([
     cadastros.length ? admin.from("organizacoes").select("id, nome").in("id", cadastros.map((c) => c.organizacao_id)) : Promise.resolve({ data: [] }),
     ids.length ? admin.from("vistorias").select("id, contrato_id, aceite_locatario_evidencia_id").in("contrato_id", ids) : Promise.resolve({ data: [] }),
     ids.length ? admin.from("obrigacoes").select("id, contrato_id, tipo, vencimento, valor_centavos, status").in("contrato_id", ids).in("status", ["pendente", "atrasada"]).lte("vencimento", somarDias(dia, 21)).order("vencimento") : Promise.resolve({ data: [] }),
     contratos.length ? admin.from("veiculos").select("id, placa, modelo").in("id", contratos.map((c) => c.veiculo_id)) : Promise.resolve({ data: [] }),
+    locadora ? admin.from("veiculos").select("id", { count: "exact", head: true }).eq("organizacao_id", locadora.id) : Promise.resolve({ count: null }),
   ]);
 
   const nomeOrg = (id: string) => orgs?.find((o) => o.id === id)?.nome ?? "Locador";
@@ -187,6 +190,18 @@ export default async function Motorista() {
           </section>
         )}
 
+        {locadora && (
+          <Link href="/painel" className="flex items-center gap-3 rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao active:bg-cartao-2">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-marca-suave text-marca"><Building2 size={19} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{locadora.nome}</span>
+              <span className="block text-xs text-suave">{frota ? `${frota} ${frota === 1 ? "carro" : "carros"} no modo locador` : "Modo locador ativo"}</span>
+            </span>
+            <span className="text-xs font-semibold text-marca">Abrir</span>
+            <ChevronRight size={16} className="text-suave" />
+          </Link>
+        )}
+
         {!cadastros.length && (
           <section className="rounded-[1.25rem] border border-borda bg-cartao p-5 shadow-cartao">
             <h2 className="font-bold">Como funciona</h2>
@@ -202,7 +217,7 @@ export default async function Motorista() {
                 </li>
               ))}
             </ol>
-            <p className="mt-4 flex items-start gap-2 rounded-xl bg-cartao-2 p-3 text-xs text-suave"><Ticket size={15} className="mt-px shrink-0 text-marca" /> Recebeu um convite de um locador? Abra o link dele neste celular para começar o cadastro.</p>
+            {!locadora && <p className="mt-4 flex items-start gap-2 rounded-xl bg-cartao-2 p-3 text-xs text-suave"><Building2 size={15} className="mt-px shrink-0 text-marca" /> <span>Tem um carro parado? <Link href="/m/carros?aba=anunciados" className="font-semibold text-marca">Anuncie no Aluguei</Link> com a mesma conta.</span></p>}
           </section>
         )}
 

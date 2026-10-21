@@ -14,8 +14,9 @@ function basicos(perfil: PerfilConta, base: string): ItemVerificacao[] {
   ];
 }
 
-export async function verificacaoMotorista(perfil: PerfilConta): Promise<ItemVerificacao[]> {
-  const cadastros = await cadastrosDoMotorista(perfil.id);
+/** Verificação da conta inteira: o básico, os documentos de quem aluga e, se for locador, os recebimentos. */
+export async function verificacaoDaConta(perfil: PerfilConta, base: string, locadoraId: string | null): Promise<ItemVerificacao[]> {
+  const [cadastros, conta] = await Promise.all([cadastrosDoMotorista(perfil.id), locadoraId ? contaDoLocador(locadoraId).catch(() => null) : Promise.resolve(null)]);
   const aprovado = cadastros.find((c) => c.status === "aprovado");
   const emAnalise = cadastros.find((c) => c.status === "em_analise");
   const aberto = cadastros.find((c) => c.status === "em_cadastro");
@@ -25,16 +26,14 @@ export async function verificacaoMotorista(perfil: PerfilConta): Promise<ItemVer
       ? { rotulo: "Documentos e CNH", detalhe: "Em análise pelo locador", estado: "andamento" }
       : aberto
         ? { rotulo: "Documentos e CNH", detalhe: "Termine o cadastro para enviar", estado: "pendente", href: `/m/cadastro/${aberto.id}` }
-        : { rotulo: "Documentos e CNH", detalhe: "Enviados no cadastro, quando você combinar um carro", estado: "pendente", href: "/m/buscar" };
-  return [...basicos(perfil, "/m/conta"), documentos];
-}
-
-export async function verificacaoLocador(perfil: PerfilConta, organizacaoId: string): Promise<ItemVerificacao[]> {
-  const conta = await contaDoLocador(organizacaoId).catch(() => null);
-  return [
-    ...basicos(perfil, "/painel/conta"),
-    conta
-      ? { rotulo: "Recebimentos no Pix", detalhe: "Conta de recebimento ativa", estado: "ok" }
-      : { rotulo: "Recebimentos no Pix", detalhe: "Ative para os motoristas pagarem no Pix", estado: "pendente", href: "/painel/recebimentos" },
-  ];
+        : { rotulo: "Documentos e CNH", detalhe: "Você envia quando um locador aprovar o seu aluguel", estado: "pendente" };
+  const itens = [...basicos(perfil, base), documentos];
+  if (locadoraId) {
+    itens.push(
+      conta
+        ? { rotulo: "Recebimentos no Pix", detalhe: "Conta de recebimento ativa", estado: "ok" }
+        : { rotulo: "Recebimentos no Pix", detalhe: "Ative para os motoristas pagarem no Pix", estado: "pendente", href: "/painel/recebimentos" },
+    );
+  }
+  return itens;
 }

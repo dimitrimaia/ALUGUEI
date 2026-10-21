@@ -2,6 +2,7 @@ import { ArrowLeft, UserRound } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { BotaoLink, Marca } from "@/components/ui";
+import { BotaoVoltar } from "@/components/voltar";
 import { usuarioAtual } from "@/lib/sessao";
 
 /** Cabeçalho das páginas públicas claras (busca de carros e anúncio). */
@@ -11,7 +12,7 @@ export async function CabecalhoPublico({ voltar }: { voltar?: { href: string; ro
     <header className="sticky top-0 z-30 border-b border-borda bg-cartao/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-5">
         {voltar ? (
-          <Link href={voltar.href as Route} className="inline-flex items-center gap-1.5 text-sm font-semibold text-suave hover:text-texto"><ArrowLeft size={17} /> {voltar.rotulo}</Link>
+          <BotaoVoltar destino={voltar.href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-suave hover:text-texto"><ArrowLeft size={17} /> {voltar.rotulo}</BotaoVoltar>
         ) : (
           <Link href="/?para=motorista" aria-label="Aluguei, início"><Marca /></Link>
         )}
