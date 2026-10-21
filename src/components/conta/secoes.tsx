@@ -7,6 +7,7 @@ import { sairDeTodosOsAparelhos } from "@/lib/acoes-conta";
 import type { PerfilConta } from "@/lib/conta";
 import { TEMAS } from "@/lib/tema";
 import { TrocaModoDaConta } from "@/components/menu-app";
+import { AtivarPush } from "./push";
 import { FormAparencia, FormEmail, FormFoto, FormLocadora, FormNome, FormNotificacoes, VerificarCelular } from "./formularios";
 
 export type Papel = "motorista" | "locador";
@@ -246,6 +247,8 @@ export function SecaoConta({
 
     case "notificacoes":
       return (
+        <div className="flex flex-col gap-5">
+        <AtivarPush />
         <FormNotificacoes
           preferencias={perfil.preferencias}
           canais={[
@@ -268,6 +271,7 @@ export function SecaoConta({
           }
           formais={{ rotulo: "Avisos do contrato", detalhe: "Cobranças, atrasos e notificações formais. Sempre enviados, porque valem como comunicação oficial." }}
         />
+        </div>
       );
 
     case "privacidade":
@@ -304,6 +308,7 @@ export function SecaoConta({
             <Linha href={`/?para=${papel}#como-funciona`} icone={CheckCircle2} titulo="Como o Aluguei funciona" detalhe="O passo a passo, do convite à devolução" />
           </Grupo>
           <Grupo titulo="Fale com a gente">
+            <Linha href={`${base.replace(/\/conta$/, "")}/suporte`} icone={LifeBuoy} titulo="Chat com o suporte" detalhe="Converse com a equipe do Aluguei pelo app" />
             <a href={`mailto:${SUPORTE}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cartao-2">
               <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-marca-suave text-marca"><Mail size={18} /></span>
               <span className="flex-1"><span className="block text-sm font-semibold">E-mail do suporte</span><span className="block text-xs text-suave">{SUPORTE} · respondemos em dias úteis</span></span>

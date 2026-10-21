@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClipboardCheck, FileText } from "lucide-react";
+import { ClipboardCheck, FileText, LogOut } from "lucide-react";
 import { BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Selo, Suave } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import type { ParametrosContrato } from "@/dominio/contrato/parametros";
@@ -60,7 +60,12 @@ export default async function FichaContrato({ params }: { params: Promise<{ id: 
         tituloCurto={l?.nome ?? "Contrato"}
         titulo={<span className="flex flex-wrap items-center gap-3">{l?.nome} <Selo tom={status.tom}>{status.rotulo}</Selo></span>}
         subtitulo={v ? `${formatarPlaca(v.placa)} · ${v.modelo}` : undefined}
-        acao={c.status === "assinado" ? <BotaoLink href={`/painel/contratos/${c.id}/vistoria` as Route} icone={ClipboardCheck}>Fazer vistoria de entrega</BotaoLink> : undefined}
+        acao={
+          c.status === "assinado" ? <BotaoLink href={`/painel/contratos/${c.id}/vistoria` as Route} icone={ClipboardCheck}>Fazer vistoria de entrega</BotaoLink>
+            : c.status === "ativo" ? <BotaoLink href={`/painel/contratos/${c.id}/encerrar` as Route} variante="secundario" icone={LogOut}>Devolução e encerramento</BotaoLink>
+              : c.status === "encerrado" || c.status === "rescindido" ? <BotaoLink href={`/painel/contratos/${c.id}/encerrar` as Route} variante="secundario">Demonstrativo e caução</BotaoLink>
+                : undefined
+        }
       />
       <div className="grid gap-4 lg:grid-cols-2">
         {c.status === "aguardando_assinatura" && l && (

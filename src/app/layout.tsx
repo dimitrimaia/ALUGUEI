@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { ProvedorMenu } from "@/components/menu-app";
+import { ServiceWorker } from "@/components/service-worker";
 import { RegistroNavegacao } from "@/components/voltar";
 import { SCRIPT_TEMA } from "@/lib/tema";
 import "./globals.css";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense>
           <BarraProgresso />
           <RegistroNavegacao />
+          <ServiceWorker />
         </Suspense>
         <ProvedorMenu>{children}</ProvedorMenu>
       </body>

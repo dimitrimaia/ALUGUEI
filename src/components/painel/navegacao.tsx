@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, ChevronDown, ChevronRight, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, MessageCircle, Plus, Settings, UserPlus, Users, X } from "lucide-react";
+import { Bell, Car, ChevronDown, LifeBuoy, ChevronRight, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, MessageCircle, Plus, Settings, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -51,7 +51,7 @@ export function NavegacaoPainel({
   recebimentosAtivos: boolean;
 }) {
   const caminho = usePathname();
-  const { perfil, naoLidas, locadora } = useConta();
+  const { perfil, naoLidas, locadora, notificacoes } = useConta();
   const [acoesAbertas, setAcoesAbertas] = useState(false);
   useMenu({
     modo: "locador",
@@ -63,6 +63,13 @@ export function NavegacaoPainel({
       { titulo: "Gestão", itens: GESTAO.slice(1).map((i) => ({ ...i, contador: i.href === "/painel/motoristas" ? pendentes : 0 })) },
       { titulo: "Busca de carros", itens: BUSCA.map((i) => ({ ...i, contador: i.href === "/painel/conversas" ? naoLidas : 0 })) },
       { titulo: "Dinheiro", itens: DINHEIRO },
+      {
+        titulo: "Ajuda",
+        itens: [
+          { href: "/painel/avisos", rotulo: "Avisos", icone: Bell, contador: notificacoes },
+          { href: "/painel/suporte", rotulo: "Falar com o suporte", icone: LifeBuoy },
+        ],
+      },
     ],
   });
   const [menuNovo, setMenuNovo] = useState(false);
@@ -136,6 +143,12 @@ export function NavegacaoPainel({
         </Link>
         <Link href="/painel/conta" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
           <Settings size={18} aria-hidden /> Configurações
+        </Link>
+        <Link href="/painel/avisos" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
+          <Bell size={18} aria-hidden /> <span className="flex-1">Avisos</span> <Contador n={notificacoes} />
+        </Link>
+        <Link href="/painel/suporte" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
+          <LifeBuoy size={18} aria-hidden /> Suporte
         </Link>
         <form action="/sair" method="post">
           <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">

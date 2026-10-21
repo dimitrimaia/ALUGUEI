@@ -16,6 +16,12 @@ export type Database = {
         Update: { id?: string; organizacao_id?: string; veiculo_id?: string; status?: "ativo" | "pausado"; cidade?: string; uf?: string; cidade_busca?: string; aluguel_semanal_centavos?: number; caucao_centavos?: number; franquia_km_mensal?: number; prazo_minimo_meses?: number; descricao?: string | null; fotos?: Json; criado_em?: string; atualizado_em?: string };
         Relationships: [];
       };
+      atendimentos: {
+        Row: { id: string; usuario_id: string; modo: string; organizacao_id: string | null; assunto: string; status: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em: string; lido_usuario_em: string | null; lido_equipe_em: string | null; criado_em: string };
+        Insert: { id?: string; usuario_id: string; modo: string; organizacao_id?: string | null; assunto: string; status?: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em?: string; lido_usuario_em?: string | null; lido_equipe_em?: string | null; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; modo?: string; organizacao_id?: string | null; assunto?: string; status?: "aberto" | "respondido" | "encerrado"; ultima_mensagem_em?: string; lido_usuario_em?: string | null; lido_equipe_em?: string | null; criado_em?: string };
+        Relationships: [];
+      };
       auditoria: {
         Row: { id: string; organizacao_id: string | null; usuario_id: string | null; acao: string; entidade: string; entidade_id: string | null; antes: Json | null; depois: Json | null; ip: string | null; criado_em: string };
         Insert: { id?: string; organizacao_id?: string | null; usuario_id?: string | null; acao: string; entidade: string; entidade_id?: string | null; antes?: Json | null; depois?: Json | null; ip?: string | null; criado_em?: string };
@@ -53,9 +59,9 @@ export type Database = {
         Relationships: [];
       };
       contratos: {
-        Row: { id: string; organizacao_id: string; locatario_id: string; veiculo_id: string; versao_modelo_id: string; parametros: Json; inicio: string; fim: string; status: "rascunho" | "aguardando_assinatura" | "assinado" | "ativo" | "encerrado" | "rescindido"; importado: boolean; pdf_evidencia_id: string | null; pdf_sha256: string | null; assinatura_provedor_id: string | null; assinado_em: string | null; contrato_anterior_id: string | null; criado_em: string };
-        Insert: { id?: string; organizacao_id: string; locatario_id: string; veiculo_id: string; versao_modelo_id: string; parametros: Json; inicio: string; fim: string; status?: "rascunho" | "aguardando_assinatura" | "assinado" | "ativo" | "encerrado" | "rescindido"; importado?: boolean; pdf_evidencia_id?: string | null; pdf_sha256?: string | null; assinatura_provedor_id?: string | null; assinado_em?: string | null; contrato_anterior_id?: string | null; criado_em?: string };
-        Update: { id?: string; organizacao_id?: string; locatario_id?: string; veiculo_id?: string; versao_modelo_id?: string; parametros?: Json; inicio?: string; fim?: string; status?: "rascunho" | "aguardando_assinatura" | "assinado" | "ativo" | "encerrado" | "rescindido"; importado?: boolean; pdf_evidencia_id?: string | null; pdf_sha256?: string | null; assinatura_provedor_id?: string | null; assinado_em?: string | null; contrato_anterior_id?: string | null; criado_em?: string };
+        Row: { id: string; organizacao_id: string; locatario_id: string; veiculo_id: string; versao_modelo_id: string; parametros: Json; inicio: string; fim: string; status: "rascunho" | "aguardando_assinatura" | "assinado" | "ativo" | "encerrado" | "rescindido"; importado: boolean; pdf_evidencia_id: string | null; pdf_sha256: string | null; assinatura_provedor_id: string | null; assinado_em: string | null; contrato_anterior_id: string | null; encerramento_motivo: string | null; encerrado_em: string | null; devolucao_em: string | null; caucao_devolver_centavos: number | null; caucao_devolver_ate: string | null; caucao_devolvida_em: string | null; criado_em: string };
+        Insert: { id?: string; organizacao_id: string; locatario_id: string; veiculo_id: string; versao_modelo_id: string; parametros: Json; inicio: string; fim: string; status?: "rascunho" | "aguardando_assinatura" | "assinado" | "ativo" | "encerrado" | "rescindido"; importado?: boolean; pdf_evidencia_id?: string | null; pdf_sha256?: string | null; assinatura_provedor_id?: string | null; assinado_em?: string | null; contrato_anterior_id?: string | null; encerramento_motivo?: string | null; encerrado_em?: string | null; devolucao_em?: string | null; caucao_devolver_centavos?: number | null; caucao_devolver_ate?: string | null; caucao_devolvida_em?: string | null; criado_em?: string };
+        Update: { id?: string; organizacao_id?: string; locatario_id?: string; veiculo_id?: string; versao_modelo_id?: string; parametros?: Json; inicio?: string; fim?: string; status?: "rascunho" | "aguardando_assinatura" | "assinado" | "ativo" | "encerrado" | "rescindido"; importado?: boolean; pdf_evidencia_id?: string | null; pdf_sha256?: string | null; assinatura_provedor_id?: string | null; assinado_em?: string | null; contrato_anterior_id?: string | null; encerramento_motivo?: string | null; encerrado_em?: string | null; devolucao_em?: string | null; caucao_devolver_centavos?: number | null; caucao_devolver_ate?: string | null; caucao_devolvida_em?: string | null; criado_em?: string };
         Relationships: [];
       };
       conversas: {
@@ -68,6 +74,12 @@ export type Database = {
         Row: { id: string; organizacao_id: string; contrato_id: string | null; veiculo_id: string | null; locatario_id: string | null; tipo: string; finalidade: string; caminho_storage: string; sha256: string; tamanho_bytes: number; mime: string; recebido_em: string; capturado_em_dispositivo: string | null; latitude: number | null; longitude: number | null; precisao_metros: number | null; ip: string | null; dispositivo: string | null; enviado_por: string; metadados: Json | null };
         Insert: { id?: string; organizacao_id: string; contrato_id?: string | null; veiculo_id?: string | null; locatario_id?: string | null; tipo: string; finalidade: string; caminho_storage: string; sha256: string; tamanho_bytes: number; mime: string; recebido_em?: string; capturado_em_dispositivo?: string | null; latitude?: number | null; longitude?: number | null; precisao_metros?: number | null; ip?: string | null; dispositivo?: string | null; enviado_por: string; metadados?: Json | null };
         Update: { id?: string; organizacao_id?: string; contrato_id?: string | null; veiculo_id?: string | null; locatario_id?: string | null; tipo?: string; finalidade?: string; caminho_storage?: string; sha256?: string; tamanho_bytes?: number; mime?: string; recebido_em?: string; capturado_em_dispositivo?: string | null; latitude?: number | null; longitude?: number | null; precisao_metros?: number | null; ip?: string | null; dispositivo?: string | null; enviado_por?: string; metadados?: Json | null };
+        Relationships: [];
+      };
+      inscricoes_push: {
+        Row: { id: string; usuario_id: string; endpoint: string; p256dh: string; auth: string; dispositivo: string | null; criado_em: string };
+        Insert: { id?: string; usuario_id: string; endpoint: string; p256dh: string; auth: string; dispositivo?: string | null; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; endpoint?: string; p256dh?: string; auth?: string; dispositivo?: string | null; criado_em?: string };
         Relationships: [];
       };
       itens_manutencao: {
@@ -112,6 +124,12 @@ export type Database = {
         Update: { id?: string; conversa_id?: string; autor?: "motorista" | "locador" | "sistema"; usuario_id?: string | null; texto?: string; criado_em?: string };
         Relationships: [];
       };
+      mensagens_suporte: {
+        Row: { id: string; atendimento_id: string; autor: "usuario" | "equipe" | "agente" | "sistema"; usuario_id: string | null; texto: string; criado_em: string };
+        Insert: { id?: string; atendimento_id: string; autor: "usuario" | "equipe" | "agente" | "sistema"; usuario_id?: string | null; texto: string; criado_em?: string };
+        Update: { id?: string; atendimento_id?: string; autor?: "usuario" | "equipe" | "agente" | "sistema"; usuario_id?: string | null; texto?: string; criado_em?: string };
+        Relationships: [];
+      };
       modelos_contrato: {
         Row: { id: string; organizacao_id: string | null; nome: string; criado_em: string };
         Insert: { id?: string; organizacao_id?: string | null; nome: string; criado_em?: string };
@@ -119,9 +137,9 @@ export type Database = {
         Relationships: [];
       };
       notificacoes: {
-        Row: { id: string; organizacao_id: string; contrato_id: string | null; destinatario_usuario_id: string | null; canal: "app" | "push" | "email" | "whatsapp"; formal: boolean; modelo: string; texto: string; chave: string; provedor_id: string | null; enviada_em: string | null; entregue_em: string | null; lida_em: string | null; falha: string | null; criado_em: string };
-        Insert: { id?: string; organizacao_id: string; contrato_id?: string | null; destinatario_usuario_id?: string | null; canal: "app" | "push" | "email" | "whatsapp"; formal?: boolean; modelo: string; texto: string; chave: string; provedor_id?: string | null; enviada_em?: string | null; entregue_em?: string | null; lida_em?: string | null; falha?: string | null; criado_em?: string };
-        Update: { id?: string; organizacao_id?: string; contrato_id?: string | null; destinatario_usuario_id?: string | null; canal?: "app" | "push" | "email" | "whatsapp"; formal?: boolean; modelo?: string; texto?: string; chave?: string; provedor_id?: string | null; enviada_em?: string | null; entregue_em?: string | null; lida_em?: string | null; falha?: string | null; criado_em?: string };
+        Row: { id: string; organizacao_id: string | null; contrato_id: string | null; destinatario_usuario_id: string | null; canal: "app" | "push" | "email" | "whatsapp"; formal: boolean; modelo: string; titulo: string | null; texto: string; link: string | null; chave: string; provedor_id: string | null; enviada_em: string | null; entregue_em: string | null; lida_em: string | null; falha: string | null; criado_em: string };
+        Insert: { id?: string; organizacao_id?: string | null; contrato_id?: string | null; destinatario_usuario_id?: string | null; canal: "app" | "push" | "email" | "whatsapp"; formal?: boolean; modelo: string; titulo?: string | null; texto: string; link?: string | null; chave: string; provedor_id?: string | null; enviada_em?: string | null; entregue_em?: string | null; lida_em?: string | null; falha?: string | null; criado_em?: string };
+        Update: { id?: string; organizacao_id?: string | null; contrato_id?: string | null; destinatario_usuario_id?: string | null; canal?: "app" | "push" | "email" | "whatsapp"; formal?: boolean; modelo?: string; titulo?: string | null; texto?: string; link?: string | null; chave?: string; provedor_id?: string | null; enviada_em?: string | null; entregue_em?: string | null; lida_em?: string | null; falha?: string | null; criado_em?: string };
         Relationships: [];
       };
       obrigacoes: {

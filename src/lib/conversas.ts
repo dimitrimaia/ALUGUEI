@@ -3,6 +3,8 @@ import type { Linha } from "@/db/tipos";
 import { supabaseAdmin } from "./supabase/admin";
 import { supabaseServidor } from "./supabase/servidor";
 import type { Usuario } from "./sessao";
+import { after } from "next/server";
+import { notificar, notificarEquipe } from "./notificacoes";
 
 export type Papel = "motorista" | "locador";
 
@@ -25,6 +27,18 @@ export async function registrarMensagem(conversaId: string, autor: Papel | "sist
     .from("conversas")
     .update({ ultima_mensagem_em: agora, ...(autor === "motorista" ? { lida_motorista_em: agora } : autor === "locador" ? { lida_locador_em: agora } : {}) })
     .eq("id", conversaId);
+  // Avisa a outra parte depois de responder, para o envio não esperar o push.
+  after(async () => {
+    const { data: c } = await admin.from("conversas").select("organizacao_id, usuario_id, nome_motorista").eq("id", conversaId).single();
+    if (!c) return;
+    const trecho = texto.length > 120 ? `${texto.slice(0, 117)}…` : texto;
+    if (autor === "motorista") {
+      await notificarEquipe(c.organizacao_id, { modelo: "chat.mensagem", titulo: `Mensagem de ${c.nome_motorista}`, texto: trecho, link: `/painel/conversas/${conversaId}`, assunto: "mensagens", chave: `msg:${data.id}` });
+    } else {
+      const { data: org } = await admin.from("organizacoes").select("nome").eq("id", c.organizacao_id).single();
+      await notificar({ usuarioId: c.usuario_id, organizacaoId: c.organizacao_id, modelo: "chat.mensagem", titulo: autor === "sistema" ? `${org?.nome ?? "Locador"}: novidade na conversa` : `Mensagem de ${org?.nome ?? "locador"}`, texto: trecho.replace(/\s\/m\/\S+/g, ""), link: `/m/conversas/${conversaId}`, assunto: "mensagens", chave: `msg:${data.id}` });
+    }
+  });
   return data;
 }
 

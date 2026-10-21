@@ -12,6 +12,7 @@ import { cadastroDoMotorista } from "@/lib/motorista";
 import { exigirUsuario } from "@/lib/sessao";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { headers } from "next/headers";
+import { notificarEquipe } from "@/lib/notificacoes";
 
 const dataISO = (rotulo: string) =>
   z.string().transform((s, ctx) => {
@@ -131,5 +132,6 @@ export async function enviarCadastro(locatarioId: string, _: EstadoCadastro, for
   if (error) return { mensagem: "Não foi possível enviar o cadastro. Tente de novo." };
 
   await auditar({ organizacaoId: l.organizacao_id, usuarioId: usuario.id, acao: "locatario.enviar_cadastro", entidade: "locatarios", entidadeId: l.id, depois: { pendencias } });
+  await notificarEquipe(l.organizacao_id, { modelo: "cadastro.enviado", titulo: "Cadastro para analisar", texto: `${d.nome} enviou CNH e documentos.`, link: `/painel/motoristas/${l.id}`, assunto: "lembretes", chave: `cadastro:${l.id}:enviado:${Date.now()}` });
   redirect("/m");
 }

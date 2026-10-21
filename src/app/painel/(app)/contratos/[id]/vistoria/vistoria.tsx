@@ -27,7 +27,9 @@ export function VistoriaEntrega({
   odometroAtual,
   fotosIniciais,
   extrasIniciais,
+  tipo = "entrega",
 }: {
+  tipo?: "entrega" | "devolucao";
   contratoId: string;
   odometroAtual: number;
   fotosIniciais: Record<string, { evidenciaId: string; url: string | null }>;
@@ -58,7 +60,7 @@ export function VistoriaEntrega({
   async function enviar(foto: string, arquivo: File): Promise<Foto> {
     try {
       const pronta = await comprimirImagem(arquivo, { carimbo: carimbo(posicao.current) });
-      const { caminho, token } = await prepararFoto(contratoId, foto as never);
+      const { caminho, token } = await prepararFoto(contratoId, foto as never, tipo);
       const { error } = await supabaseNavegador().storage.from("evidencias").uploadToSignedUrl(caminho, token, pronta, { contentType: "image/jpeg" });
       if (error) throw new Error(error.message);
       const p = posicao.current;
@@ -69,7 +71,7 @@ export function VistoriaEntrega({
         longitude: p?.longitude,
         precisao: p?.precisao,
         capturadoEm: new Date(arquivo.lastModified || Date.now()).toISOString(),
-      });
+      }, tipo);
       if (!r.ok) return { estado: "erro", erro: r.erro };
       return { estado: "pronta", evidenciaId: r.evidenciaId, url: r.url };
     } catch {
@@ -115,7 +117,7 @@ export function VistoriaEntrega({
           observacao: itens[i.id]!.observacao || undefined,
         })),
         observacoes: observacoes || undefined,
-      });
+      }, tipo);
       if (r?.erro) setErro(r.erro);
     });
   }

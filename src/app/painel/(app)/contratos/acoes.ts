@@ -14,6 +14,7 @@ import { guardarEvidencia } from "@/lib/evidencias";
 import { gerarPdfContrato } from "@/lib/pdf/contrato";
 import { exigirEquipe } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
+import { notificar } from "@/lib/notificacoes";
 
 const reais = (rotulo: string) =>
   z.string().transform((s, ctx) => {
@@ -152,5 +153,6 @@ export async function criarContrato(_: EstadoNovoContrato, form: FormData): Prom
 
   await supabase.from("contratos").update({ pdf_evidencia_id: evidencia.id, pdf_sha256: evidencia.sha256 }).eq("id", contrato.id);
   await auditar({ organizacaoId: organizacao.id, usuarioId: usuario.id, acao: "contrato.emitir", entidade: "contratos", entidadeId: contrato.id, depois: { versaoModelo: versao.versao, pdfSha256: evidencia.sha256 } });
+  if (l.usuario_id) await notificar({ usuarioId: l.usuario_id, organizacaoId: organizacao.id, contratoId: contrato.id, modelo: "contrato.pronto", titulo: "Seu contrato está pronto", texto: `${organizacao.nome} preparou o contrato. Leia o resumo e assine pelo celular.`, link: `/m/contrato/${contrato.id}`, assunto: "formal", porEmail: true, chave: `contrato:${contrato.id}:pronto` });
   redirect(`/painel/contratos/${contrato.id}`);
 }

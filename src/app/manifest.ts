@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Aluguei",
     description: "Contrato, pagamento semanal, check-in e vistoria do carro alugado.",
     lang: "pt-BR",
-    start_url: "/m",
+    start_url: "/inicio",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

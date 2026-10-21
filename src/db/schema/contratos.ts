@@ -52,6 +52,13 @@ export const contratos = pgTable(
     assinaturaProvedorId: text("assinatura_provedor_id"),
     assinadoEm: timestamp("assinado_em", { withTimezone: true }),
     contratoAnteriorId: uuid("contrato_anterior_id"), // renovação (RF-034)
+    /** Encerramento (RF-035, RF-045, RF-060): motivo, dia da devolução e a caução a devolver. */
+    encerramentoMotivo: text("encerramento_motivo"),
+    encerradoEm: timestamp("encerrado_em", { withTimezone: true }),
+    devolucaoEm: date("devolucao_em"),
+    caucaoDevolver: integer("caucao_devolver_centavos"),
+    caucaoDevolverAte: date("caucao_devolver_ate"),
+    caucaoDevolvidaEm: timestamp("caucao_devolvida_em", { withTimezone: true }),
     criadoEm: criadoEm(),
   },
   (t) => [index("contratos_org").on(t.organizacaoId)],

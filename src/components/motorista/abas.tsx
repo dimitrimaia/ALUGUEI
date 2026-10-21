@@ -9,7 +9,7 @@ import { useConta } from "@/components/conta/contexto";
 export function AbasMotorista() {
   const caminho = usePathname();
   const { naoLidas } = useConta();
-  if (caminho.startsWith("/m/cadastro") || /^\/m\/conversas\/./.test(caminho) || caminho.startsWith("/m/checkin")) return null;
+  if (caminho.startsWith("/m/cadastro") || /^\/m\/(conversas|suporte)\/./.test(caminho) || caminho.startsWith("/m/checkin")) return null;
   return (
     <BarraInferior
       abas={[

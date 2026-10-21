@@ -23,13 +23,19 @@ async function contratoDaEquipe(contratoId: string) {
 }
 
 const IDS_FOTO = [...FOTOS_VISTORIA.map((f) => f.id), "extra"] as const;
+export type TipoVistoria = "entrega" | "devolucao";
+
+/** Entrega: depois da assinatura. Devolução: com o contrato ativo, no encerramento. */
+function statusEsperado(tipo: TipoVistoria) {
+  return tipo === "entrega" ? "assinado" : "ativo";
+}
 
 /** Passo 1 do envio: URL assinada para o navegador mandar a foto direto ao cofre. */
-export async function prepararFoto(contratoId: string, foto: (typeof IDS_FOTO)[number]) {
+export async function prepararFoto(contratoId: string, foto: (typeof IDS_FOTO)[number], tipo: TipoVistoria = "entrega") {
   const { organizacao, contrato } = await contratoDaEquipe(contratoId);
-  if (contrato.status !== "assinado") throw new Error("A vistoria de entrega é feita depois da assinatura.");
+  if (contrato.status !== statusEsperado(tipo)) throw new Error(tipo === "entrega" ? "A vistoria de entrega é feita depois da assinatura." : "A vistoria de devolução é feita com o contrato ativo.");
   z.enum(IDS_FOTO).parse(foto);
-  return urlDeEnvio(`${organizacao.id}/vistoria/entrega/${contratoId}/${foto}-${randomUUID()}.jpg`);
+  return urlDeEnvio(`${organizacao.id}/vistoria/${tipo}/${contratoId}/${foto}-${randomUUID()}.jpg`);
 }
 
 const esquemaRegistro = z.object({
@@ -42,15 +48,15 @@ const esquemaRegistro = z.object({
 });
 
 /** Passo 2: a foto chegou; calcula o hash e registra no cofre. */
-export async function registrarFoto(contratoId: string, entrada: z.input<typeof esquemaRegistro>) {
+export async function registrarFoto(contratoId: string, entrada: z.input<typeof esquemaRegistro>, tipo: TipoVistoria = "entrega") {
   const { organizacao, usuario, contrato } = await contratoDaEquipe(contratoId);
   const d = esquemaRegistro.parse(entrada);
-  if (!d.caminho.startsWith(`${organizacao.id}/vistoria/entrega/${contratoId}/`)) throw new Error("Caminho inválido");
+  if (!d.caminho.startsWith(`${organizacao.id}/vistoria/${tipo}/${contratoId}/`)) throw new Error("Caminho inválido");
   try {
     const ev = await registrarArquivoEnviado(d.caminho, {
       organizacaoId: organizacao.id,
       enviadoPor: usuario.id,
-      finalidade: `vistoria.entrega.${d.foto}`,
+      finalidade: `vistoria.${tipo}.${d.foto}`,
       tipo: "foto",
       contratoId,
       veiculoId: contrato.veiculo_id,
@@ -83,9 +89,9 @@ const esquemaVistoria = z.object({
 
 export type ResultadoVistoria = { erro?: string };
 
-export async function concluirVistoria(contratoId: string, entrada: z.input<typeof esquemaVistoria>): Promise<ResultadoVistoria> {
+export async function concluirVistoria(contratoId: string, entrada: z.input<typeof esquemaVistoria>, tipo: TipoVistoria = "entrega"): Promise<ResultadoVistoria> {
   const { organizacao, usuario, contrato, supabase } = await contratoDaEquipe(contratoId);
-  if (contrato.status !== "assinado") return { erro: "Este contrato não está aguardando vistoria de entrega." };
+  if (contrato.status !== statusEsperado(tipo)) return { erro: tipo === "entrega" ? "Este contrato não está aguardando vistoria de entrega." : "Só dá para fazer a devolução de um contrato ativo." };
   const lido = esquemaVistoria.safeParse(entrada);
   if (!lido.success) return { erro: "Dados da vistoria inválidos." };
   const d = lido.data;
@@ -106,15 +112,15 @@ export async function concluirVistoria(contratoId: string, entrada: z.input<type
     return { erro: `O km informado é menor que o último registrado (${veiculo.odometro_atual.toLocaleString("pt-BR")} km).` };
   }
 
-  const { data: existente } = await supabase.from("vistorias").select("id").eq("contrato_id", contratoId).eq("tipo", "entrega").maybeSingle();
-  if (existente) return { erro: "A vistoria de entrega já foi registrada." };
+  const { data: existente } = await supabase.from("vistorias").select("id").eq("contrato_id", contratoId).eq("tipo", tipo).maybeSingle();
+  if (existente) return tipo === "devolucao" ? redirect(`/painel/contratos/${contratoId}/encerrar`) : { erro: "A vistoria de entrega já foi registrada." };
 
   const { data: vistoria, error } = await supabase
     .from("vistorias")
     .insert({
       organizacao_id: organizacao.id,
       contrato_id: contratoId,
-      tipo: "entrega",
+      tipo,
       odometro: d.odometro,
       combustivel_oitavos: d.combustivelOitavos,
       checklist: JSON.parse(JSON.stringify(checklist)),
@@ -124,6 +130,6 @@ export async function concluirVistoria(contratoId: string, entrada: z.input<type
     .single();
   if (error || !vistoria) return { erro: "Não foi possível salvar a vistoria." };
 
-  await auditar({ organizacaoId: organizacao.id, usuarioId: usuario.id, acao: "vistoria.entrega.registrar", entidade: "vistorias", entidadeId: vistoria.id, depois: { odometro: d.odometro, combustivel: d.combustivelOitavos } });
-  redirect(`/painel/contratos/${contratoId}`);
+  await auditar({ organizacaoId: organizacao.id, usuarioId: usuario.id, acao: `vistoria.${tipo}.registrar`, entidade: "vistorias", entidadeId: vistoria.id, depois: { odometro: d.odometro, combustivel: d.combustivelOitavos } });
+  redirect(tipo === "devolucao" ? `/painel/contratos/${contratoId}/encerrar` : `/painel/contratos/${contratoId}`);
 }

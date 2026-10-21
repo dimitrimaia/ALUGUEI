@@ -54,6 +54,20 @@ export default async function ContratoMotorista({ params }: { params: Promise<{ 
         <Suave>Contrato com {org?.nome}</Suave>
         <h1 className="text-2xl font-bold tracking-tight">Resumo do contrato</h1>
       </div>
+      {(c.status === "encerrado" || c.status === "rescindido") && (
+        <Cartao className="flex flex-col gap-2 border-marca/30">
+          <p className="font-semibold">{c.status === "rescindido" ? "Contrato rescindido" : "Contrato encerrado"}{c.devolucao_em ? ` · carro devolvido em ${c.devolucao_em.split("-").reverse().join("/")}` : ""}</p>
+          {(c.caucao_devolver_centavos ?? 0) > 0 ? (
+            <p className="text-sm">
+              {c.caucao_devolvida_em ? "O locador informou que devolveu " : "Caução a receber: "}
+              <strong>{formatarBRL(c.caucao_devolver_centavos ?? 0)}</strong>
+              {c.caucao_devolvida_em ? ` em ${new Date(c.caucao_devolvida_em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.` : ` até ${(c.caucao_devolver_ate ?? "").split("-").reverse().join("/")}.`}
+            </p>
+          ) : (
+            <p className="text-sm text-suave">A caução foi usada para quitar as pendências da devolução. O detalhe está no seu extrato.</p>
+          )}
+        </Cartao>
+      )}
       <Cartao className="flex flex-col gap-3">
         {pontos.map(([rotulo, texto]) => (
           <div key={rotulo}>

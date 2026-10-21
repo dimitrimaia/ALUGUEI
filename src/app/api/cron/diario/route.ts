@@ -1,7 +1,9 @@
 import { diasDeAtraso } from "@/dominio/checkin/checkin";
 import type { ParametrosContrato } from "@/dominio/contrato/parametros";
 import { data, formatarData, hoje, somarDias } from "@/dominio/datas/data";
+import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { conciliar, contaDoLocador, emitirCobranca } from "@/lib/cobrancas";
+import { notificar, notificarEquipe, usuarioDoContrato } from "@/lib/notificacoes";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const DIAS_DE_ANTECEDENCIA = 3;
@@ -13,7 +15,9 @@ const DIAS_DE_ANTECEDENCIA = 3;
  *  2. concilia as cobranças em aberto com o Asaas (cobre aviso de pagamento perdido);
  *  3. marca como atrasadas as obrigações vencidas e não pagas;
  *  4. check-in sem envio há mais dias que o contrato tolera vira uma decisão
- *     pendente para o locador (RF-073). O sistema só sugere; não notifica nem multa.
+ *     pendente para o locador (RF-073). O sistema só sugere; não notifica nem multa;
+ *  5. lembretes ao motorista: pagamento na véspera e no dia, atraso no dia
+ *     seguinte e check-in aberto (cada aviso tem chave própria e sai uma vez).
  */
 export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -85,6 +89,42 @@ export async function GET(request: Request) {
       motivo: `Check-in de ${formatarData(data(o.vencimento))} sem envio há ${atraso} dias. O contrato trata como infração grave: registre ou dispense.`,
     });
     resultado.checkinsAtrasados++;
+    await notificarEquipe(o.organizacao_id, { contratoId: o.contrato_id, modelo: "checkin.atrasado", titulo: "Check-in atrasado: decida", texto: `Check-in de ${formatarData(data(o.vencimento))} sem envio há ${atraso} dias.`, link: `/painel/contratos/${o.contrato_id}`, assunto: "lembretes", chave: `checkin:${o.id}:decisao` });
+  }
+
+  const amanha = somarDias(dia, 1);
+  const ativosIds = (ativos ?? []).map((c) => c.id);
+  if (ativosIds.length) {
+    const { data: proximas } = await admin
+      .from("obrigacoes")
+      .select("id, organizacao_id, contrato_id, tipo, vencimento, valor_centavos, status")
+      .in("contrato_id", ativosIds)
+      .in("status", ["pendente", "atrasada"])
+      .gte("vencimento", somarDias(dia, -1))
+      .lte("vencimento", amanha);
+    for (const o of proximas ?? []) {
+      const usuarioId = await usuarioDoContrato(o.contrato_id);
+      if (!usuarioId) continue;
+      const comum = { usuarioId, organizacaoId: o.organizacao_id, contratoId: o.contrato_id };
+      if (o.tipo === "checkin") {
+        if (o.vencimento < dia) continue;
+        await notificar({ ...comum, modelo: "checkin.aberto", titulo: o.vencimento === dia ? "Hoje é dia de check-in" : "Check-in amanhã", texto: "Fotos do painel, do óleo e do arrefecimento, e um vídeo do carro. Leva 3 minutos.", link: `/m/checkin/${o.id}`, assunto: "lembretes", chave: `checkin:${o.id}:aberto` });
+      } else {
+        const valor = formatarBRL(o.valor_centavos ?? 0);
+        const nome = o.tipo === "aluguel" ? "Aluguel" : "Parcela da caução";
+        const etapa = o.vencimento < dia ? "atraso" : o.vencimento === dia ? "hoje" : "amanha";
+        await notificar({
+          ...comum,
+          modelo: `pagamento.${etapa}`,
+          titulo: etapa === "atraso" ? `${nome} em atraso: ${valor}` : etapa === "hoje" ? `${nome} vence hoje: ${valor}` : `${nome} vence amanhã: ${valor}`,
+          texto: etapa === "atraso" ? "Pague hoje pelo Pix para evitar mais juros. Se já pagou, desconsidere." : "Toque para pagar com Pix em segundos.",
+          link: `/m/pagar/${o.id}`,
+          assunto: "lembretes",
+          porEmail: true,
+          chave: `pagamento:${o.id}:${etapa}`,
+        });
+      }
+    }
   }
 
   return Response.json(resultado);

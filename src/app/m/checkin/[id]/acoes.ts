@@ -10,6 +10,7 @@ import { ArquivoInvalido, registrarArquivoEnviado, urlDeEnvio } from "@/lib/evid
 import { contratosDoMotorista } from "@/lib/motorista";
 import { exigirUsuario } from "@/lib/sessao";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { notificarEquipe } from "@/lib/notificacoes";
 
 const IDS = ITENS_CHECKIN.map((i) => i.id) as [string, ...string[]];
 
@@ -107,6 +108,7 @@ export async function concluirCheckin(obrigacaoId: string, entrada: z.input<type
     d.km > (veiculo?.odometro_atual ?? 0) ? admin.from("veiculos").update({ odometro_atual: d.km }).eq("id", contrato.veiculo_id) : Promise.resolve(),
   ]);
   await auditar({ organizacaoId: contrato.organizacao_id, usuarioId: usuario.id, acao: "checkin.enviado", entidade: "checkins", entidadeId: checkin?.id ?? null, depois: { obrigacaoId, km: d.km } });
+  await notificarEquipe(contrato.organizacao_id, { contratoId: contrato.id, modelo: "checkin.enviado", titulo: "Check-in enviado", texto: `Fotos da semana e ${d.km.toLocaleString("pt-BR")} km. Revise quando puder.`, link: `/painel/contratos/${contrato.id}/checkins/${checkin?.id ?? ""}`, assunto: "lembretes", chave: `checkin:${obrigacaoId}:enviado` });
   revalidatePath("/m");
   return { ok: true };
 }

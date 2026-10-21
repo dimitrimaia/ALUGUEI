@@ -22,6 +22,8 @@ import {
 import { auditar } from "./auditoria";
 import { cifrar, decifrar } from "./cifra";
 import { supabaseAdmin } from "./supabase/admin";
+import { notificar, notificarEquipe, usuarioDoContrato } from "./notificacoes";
+import { formatarBRL } from "@/dominio/dinheiro/centavos";
 
 const PROVEDOR = "asaas";
 
@@ -219,6 +221,13 @@ export async function aplicarSituacao(cob: Linha<"cobrancas">, remota: CobrancaA
   if (juros > 0) lancamentos.push({ ...base, tipo: "juros_mora" as const, valor_centavos: juros, descricao: "Juros por atraso", chave: `juros:${remota.id}` });
   lancamentos.push({ ...base, tipo: "pagamento" as const, valor_centavos: -valorPago, descricao: remota.status === "RECEIVED_IN_CASH" ? "Pagamento registrado pelo locador" : "Pagamento via Pix", chave: `pagamento:${remota.id}` });
   await admin.from("lancamentos").upsert(lancamentos, { onConflict: "chave", ignoreDuplicates: true });
+
+  const valor = formatarBRL(valorPago);
+  const motorista = await usuarioDoContrato(cob.contrato_id);
+  await Promise.all([
+    notificarEquipe(cob.organizacao_id, { contratoId: cob.contrato_id, modelo: "pagamento.recebido", titulo: `Pagamento recebido: ${valor}`, texto: "O Pix caiu e a cobrança já foi baixada.", link: `/painel/contratos/${cob.contrato_id}`, assunto: "lembretes", chave: `pago:${remota.id}` }),
+    motorista ? notificar({ usuarioId: motorista, organizacaoId: cob.organizacao_id, contratoId: cob.contrato_id, modelo: "pagamento.confirmado", titulo: `Pagamento confirmado: ${valor}`, texto: "Obrigado! O comprovante está no seu extrato.", link: "/m/extrato", assunto: "lembretes", chave: `pago:${remota.id}` }) : Promise.resolve(),
+  ]);
 }
 
 export async function conciliar(cob: Linha<"cobrancas">) {

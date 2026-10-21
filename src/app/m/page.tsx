@@ -45,7 +45,7 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
   const dia = hoje();
   const [{ data: orgs }, { data: vistorias }, { data: obrigacoes }, { data: veiculos }, { count: frota }] = await Promise.all([
     cadastros.length ? admin.from("organizacoes").select("id, nome").in("id", cadastros.map((c) => c.organizacao_id)) : Promise.resolve({ data: [] }),
-    ids.length ? admin.from("vistorias").select("id, contrato_id, aceite_locatario_evidencia_id").in("contrato_id", ids) : Promise.resolve({ data: [] }),
+    ids.length ? admin.from("vistorias").select("id, contrato_id, tipo, aceite_locatario_evidencia_id").in("contrato_id", ids) : Promise.resolve({ data: [] }),
     ids.length ? admin.from("obrigacoes").select("id, contrato_id, tipo, vencimento, valor_centavos, status").in("contrato_id", ids).in("status", ["pendente", "atrasada"]).lte("vencimento", somarDias(dia, 21)).order("vencimento") : Promise.resolve({ data: [] }),
     contratos.length ? admin.from("veiculos").select("id, placa, modelo").in("id", contratos.map((c) => c.veiculo_id)) : Promise.resolve({ data: [] }),
     locadora ? admin.from("veiculos").select("id", { count: "exact", head: true }).eq("organizacao_id", locadora.id) : Promise.resolve({ count: null }),
@@ -60,6 +60,7 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
   const proximoPagamento = (obrigacoes ?? []).find((o) => o.contrato_id === contrato?.id && o.tipo !== "checkin");
   const veiculo = contrato && veiculos?.find((x) => x.id === contrato.veiculo_id);
   const vistoriaPendente = contrato && vistorias?.find((v) => v.contrato_id === contrato.id && !v.aceite_locatario_evidencia_id);
+  const devolucaoPendente = vistoriaPendente?.tipo === "devolucao";
   const proximoCheckin = ativo ? (obrigacoes ?? []).find((o) => o.contrato_id === contrato.id && o.tipo === "checkin") : undefined;
   const situacao = proximoCheckin ? situacaoCheckin(data(proximoCheckin.vencimento), dia, false) : null;
 
@@ -148,7 +149,7 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
               </Acao>
             )}
             {vistoriaPendente && (
-              <Acao icone={ClipboardCheck} titulo="Confirme a vistoria" texto="Confira as fotos e o estado do carro antes de sair com ele." destaque>
+              <Acao icone={ClipboardCheck} titulo={devolucaoPendente ? "Confirme a vistoria de devolução" : "Confirme a vistoria"} texto={devolucaoPendente ? "Confira as fotos e o estado em que o carro foi devolvido." : "Confira as fotos e o estado do carro antes de sair com ele."} destaque>
                 <BotaoLink href={`/m/vistoria/${vistoriaPendente.id}` as Route} tamanho="lg" className="w-full">Conferir vistoria</BotaoLink>
               </Acao>
             )}

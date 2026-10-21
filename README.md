@@ -17,6 +17,9 @@ o marketplace fica para a Fase 3.
 - [Conta, perfil e configurações](docs/conta-e-configuracoes.md): requisitos RF-130 a RF-139 e navegação das áreas logadas
 - [Busca de carros e chat](docs/marketplace-chat.md)
 - [Check-in semanal](docs/checkin.md)
+- [Devolução e encerramento](docs/devolucao-e-encerramento.md)
+- [Notificações](docs/notificacoes.md)
+- [Suporte](docs/suporte.md)
 - [Integrações e pendências](docs/integracoes-e-pendencias.md): placa, documentos, rastreador, Pix sem custo, SMS e o que falta
 - [Hospedagem e domínio](docs/hospedagem.md)
 - [Arquitetura](docs/arquitetura.md): os quatro pilares e as camadas

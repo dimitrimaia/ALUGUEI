@@ -10,6 +10,7 @@ import { lerReais } from "@/dominio/dinheiro/centavos";
 import { auditar } from "@/lib/auditoria";
 import { exigirEquipe } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
+import { notificar } from "@/lib/notificacoes";
 
 const DIAS_VALIDADE_CONVITE = 7;
 
@@ -110,6 +111,11 @@ export async function decidirCadastro(locatarioId: string, _: EstadoDecisao, for
   if (error) return { erro: "Não foi possível salvar a decisão." };
 
   await auditar({ organizacaoId: organizacao.id, usuarioId: usuario.id, acao: `locatario.${lido.data.decisao}`, entidade: "locatarios", entidadeId: locatarioId, antes, depois: lido.data });
+  const { data: l } = await supabase.from("locatarios").select("usuario_id").eq("id", locatarioId).single();
+  if (l?.usuario_id) {
+    const aprovado = lido.data.decisao === "aprovado";
+    await notificar({ usuarioId: l.usuario_id, organizacaoId: organizacao.id, modelo: `cadastro.${lido.data.decisao}`, titulo: aprovado ? "Cadastro aprovado!" : "Cadastro não aprovado", texto: aprovado ? `${organizacao.nome} aprovou seu cadastro e vai preparar o contrato.` : `${organizacao.nome} não aprovou o cadastro desta vez.`, link: "/m", assunto: "formal", porEmail: true, chave: `cadastro:${locatarioId}:${lido.data.decisao}` });
+  }
   revalidatePath(`/painel/motoristas/${locatarioId}`);
   return {};
 }

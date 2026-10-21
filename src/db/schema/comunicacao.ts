@@ -9,13 +9,17 @@ export const notificacoes = pgTable(
   "notificacoes",
   {
     id: id(),
-    organizacaoId: organizacaoId(),
+    /** Nulo nos avisos que não são de um locador (ex.: resposta do suporte). */
+    organizacaoId: uuid("organizacao_id"),
     contratoId: uuid("contrato_id").references(() => contratos.id),
     destinatarioUsuarioId: uuid("destinatario_usuario_id"),
     canal: canalNotificacao("canal").notNull(),
     formal: boolean("formal").notNull().default(false), // notificação formal da régua
     modelo: text("modelo").notNull(),
+    titulo: text("titulo"),
     texto: text("texto").notNull(),
+    /** Tela que o aviso abre no app. */
+    link: text("link"),
     chave: text("chave").notNull(), // idempotência: um lembrete por obrigação e etapa
     provedorId: text("provedor_id"),
     enviadaEm: timestamp("enviada_em", { withTimezone: true }),
@@ -24,7 +28,7 @@ export const notificacoes = pgTable(
     falha: text("falha"),
     criadoEm: criadoEm(),
   },
-  (t) => [uniqueIndex("notificacoes_chave").on(t.chave), index("notificacoes_contrato").on(t.contratoId)],
+  (t) => [uniqueIndex("notificacoes_chave").on(t.chave), index("notificacoes_contrato").on(t.contratoId), index("notificacoes_destinatario").on(t.destinatarioUsuarioId, t.canal, t.criadoEm)],
 );
 
 /**
@@ -60,4 +64,54 @@ export const auditoria = pgTable(
     criadoEm: criadoEm(),
   },
   (t) => [index("auditoria_entidade").on(t.entidade, t.entidadeId)],
+);
+
+/** Aparelhos que aceitaram notificação no celular (Web Push). */
+export const inscricoesPush = pgTable(
+  "inscricoes_push",
+  {
+    id: id(),
+    usuarioId: uuid("usuario_id").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    dispositivo: text("dispositivo"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [uniqueIndex("inscricoes_push_endpoint").on(t.endpoint), index("inscricoes_push_usuario").on(t.usuarioId)],
+);
+
+export const statusAtendimento = pgEnum("status_atendimento", ["aberto", "respondido", "encerrado"]);
+export const autorSuporte = pgEnum("autor_suporte", ["usuario", "equipe", "agente", "sistema"]);
+
+/** Atendimento do suporte do Aluguei: uma conversa da pessoa com a equipe (ou, depois, com um agente). */
+export const atendimentos = pgTable(
+  "atendimentos",
+  {
+    id: id(),
+    usuarioId: uuid("usuario_id").notNull(),
+    /** Modo em que a pessoa abriu o atendimento: motorista ou locador. */
+    modo: text("modo").notNull(),
+    organizacaoId: uuid("organizacao_id"),
+    assunto: text("assunto").notNull(),
+    status: statusAtendimento("status").notNull().default("aberto"),
+    ultimaMensagemEm: timestamp("ultima_mensagem_em", { withTimezone: true }).notNull().defaultNow(),
+    lidoUsuarioEm: timestamp("lido_usuario_em", { withTimezone: true }),
+    lidoEquipeEm: timestamp("lido_equipe_em", { withTimezone: true }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("atendimentos_usuario").on(t.usuarioId, t.ultimaMensagemEm), index("atendimentos_status").on(t.status, t.ultimaMensagemEm)],
+);
+
+export const mensagensSuporte = pgTable(
+  "mensagens_suporte",
+  {
+    id: id(),
+    atendimentoId: uuid("atendimento_id").notNull().references(() => atendimentos.id),
+    autor: autorSuporte("autor").notNull(),
+    usuarioId: uuid("usuario_id"),
+    texto: text("texto").notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("mensagens_suporte_atendimento").on(t.atendimentoId, t.criadoEm)],
 );

@@ -40,9 +40,9 @@ describe("nome e iniciais", () => {
 });
 
 describe("primeiroNome", () => {
-  it("pega o primeiro nome com inicial maiúscula", () => {
-    expect(primeiroNome("dimitri silva")).toBe("Dimitri");
-    expect(primeiroNome("  élida ")).toBe("Élida");
+  it("pega o primeiro nome como a pessoa escreveu", () => {
+    expect(primeiroNome("dimitri silva")).toBe("dimitri");
+    expect(primeiroNome("  Élida ")).toBe("Élida");
     expect(primeiroNome("")).toBe("");
     expect(primeiroNome(undefined)).toBe("");
   });

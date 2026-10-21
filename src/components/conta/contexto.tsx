@@ -12,9 +12,11 @@ export interface ContaApp {
   locadora: string | null;
   /** Pendências mostradas como um ponto no ☰. */
   avisos: number;
+  /** Avisos do app ainda não lidos. */
+  notificacoes: number;
 }
 
-const Contexto = createContext<ContaApp>({ perfil: { nome: "Sua conta", foto: null, detalhe: "" }, naoLidas: 0, modo: "motorista", locadora: null, avisos: 0 });
+const Contexto = createContext<ContaApp>({ perfil: { nome: "Sua conta", foto: null, detalhe: "" }, naoLidas: 0, modo: "motorista", locadora: null, avisos: 0, notificacoes: 0 });
 
 /**
  * Dados da conta para o menu e as abas, carregados uma vez pelo layout.

@@ -27,6 +27,8 @@ ou um blog.
      ou as subcontas existentes ficam ilegíveis.
    - `CRON_SECRET`: a Vercel envia no cabeçalho da rotina diária (`/api/cron/diario`, 06:00).
    - `ADMINS`: e-mails da equipe do Aluguei, separados por vírgula (acesso a `/admin/verificacoes`).
+   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`: notificação no celular (ver `notificacoes.md`).
+   - `RESEND_API_KEY`: e-mails de aviso pelo Resend.
    - `NEXT_PUBLIC_SITE_URL` = `https://aluguei.xyz` (só em Production; nas prévias o app usa o endereço acessado)
 3. *Deploy*.
 4. *Settings → Domains*: adicionar `seudominio.com.br` e `www.seudominio.com.br`.
