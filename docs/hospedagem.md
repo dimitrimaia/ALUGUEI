@@ -5,7 +5,7 @@ Domínio: **aluguei.xyz** (DNS na Vercel). E-mail de login: Resend (domínio ver
 ## Recomendação: Vercel (plano Pro) para o app
 
 - É a plataforma do Next.js: deploy a cada push no GitHub, HTTPS automático, prévia por branch.
-- Região **gru1 (São Paulo)**, ao lado do Supabase (sa-east-1). Já configurado em `vercel.json`.
+- Região **iad1 (Washington, EUA)**, a mesma do banco do Supabase (us-east-1, Virgínia do Norte). Cada tela faz várias consultas ao banco: com as funções do lado do banco, cada consulta leva ~2 ms em vez de ~120 ms. Configurado em `vercel.json`.
 - Uso comercial exige o plano **Pro (US$ 20/mês por pessoa)**. O plano grátis (Hobby) não permite uso comercial.
 - Fotos e vídeos vão direto do celular para o Supabase Storage (URL assinada). Isso evita o limite de
   4,5 MB por requisição das funções da Vercel.
@@ -29,6 +29,7 @@ ou um blog.
    - `ADMINS`: e-mails da equipe do Aluguei, separados por vírgula (acesso a `/admin/verificacoes`).
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`: notificação no celular (ver `notificacoes.md`).
    - `RESEND_API_KEY`: e-mails de aviso pelo Resend.
+   - `ANTHROPIC_API_KEY`: assistente do suporte (Claude). Opcional: `SUPORTE_AGENTE=desligado` para desligar.
    - `NEXT_PUBLIC_SITE_URL` = `https://aluguei.xyz` (só em Production; nas prévias o app usa o endereço acessado)
 3. *Deploy*.
 4. *Settings → Domains*: adicionar `seudominio.com.br` e `www.seudominio.com.br`.

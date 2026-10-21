@@ -89,17 +89,27 @@ export function calcularEncerramento(e: EntradaEncerramento): Demonstrativo {
   };
 }
 
+const normalizar = (t?: string) => (t ?? "").toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
+
 /**
  * Itens que pioraram entre a entrega e a devolução: o que estava OK e voltou
- * com avaria ou faltando. É a base das cobranças de avaria (com as fotos).
+ * com avaria ou faltando, ou que já tinha avaria mas voltou com outra descrição
+ * (possível avaria nova: o locador confere nas fotos). É a base das cobranças.
  */
-export function itensQuePioraram(entrega: ChecklistVistoria, devolucao: ChecklistVistoria): { item: IdItem; rotulo: string; estado: "avaria" | "ausente"; observacao?: string }[] {
-  const saida: { item: IdItem; rotulo: string; estado: "avaria" | "ausente"; observacao?: string }[] = [];
+export function itensQuePioraram(entrega: ChecklistVistoria, devolucao: ChecklistVistoria): { item: IdItem; rotulo: string; estado: "avaria" | "ausente"; observacao?: string; antes?: string }[] {
+  const saida: { item: IdItem; rotulo: string; estado: "avaria" | "ausente"; observacao?: string; antes?: string }[] = [];
   for (const d of devolucao.itens) {
     if (d.estado === "ok") continue;
     const antes = entrega.itens.find((x) => x.item === d.item);
-    if (antes && antes.estado === d.estado) continue; // já estava assim na entrega
-    saida.push({ item: d.item, rotulo: ITENS_CHECKLIST.find((i) => i.id === d.item)?.rotulo ?? d.item, estado: d.estado, observacao: d.observacao });
+    // Já estava assim na entrega, com a mesma descrição: não é novidade.
+    if (antes && antes.estado === d.estado && (d.estado === "ausente" || normalizar(antes.observacao) === normalizar(d.observacao))) continue;
+    saida.push({
+      item: d.item,
+      rotulo: ITENS_CHECKLIST.find((i) => i.id === d.item)?.rotulo ?? d.item,
+      estado: d.estado,
+      observacao: d.observacao,
+      ...(antes && antes.estado !== "ok" ? { antes: antes.observacao } : {}),
+    });
   }
   return saida;
 }

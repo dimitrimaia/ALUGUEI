@@ -61,4 +61,11 @@ describe("itensQuePioraram", () => {
     const devolucao = c([{ item: "lataria", estado: "avaria", observacao: "risco na porta" }, { item: "estepe", estado: "ausente" }, { item: "pneus", estado: "ok" }]);
     expect(itensQuePioraram(entrega, devolucao)).toEqual([{ item: "lataria", rotulo: "Lataria e pintura", estado: "avaria", observacao: "risco na porta" }]);
   });
+  it("avaria já existente com descrição nova entra como possível avaria nova", () => {
+    const entrega = c([{ item: "lataria", estado: "avaria", observacao: "Risco na porta direita" }]);
+    expect(itensQuePioraram(entrega, c([{ item: "lataria", estado: "avaria", observacao: "risco na porta  direita" }]))).toEqual([]);
+    expect(itensQuePioraram(entrega, c([{ item: "lataria", estado: "avaria", observacao: "Amassado no capô" }]))).toEqual([
+      { item: "lataria", rotulo: "Lataria e pintura", estado: "avaria", observacao: "Amassado no capô", antes: "Risco na porta direita" },
+    ]);
+  });
 });

@@ -226,7 +226,8 @@ export function Lista({ children }: { children: ReactNode }) {
 export function DadoRotulado({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-2 text-sm">
-      <dt className="shrink-0 text-suave">{rotulo}</dt>
+      {/* Os dois lados podem quebrar a linha: rótulos longos (ex.: descrição de avaria) não vazam do cartão. */}
+      <dt className="min-w-0 text-suave [overflow-wrap:anywhere]">{rotulo}</dt>
       <dd className="min-w-0 text-right font-medium break-words">{children}</dd>
     </div>
   );

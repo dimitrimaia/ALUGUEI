@@ -102,7 +102,7 @@ export default async function Encerrar({ params }: { params: Promise<{ id: strin
         saldoAberto={d.saldoAberto}
         caucaoLancada={d.caucaoLancada}
         caucaoPaga={d.caucaoPaga}
-        sugestoes={pioraram.map((p) => ({ descricao: `${p.rotulo}: ${p.observacao ?? (p.estado === "ausente" ? "faltando" : "avaria")}` }))}
+        sugestoes={pioraram.map((p) => ({ descricao: `${p.rotulo}: ${p.observacao ?? (p.estado === "ausente" ? "faltando" : "avaria")}${p.antes ? ` (na entrega: ${p.antes})` : ""}` }))}
         combustivelFaltando={faltaCombustivel ? `Combustível: saiu com ${combustivelPorExtenso(d.entrega.combustivel_oitavos)}, voltou com ${combustivelPorExtenso(d.devolucao.combustivel_oitavos)}` : null}
       />
     </div>

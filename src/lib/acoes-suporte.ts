@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import type { Linha } from "@/db/tipos";
 import { enviarEmail } from "@/integracoes/email";
+import { agenteLigado, humanoAssumiu, responderComAgente } from "./agente-suporte";
 import { emailsDaEquipe } from "./equipe-aluguei";
 import { locadoraDoUsuario } from "./modos";
 import { notificar } from "./notificacoes";
@@ -29,11 +31,14 @@ export async function abrirAtendimento(modo: "motorista" | "locador", _: EstadoN
   const locadora = modo === "locador" ? await locadoraDoUsuario(usuario.id) : null;
   const { data: at, error } = await admin.from("atendimentos").insert({ usuario_id: usuario.id, modo, organizacao_id: locadora?.id ?? null, assunto: lido.data.assunto, lido_usuario_em: new Date().toISOString() }).select("id").single();
   if (error || !at) return { erro: "Não foi possível abrir o atendimento. Tente de novo." };
-  await admin.from("mensagens_suporte").insert([
-    { atendimento_id: at.id, autor: "usuario", usuario_id: usuario.id, texto: lido.data.texto },
-    { atendimento_id: at.id, autor: "sistema", texto: RESPOSTA_AUTOMATICA },
-  ]);
-  await avisarEquipe(at.id, `Suporte: ${lido.data.assunto}`, `${usuario.email ?? usuario.telefone} (${modo}): ${lido.data.texto}`);
+  await admin.from("mensagens_suporte").insert({ atendimento_id: at.id, autor: "usuario", usuario_id: usuario.id, texto: lido.data.texto });
+  if (agenteLigado()) {
+    // O assistente responde em segundos; a equipe só entra se ele transferir.
+    after(() => responderComAgente(at.id));
+  } else {
+    await admin.from("mensagens_suporte").insert({ atendimento_id: at.id, autor: "sistema", texto: RESPOSTA_AUTOMATICA });
+    await avisarEquipe(at.id, `Suporte: ${lido.data.assunto}`, `${usuario.email ?? usuario.telefone} (${modo}): ${lido.data.texto}`);
+  }
   redirect(`${modo === "locador" ? "/painel" : "/m"}/suporte/${at.id}`);
 }
 
@@ -54,7 +59,9 @@ export async function enviarMensagemSuporte(atendimentoId: string, texto: string
   if (lado === "equipe") {
     await notificar({ usuarioId: a.usuario_id, organizacaoId: a.organizacao_id, modelo: "suporte.resposta", titulo: "O suporte respondeu", texto: limpo.length > 120 ? `${limpo.slice(0, 117)}…` : limpo, link: `${a.modo === "locador" ? "/painel" : "/m"}/suporte/${atendimentoId}`, assunto: "mensagens", porEmail: true, chave: `suporte:${data.id}` });
   } else {
-    await avisarEquipe(atendimentoId, `Suporte: nova mensagem (${a.assunto})`, limpo);
+    const { data: todas } = await admin.from("mensagens_suporte").select("autor, texto").eq("atendimento_id", atendimentoId);
+    if (agenteLigado() && !humanoAssumiu(todas ?? [])) after(() => responderComAgente(atendimentoId));
+    else await avisarEquipe(atendimentoId, `Suporte: nova mensagem (${a.assunto})`, limpo);
   }
   return { mensagem: data };
 }

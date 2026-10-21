@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ChatSuporte } from "@/components/chat";
+import { agenteLigado, humanoAssumiu } from "@/lib/agente-suporte";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { acessoAtendimento } from "@/lib/suporte";
@@ -17,7 +18,7 @@ export default async function AtendimentoMotorista({ params }: { params: Promise
     // Tela cheia, como a conversa com o locador.
     <div className="fixed inset-0 z-30 mx-auto flex max-w-[30rem] flex-col bg-fundo px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <CabecalhoMotorista titulo={`Suporte · ${acesso.atendimento.assunto}`} voltar="/m/suporte" />
-      <ChatSuporte atendimentoId={id} iniciais={mensagens ?? []} />
+      <ChatSuporte atendimentoId={id} iniciais={mensagens ?? []} assistente={agenteLigado() && !humanoAssumiu(mensagens ?? [])} />
     </div>
   );
 }

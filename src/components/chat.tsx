@@ -24,7 +24,7 @@ export function Chat({ conversaId, papel, iniciais }: { conversaId: string; pape
 }
 
 /** Chat do atendimento com o suporte do Aluguei (equipe ou, depois, um agente). */
-export function ChatSuporte({ atendimentoId, iniciais, lado = "usuario" }: { atendimentoId: string; iniciais: Linha<"mensagens_suporte">[]; lado?: "usuario" | "equipe" }) {
+export function ChatSuporte({ atendimentoId, iniciais, lado = "usuario", assistente = false }: { atendimentoId: string; iniciais: Linha<"mensagens_suporte">[]; lado?: "usuario" | "equipe"; assistente?: boolean }) {
   return (
     <ChatBase
       tabela="mensagens_suporte"
@@ -33,6 +33,7 @@ export function ChatSuporte({ atendimentoId, iniciais, lado = "usuario" }: { ate
       meuAutor={lado}
       iniciais={iniciais}
       rotuloOutro={lado === "usuario" ? "Suporte Aluguei" : undefined}
+      digitando={assistente && lado === "usuario"}
       aoEnviar={(t) => enviarMensagemSuporte(atendimentoId, t, lado)}
       buscarDesde={(d) => mensagensSuporteDesde(atendimentoId, d, lado)}
     />
@@ -49,6 +50,7 @@ function ChatBase({
   aoEnviar,
   buscarDesde,
   rotuloOutro,
+  digitando = false,
   linkify = true,
 }: {
   tabela: "mensagens" | "mensagens_suporte";
@@ -60,6 +62,8 @@ function ChatBase({
   buscarDesde: (desde: string) => Promise<Mensagem[]>;
   /** Nome mostrado acima das mensagens da outra parte (ex.: "Suporte Aluguei"). */
   rotuloOutro?: string;
+  /** Mostra "respondendo…" enquanto a última mensagem é minha e recente (o assistente está trabalhando). */
+  digitando?: boolean;
   linkify?: boolean;
 }) {
   const [mensagens, setMensagens] = useState(iniciais);
@@ -136,6 +140,16 @@ function ChatBase({
             </div>
           );
         })}
+        {digitando && mensagens.at(-1)?.autor === papel && Date.now() - new Date(mensagens.at(-1)!.criado_em).getTime() < 90_000 && (
+          <div className="self-start rounded-2xl rounded-bl-md border border-borda bg-cartao px-3.5 py-2 text-sm text-suave">
+            <span className="text-[0.7rem] font-semibold text-marca">Suporte Aluguei · assistente</span>
+            <span className="flex items-center gap-1 pt-1" aria-label="Respondendo">
+              <span className="size-1.5 animate-bounce rounded-full bg-suave [animation-delay:-0.2s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-suave [animation-delay:-0.1s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-suave" />
+            </span>
+          </div>
+        )}
         <div ref={fim} />
       </div>
       {erro && <p className="px-1 pb-1 text-xs font-medium text-perigo">{erro}</p>}
