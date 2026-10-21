@@ -3,7 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 
 /**
- * Destino do link mágico do e-mail. Aceita os dois formatos do Supabase:
+ * Destino antigo dos links de e-mail (os novos vão para /auth/confirmar).
+ * Aceita os dois formatos do Supabase:
  * `?code=` (fluxo PKCE, aberto no mesmo navegador) e `?token_hash=&type=`
  * (modelo de e-mail com {{ .TokenHash }}, funciona em qualquer navegador).
  */
@@ -24,10 +25,11 @@ export async function GET(request: NextRequest) {
       : { error: new Error("link sem código") };
 
   if (error) {
-    const erro = new URL("/entrar", url.origin);
-    erro.searchParams.set("voltar", destino);
-    erro.searchParams.set("erro", "link");
+    // A tela de confirmação explica o motivo e oferece pedir outro link.
+    const erro = new URL("/auth/confirmar", url.origin);
+    erro.searchParams.set("error_code", code ? "flow_state_not_found" : "otp_expired");
+    if (tipo) erro.searchParams.set("type", tipo);
     return NextResponse.redirect(erro);
   }
-  return NextResponse.redirect(new URL(destino, url.origin));
+  return NextResponse.redirect(new URL(tipo === "recovery" ? "/nova-senha" : destino, url.origin));
 }

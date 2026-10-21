@@ -26,8 +26,34 @@
   color-scheme: light;
 }
 
+/* Tema escuro: só quando a pessoa escolhe nas configurações (Escuro, ou Automático com o aparelho no escuro). */
+:root[data-tema="escuro"] {
+  --fundo: #060e1f;
+  --cartao: #0c1830;
+  --cartao-2: #11203d;
+  --borda: #1c2c4c;
+  --borda-forte: #2a3d63;
+  --texto: #e9effb;
+  --suave: #93a3c2;
+  --marca: #5b8cff;
+  --marca-forte: #86a9ff;
+  --marca-suave: #13275a;
+  --marca-texto: #ffffff;
+  --navy: #040b1a;
+  --navy-2: #0a1a3a;
+  --ok: #4ade80;
+  --ok-suave: #0d2a1c;
+  --alerta: #fbbf24;
+  --alerta-suave: #2b2109;
+  --perigo: #f87171;
+  --perigo-suave: #2d1214;
+  --info: #67e8f9;
+  --info-suave: #0b2730;
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root[data-tema="auto"] {
     --fundo: #060e1f;
     --cartao: #0c1830;
     --cartao-2: #11203d;
@@ -53,7 +79,7 @@
   }
 }
 
-/* Força o tema claro num trecho da página, independente do tema do aparelho. */
+/* Força o tema claro num trecho da página, independente do tema escolhido. */
 .tema-claro {
   --fundo: #f3f6fb;
   --cartao: #ffffff;
@@ -96,12 +122,19 @@
   --color-info: var(--info);
   --color-info-suave: var(--info-suave);
   --font-sans: var(--fonte-texto), ui-sans-serif, system-ui, sans-serif;
+  /* Pesos mais leves que o padrão: a fonte é variável, então aceita valores intermediários. */
+  --font-weight-medium: 480;
+  --font-weight-semibold: 570;
+  --font-weight-bold: 650;
+  --font-weight-extrabold: 720;
   --shadow-cartao: 0 1px 2px rgb(11 22 48 / 0.04), 0 2px 8px rgb(11 22 48 / 0.04);
   --shadow-flutuante: 0 12px 32px rgb(11 22 48 / 0.14);
   --shadow-marca: 0 8px 20px rgb(31 86 232 / 0.28);
 }
 
 html {
+  /* Base de 15px: tudo (texto e espaçamentos em rem) fica um pouco mais compacto. */
+  font-size: 93.75%;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;

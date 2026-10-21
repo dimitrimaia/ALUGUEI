@@ -39,3 +39,37 @@ export async function conversasNaoLidasDoLocador(organizacaoId: string): Promise
   const { data } = await supabase.from("conversas").select("ultima_mensagem_em, lida_locador_em").eq("organizacao_id", organizacaoId);
   return (data ?? []).filter((c) => !c.lida_locador_em || c.lida_locador_em < c.ultima_mensagem_em).length;
 }
+
+/** Conversas com mensagem nova para o motorista. */
+export async function conversasNaoLidasDoMotorista(usuarioId: string): Promise<number> {
+  const { data } = await supabaseAdmin().from("conversas").select("ultima_mensagem_em, lida_motorista_em").eq("usuario_id", usuarioId);
+  return (data ?? []).filter((c) => !c.lida_motorista_em || c.lida_motorista_em < c.ultima_mensagem_em).length;
+}
+
+export interface ResumoConversa {
+  id: string;
+  carro: string;
+  locador: string;
+  ultimaMensagemEm: string;
+  naoLida: boolean;
+}
+
+/** Conversas do motorista, da mais recente para a mais antiga, com o carro e o locador. */
+export async function conversasDoMotorista(usuarioId: string, limite = 50): Promise<ResumoConversa[]> {
+  const admin = supabaseAdmin();
+  const { data: conversas } = await admin.from("conversas").select("*").eq("usuario_id", usuarioId).order("ultima_mensagem_em", { ascending: false }).limit(limite);
+  const lista = conversas ?? [];
+  if (!lista.length) return [];
+  const [{ data: anuncios }, { data: orgs }] = await Promise.all([
+    admin.from("anuncios").select("id, veiculo_id").in("id", lista.map((c) => c.anuncio_id)),
+    admin.from("organizacoes").select("id, nome").in("id", lista.map((c) => c.organizacao_id)),
+  ]);
+  const { data: veiculos } = anuncios?.length ? await admin.from("veiculos").select("id, modelo").in("id", anuncios.map((a) => a.veiculo_id)) : { data: [] };
+  return lista.map((c) => ({
+    id: c.id,
+    carro: veiculos?.find((v) => v.id === anuncios?.find((a) => a.id === c.anuncio_id)?.veiculo_id)?.modelo ?? "Carro",
+    locador: orgs?.find((o) => o.id === c.organizacao_id)?.nome ?? "Locador",
+    ultimaMensagemEm: c.ultima_mensagem_em,
+    naoLida: !c.lida_motorista_em || c.lida_motorista_em < c.ultima_mensagem_em,
+  }));
+}

@@ -1,4 +1,4 @@
-import { BellRing, Camera, Megaphone, Search, Car, ClipboardCheck, Eye, FileSignature, FileText, Gauge, Landmark, Lock, MessageCircle, QrCode, Receipt, ShieldCheck, Smartphone, UserCheck, Wallet } from "lucide-react";
+import { Camera, Megaphone, Search, Car, ClipboardCheck, Eye, FileSignature, FileText, Gauge, Landmark, Lock, MessageCircle, QrCode, Receipt, ShieldCheck, Smartphone, UserCheck, Wallet } from "lucide-react";
 import { MockupLocador, MockupMotorista } from "./mockups";
 import type { ConteudoPerfil } from "./pagina-perfil";
 

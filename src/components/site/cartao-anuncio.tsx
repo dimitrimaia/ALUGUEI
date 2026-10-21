@@ -3,9 +3,9 @@ import Link from "next/link";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import type { AnuncioPublico } from "@/lib/marketplace";
 
-export function CartaoAnuncio({ a }: { a: AnuncioPublico }) {
+export function CartaoAnuncio({ a, doApp = false }: { a: AnuncioPublico; doApp?: boolean }) {
   return (
-    <Link href={`/carros/${a.id}`} className="group overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante">
+    <Link href={doApp ? `/carros/${a.id}?de=app` : `/carros/${a.id}`} className="group overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao transition-all hover:-translate-y-0.5 hover:shadow-flutuante">
       <div className="relative aspect-[16/10] bg-gradient-to-br from-marca-suave to-cartao-2">
         {a.fotos[0] ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -1,12 +1,15 @@
-import { CalendarClock, Camera, ChevronRight, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, Inbox, UserRoundPen, Wallet, XCircle } from "lucide-react";
+import { CalendarClock, Camera, ChevronRight, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, MessageCircle, Search, Ticket, UserRoundPen, Wallet, XCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { ListaConversas } from "@/components/motorista/lista-conversas";
 import { MenuMotorista } from "@/components/motorista/menu";
-import { BotaoLink, Cartao, Marca, Placa, Selo, Suave, Vazio } from "@/components/ui";
+import { Avatar, BotaoLink, Marca, Placa, Selo, Suave } from "@/components/ui";
 import type { Linha } from "@/db/tipos";
 import { nomeDiaDaSemana } from "@/dominio/contrato/variaveis";
 import { data, diaDaSemana, formatarData, hoje, somarDias } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { perfilDaConta } from "@/lib/conta";
+import { conversasDoMotorista } from "@/lib/conversas";
 import { exigirUsuario } from "@/lib/sessao";
 import { cadastrosDoMotorista, contratosDoMotorista } from "@/lib/motorista";
 import { TIPO_OBRIGACAO } from "@/lib/rotulos";
@@ -22,10 +25,15 @@ function etapaAtual(cadastro: Linha<"locatarios">, contrato?: Linha<"contratos">
   return 0;
 }
 
-/** Tela inicial do motorista (RF-121), no estilo de app de banco: o que importa no topo. */
+/** Início do motorista (RF-121): um resumo do que importa agora, no estilo de app de banco. */
 export default async function Motorista() {
   const usuario = await exigirUsuario("/m");
-  const [cadastros, contratos] = await Promise.all([cadastrosDoMotorista(usuario.id), contratosDoMotorista(usuario.id)]);
+  const [cadastros, contratos, perfil, conversas] = await Promise.all([
+    cadastrosDoMotorista(usuario.id),
+    contratosDoMotorista(usuario.id),
+    perfilDaConta(),
+    conversasDoMotorista(usuario.id, 3),
+  ]);
   const admin = supabaseAdmin();
   const ids = contratos.map((c) => c.id);
   const dia = hoje();
@@ -37,7 +45,7 @@ export default async function Motorista() {
   ]);
 
   const nomeOrg = (id: string) => orgs?.find((o) => o.id === id)?.nome ?? "Locador";
-  const primeiroNome = cadastros[0]?.nome.split(" ")[0];
+  const primeiroNome = (perfil?.nomeInformado || cadastros[0]?.nome || "").split(" ")[0];
   const principal = cadastros[0];
   const contrato = principal && contratos.find((k) => k.locatario_id === principal.id);
   const etapa = principal ? etapaAtual(principal, contrato) : 0;
@@ -47,55 +55,65 @@ export default async function Motorista() {
   const vistoriaPendente = contrato && vistorias?.find((v) => v.contrato_id === contrato.id && !v.aceite_locatario_evidencia_id);
 
   return (
-    <div className="-mx-4">
-      {/* Topo azul */}
-      <section className="fundo-marca relative overflow-hidden rounded-b-[2rem] px-5 pt-4 pb-8">
-        <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(80%_80%_at_90%_0%,black,transparent)]" aria-hidden />
-        <div className="relative flex items-center justify-between">
-          <Link href="/m"><Marca inverso /></Link>
-          <MenuMotorista claro />
-        </div>
-        <p className="relative mt-6 text-sm text-white/75">Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
+    <div className="flex flex-col gap-4">
+      <header className="-mx-4 flex items-center gap-2 px-4 pt-3 pb-1">
+        <Link href="/m" className="flex-1" aria-label="Início do app"><Marca /></Link>
+        <Link href="/m/conta" aria-label="Perfil e configurações"><Avatar nome={perfil?.nome ?? "Conta"} foto={perfil?.foto} tamanho="sm" /></Link>
+        <MenuMotorista />
+      </header>
 
-        {ativo ? (
+      <div>
+        <p className="text-sm text-suave">Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
+        <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight">{ativo ? "Seu aluguel em dia" : principal && principal.status !== "recusado" ? "Acompanhe seu aluguel" : "Encontre seu carro"}</h1>
+      </div>
+
+      {ativo ? (
+        <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante">
+          <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(80%_80%_at_90%_0%,black,transparent)]" aria-hidden />
           <div className="relative">
-            <p className="mt-4 text-sm text-white/75">
+            <p className="text-sm text-white/75">
               {proximoPagamento ? `Próximo pagamento · ${nomeDiaDaSemana(diaDaSemana(data(proximoPagamento.vencimento)))}, ${formatarData(data(proximoPagamento.vencimento)).slice(0, 5)}` : "Nenhum pagamento nos próximos dias"}
             </p>
-            <p className="text-[2.2rem] leading-tight font-extrabold tracking-tight">{proximoPagamento ? formatarBRL(proximoPagamento.valor_centavos ?? 0) : "R$ 0,00"}</p>
+            <p className="text-[2rem] leading-tight font-bold tracking-tight tabular-nums">{proximoPagamento ? formatarBRL(proximoPagamento.valor_centavos ?? 0) : "R$ 0,00"}</p>
             {proximoPagamento && <p className="text-sm text-white/75">{TIPO_OBRIGACAO[proximoPagamento.tipo]}</p>}
-            <div className="mt-5 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2">
               {proximoPagamento ? (
-                <BotaoLink href={`/m/pagar/${proximoPagamento.id}` as Route} variante="claro" className="h-12 rounded-2xl"><Wallet size={18} /> Pagar com Pix</BotaoLink>
+                <BotaoLink href={`/m/pagar/${proximoPagamento.id}` as Route} variante="claro" className="h-11 rounded-xl"><Wallet size={17} /> Pagar com Pix</BotaoLink>
               ) : (
-                <span className="flex h-12 items-center justify-center rounded-2xl bg-white/15 text-sm font-semibold">Tudo pago</span>
+                <span className="flex h-11 items-center justify-center rounded-xl bg-white/15 text-sm font-semibold">Tudo pago</span>
               )}
-              <BotaoLink href="/m/extrato" variante="vidro" className="h-12 rounded-2xl"><Receipt size={18} /> Extrato</BotaoLink>
+              <BotaoLink href="/m/extrato" variante="vidro" className="h-11 rounded-xl"><Receipt size={17} /> Extrato</BotaoLink>
             </div>
           </div>
-        ) : principal && principal.status !== "recusado" ? (
+        </section>
+      ) : principal && principal.status !== "recusado" ? (
+        <section className="rounded-[1.25rem] border border-borda bg-cartao p-5 shadow-cartao">
+          <p className="text-xs font-semibold text-suave">Seu andamento · etapa {etapa + 1} de {ETAPAS.length}</p>
+          <p className="mt-0.5 text-xl font-bold tracking-tight">{ETAPAS[etapa]}</p>
+          <ol className="mt-4 flex gap-1.5" aria-label="Andamento">
+            {ETAPAS.map((nome, i) => (
+              <li key={nome} className={`h-1.5 flex-1 rounded-full ${i < etapa ? "bg-marca" : i === etapa ? "bg-marca/50" : "bg-borda"}`} title={nome} />
+            ))}
+          </ol>
+          <p className="mt-2 text-xs text-suave">{nomeOrg(principal.organizacao_id)}</p>
+        </section>
+      ) : (
+        <form action="/m/buscar" className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante">
+          <div className="grade-sutil absolute inset-0 opacity-50 [mask-image:radial-gradient(80%_80%_at_90%_0%,black,transparent)]" aria-hidden />
           <div className="relative">
-            <p className="mt-4 text-sm text-white/75">Seu andamento</p>
-            <p className="text-3xl font-extrabold tracking-tight">{ETAPAS[etapa]}</p>
-            <ol className="mt-5 flex gap-1.5" aria-label="Andamento">
-              {ETAPAS.map((nome, i) => (
-                <li key={nome} className={`h-1.5 flex-1 rounded-full ${i < etapa ? "bg-white" : i === etapa ? "bg-white/60" : "bg-white/20"}`} title={nome} />
-              ))}
-            </ol>
-            <p className="mt-2 text-xs text-white/70">Etapa {etapa + 1} de {ETAPAS.length}</p>
+            <p className="font-semibold">Carros para rodar no app</p>
+            <p className="mt-0.5 text-sm text-white/75">Busque na sua cidade e converse com o locador por aqui.</p>
+            <label className="relative mt-4 block">
+              <span className="sr-only">Cidade</span>
+              <Search size={17} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-[#5b6880]" />
+              <input name="cidade" placeholder="Em qual cidade você roda?" className="h-11 w-full rounded-xl bg-white pr-3 pl-10 text-[#0b1630] outline-none placeholder:text-[#5b6880]" />
+            </label>
+            <button className="mt-2 h-11 w-full rounded-xl bg-white/15 text-sm font-semibold ring-1 ring-white/25 hover:bg-white/25">Buscar carros</button>
           </div>
-        ) : (
-          <p className="relative mt-2 text-2xl font-extrabold tracking-tight">Bem-vindo ao Aluguei</p>
-        )}
-      </section>
+        </form>
+      )}
 
-      <div className="relative -mt-4 flex flex-col gap-4 px-4">
-        {!cadastros.length && (
-          <Vazio icone={Inbox} titulo="Procurando um carro?" acao={<BotaoLink href="/carros">Buscar carros na minha cidade</BotaoLink>}>
-            Encontre um carro, converse com o locador pelo app e combine o aluguel. Se já recebeu um convite, abra o link dele neste celular.
-          </Vazio>
-        )}
-
+      <div className="flex flex-col gap-4">
         {principal && (
           <>
             {principal.status === "em_cadastro" && (
@@ -157,6 +175,35 @@ export default async function Motorista() {
               );
             })}
           </div>
+        )}
+
+        {!!conversas.length && (
+          <section>
+            <div className="mt-1 mb-2.5 flex items-center justify-between">
+              <h2 className="font-bold">Conversas</h2>
+              <Link href="/m/conversas" className="text-sm font-semibold text-marca">Ver todas</Link>
+            </div>
+            <ListaConversas conversas={conversas} />
+          </section>
+        )}
+
+        {!cadastros.length && (
+          <section className="rounded-[1.25rem] border border-borda bg-cartao p-5 shadow-cartao">
+            <h2 className="font-bold">Como funciona</h2>
+            <ol className="mt-3 flex flex-col gap-3">
+              {[
+                { icone: Search, titulo: "Encontre um carro", texto: "Veja valor da semana, caução e fotos." },
+                { icone: MessageCircle, titulo: "Converse com o locador", texto: "Tire dúvidas e combine a retirada pelo app." },
+                { icone: FileSignature, titulo: "Cadastro e contrato", texto: "Envie a CNH, assine pelo celular e pegue o carro." },
+              ].map(({ icone: Icone, titulo, texto }) => (
+                <li key={titulo} className="flex gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-marca-suave text-marca"><Icone size={17} /></span>
+                  <span><span className="block text-sm font-semibold">{titulo}</span><span className="block text-xs text-suave">{texto}</span></span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-4 flex items-start gap-2 rounded-xl bg-cartao-2 p-3 text-xs text-suave"><Ticket size={15} className="mt-px shrink-0 text-marca" /> Recebeu um convite de um locador? Abra o link dele neste celular para começar o cadastro.</p>
+          </section>
         )}
 
         {!!obrigacoes?.length && (

@@ -1,12 +1,13 @@
 "use client";
 
-import { Car, ChevronDown, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle, Plus, UserPlus, Users, X } from "lucide-react";
+import { Car, ChevronDown, ChevronRight, CircleDollarSign, FileText, Globe, Landmark, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle, Plus, Settings, UserPlus, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Gaveta } from "@/components/gaveta";
-import { Marca } from "@/components/ui";
+import { useConta } from "@/components/conta/contexto";
+import { MenuApp } from "@/components/menu-app";
+import { Avatar, Marca } from "@/components/ui";
 
 const GESTAO = [
   { href: "/painel", rotulo: "Início", icone: LayoutDashboard },
@@ -22,9 +23,9 @@ const DINHEIRO = [
   { href: "/painel/financeiro", rotulo: "Financeiro", icone: CircleDollarSign },
   { href: "/painel/recebimentos", rotulo: "Recebimentos", icone: Landmark },
 ] as const;
-const ABAS_MOVEIS = [GESTAO[0], GESTAO[2]] as const;
-const ABAS_MOVEIS_DIREITA = [DINHEIRO[0]] as const;
-const MAIS = [GESTAO[1], GESTAO[3], DINHEIRO[1], BUSCA[0], BUSCA[1]] as const; // marcam a aba "Mais" como ativa
+// Celular: as quatro telas do dia a dia ficam nas abas; o resto, no menu ☰.
+const ABAS_MOVEIS = [GESTAO[0], { ...GESTAO[1], rotulo: "Frota" }] as const;
+const ABAS_MOVEIS_DIREITA = [DINHEIRO[0], BUSCA[1]] as const;
 
 const ACOES = [
   { href: "/painel/veiculos/novo", rotulo: "Cadastrar veículo", detalhe: "Placa, modelo e km", icone: Car },
@@ -44,18 +45,15 @@ function Contador({ n }: { n: number }) {
 /** Barra lateral escura no computador; cabeçalho, abas inferiores e botão de ação no celular. */
 export function NavegacaoPainel({
   organizacao,
-  usuario,
   pendentes,
   recebimentosAtivos,
-  naoLidas = 0,
 }: {
   organizacao: string;
-  usuario: string;
   pendentes: number;
   recebimentosAtivos: boolean;
-  naoLidas?: number;
 }) {
   const caminho = usePathname();
+  const { perfil, naoLidas } = useConta();
   const [acoesAbertas, setAcoesAbertas] = useState(false);
   const [maisAberto, setMaisAberto] = useState(false);
   const [menuNovo, setMenuNovo] = useState(false);
@@ -73,23 +71,24 @@ export function NavegacaoPainel({
     return () => document.removeEventListener("click", fechar);
   }, []);
 
-  const inicial = organizacao.trim()[0]?.toUpperCase() ?? "A";
 
   return (
     <>
       {/* Computador */}
       <aside className="fundo-navy sticky top-0 hidden h-dvh w-[17rem] shrink-0 flex-col px-4 py-6 lg:flex">
-        <Link href="/painel" className="px-2"><Marca inverso /></Link>
+        <Link href="/painel" className="px-2" aria-label="Início do painel"><Marca inverso /></Link>
 
-        <div className="mt-7 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
-          <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-[#5b8cff] to-[#1f56e8] font-bold">{inicial}</span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{organizacao}</p>
-            <p className="text-xs text-white/55">Conta do locador</p>
+        <Link href="/painel/conta" className="mt-7 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 hover:bg-white/[0.1]">
+          <Avatar nome={perfil.nome} foto={perfil.foto} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{perfil.nome}</p>
+            <p className="truncate text-xs text-white/55">{organizacao}</p>
           </div>
-        </div>
+          <ChevronRight size={16} className="text-white/40" />
+        </Link>
 
-        {([["Gestão", GESTAO], ["Busca de carros", BUSCA], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
+        {/* O início do painel fica no logo, não na lista. */}
+        {([["Gestão", GESTAO.slice(1)], ["Busca de carros", BUSCA], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
           <div key={titulo}>
             <p className="mt-7 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{titulo}</p>
             <nav className="flex flex-col gap-1" aria-label={titulo}>
@@ -127,6 +126,9 @@ export function NavegacaoPainel({
         <Link href="/" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
           <Globe size={18} aria-hidden /> Ver o site
         </Link>
+        <Link href="/painel/conta" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
+          <Settings size={18} aria-hidden /> Configurações
+        </Link>
         <form action="/sair" method="post">
           <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-white/[0.07] hover:text-white">
             <LogOut size={18} aria-hidden /> Sair
@@ -158,19 +160,20 @@ export function NavegacaoPainel({
           )}
         </div>
         <span className="h-8 w-px bg-borda" />
-        <span className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-full bg-marca-suave text-sm font-bold text-marca">{usuario[0]?.toUpperCase()}</span>
-          <span className="max-w-48 truncate text-sm font-medium text-suave">{usuario}</span>
-        </span>
+        <Link href="/painel/conta" className="flex items-center gap-3 rounded-xl py-1 pr-2 pl-1 hover:bg-cartao-2">
+          <Avatar nome={perfil.nome} foto={perfil.foto} tamanho="sm" />
+          <span className="max-w-48 truncate text-sm font-medium">{perfil.nome}</span>
+        </Link>
       </div>
 
       {/* Celular */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-borda bg-cartao/90 px-3 py-2.5 backdrop-blur lg:hidden">
-        <button onClick={() => setMaisAberto(true)} aria-label="Abrir menu" aria-expanded={maisAberto} className="grid size-10 place-items-center rounded-xl hover:bg-cartao-2">
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-borda bg-cartao/90 py-2.5 pr-3 pl-5 backdrop-blur lg:hidden">
+        <Link href="/painel" className="flex-1" aria-label="Início do painel"><Marca /></Link>
+        <Link href="/painel/conta" aria-label="Perfil e configurações" className="rounded-full"><Avatar nome={perfil.nome} foto={perfil.foto} tamanho="sm" /></Link>
+        <button onClick={() => setMaisAberto(true)} aria-label="Abrir menu" aria-expanded={maisAberto} className="relative grid size-10 place-items-center rounded-xl hover:bg-cartao-2">
           <Menu size={22} />
+          {pendentes + naoLidas > 0 && <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-[#ffb020] ring-2 ring-cartao" />}
         </button>
-        <Link href="/painel" className="flex-1"><Marca /></Link>
-        <span className="grid size-9 place-items-center rounded-full bg-marca-suave text-sm font-bold text-marca" aria-label={organizacao}>{inicial}</span>
       </header>
 
       <nav
@@ -179,7 +182,7 @@ export function NavegacaoPainel({
       >
         <div className="relative grid grid-cols-5">
           {ABAS_MOVEIS.map((item) => (
-            <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} contador={item.href === "/painel/motoristas" ? pendentes : 0} />
+            <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} />
           ))}
           <div className="flex justify-center">
             <button
@@ -190,54 +193,23 @@ export function NavegacaoPainel({
               <Plus size={26} aria-hidden />
             </button>
           </div>
-          {ABAS_MOVEIS_DIREITA.map((item) => <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} />)}
-          <button
-            onClick={() => setMaisAberto(true)}
-            className={`flex flex-col items-center gap-1 pt-2.5 pb-2 text-[0.68rem] font-semibold ${MAIS.some((m) => ativo(caminho, m.href)) ? "text-marca" : "text-suave"}`}
-          >
-            <span className="grid h-7 w-12 place-items-center rounded-full"><Menu size={21} aria-hidden /></span>
-            Mais
-          </button>
+          {ABAS_MOVEIS_DIREITA.map((item) => <AbaMovel key={item.href} {...item} atual={ativo(caminho, item.href)} contador={item.href === "/painel/conversas" ? naoLidas : 0} />)}
         </div>
       </nav>
 
-      <Gaveta aberta={maisAberto} aoFechar={() => setMaisAberto(false)} escura rotulo="Menu do painel">
-        <div className="flex flex-1 flex-col px-4 pt-5 pb-5">
-          <Link href="/painel" className="w-fit px-1"><Marca inverso /></Link>
-          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
-            <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-[#5b8cff] to-[#1f56e8] font-bold">{inicial}</span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{organizacao}</p>
-              <p className="truncate text-xs text-white/55">{usuario}</p>
-            </div>
-          </div>
-          {([["Gestão", GESTAO], ["Busca de carros", BUSCA], ["Dinheiro", DINHEIRO]] as const).map(([titulo, itens]) => (
-            <div key={titulo}>
-              <p className="mt-6 mb-2 px-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/40 uppercase">{titulo}</p>
-              <nav className="flex flex-col gap-1" aria-label={titulo}>
-                {itens.map(({ href, rotulo, icone: Icone }) => {
-                  const atual = ativo(caminho, href);
-                  return (
-                    <Link key={href} href={href} aria-current={atual ? "page" : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-3 font-medium ${atual ? "bg-white text-[#0b2a6b]" : "text-white/80 hover:bg-white/[0.07]"}`}>
-                      <Icone size={20} className={atual ? "text-[#1f56e8]" : ""} />
-                      <span className="flex-1">{rotulo}</span>
-                      {href === "/painel/motoristas" && <Contador n={pendentes} />}
-                      {href === "/painel/conversas" && <Contador n={naoLidas} />}
-                    {href === "/painel/conversas" && <Contador n={naoLidas} />}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-          ))}
-          <div className="mt-auto flex flex-col gap-1 pt-6">
-            <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/70 hover:bg-white/[0.07]"><Globe size={18} /> Ver o site do Aluguei</Link>
-            <form action="/sair" method="post">
-              <button className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/70 hover:bg-white/[0.07]"><LogOut size={18} /> Sair</button>
-            </form>
-          </div>
-        </div>
-      </Gaveta>
+      <MenuApp
+        aberto={maisAberto}
+        aoFechar={() => setMaisAberto(false)}
+        inicio="/painel"
+        conta="/painel/conta"
+        perfil={{ ...perfil, detalhe: organizacao }}
+        secoes={[
+          { titulo: "Gestão", itens: GESTAO.slice(1).map((i) => ({ ...i, contador: i.href === "/painel/motoristas" ? pendentes : 0 })) },
+          { titulo: "Busca de carros", itens: BUSCA.map((i) => ({ ...i, contador: i.href === "/painel/conversas" ? naoLidas : 0 })) },
+          { titulo: "Dinheiro", itens: DINHEIRO },
+          { titulo: "Conta", itens: [{ href: "/painel/conta", rotulo: "Perfil e configurações", icone: Settings }] },
+        ]}
+      />
 
       {acoesAbertas && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Criar novo">

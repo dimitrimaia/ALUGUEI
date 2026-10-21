@@ -4,13 +4,13 @@ import Link from "next/link";
 import { Marca } from "@/components/ui";
 import { redirect } from "next/navigation";
 import { usuarioAtual } from "@/lib/sessao";
-import { FormularioEntrar } from "./formulario";
+import { FormularioEntrar, type Modo } from "./formulario";
 import { LembrarPerfil } from "./lembrar";
 
 const PERFIS = {
   locador: {
     titulo: "Área do locador",
-    texto: "Entre ou crie a conta da sua locadora. É o mesmo passo: enviamos um código e pronto.",
+    texto: "Entre ou crie a conta da sua locadora com e-mail e senha, ou com um código no e-mail.",
     itens: [
       { icone: FileSignature, texto: "Contrato gerado com os seus valores e assinado pelo celular" },
       { icone: Wallet, texto: "Aluguel cobrado no Pix toda semana, com baixa automática" },
@@ -19,7 +19,7 @@ const PERFIS = {
   },
   motorista: {
     titulo: "Área do motorista",
-    texto: "Acompanhe seu aluguel, pague no Pix e veja seu contrato. Primeira vez? Abra o link do convite que o locador mandou.",
+    texto: "Busque carros na sua cidade, converse com o locador, pague o aluguel no Pix e veja seu contrato.",
     itens: [
       { icone: Wallet, texto: "Pague o aluguel no Pix em segundos" },
       { icone: FileSignature, texto: "Contrato e extrato sempre à mão" },
@@ -28,7 +28,7 @@ const PERFIS = {
   },
   geral: {
     titulo: "Bem-vindo ao Aluguei",
-    texto: "Entre com um código no e-mail ou no celular. Sem senha para lembrar.",
+    texto: "Entre com e-mail e senha, ou com um código no e-mail.",
     itens: [
       { icone: CalendarCheck, texto: "Cobrança semanal e lembretes automáticos" },
       { icone: Camera, texto: "Vistorias com fotos guiadas" },
@@ -37,8 +37,9 @@ const PERFIS = {
   },
 } as const;
 
-export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string; perfil?: string; novo?: string }> }) {
-  const { voltar, erro, perfil, novo } = await searchParams;
+export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string; perfil?: string; novo?: string; modo?: string }> }) {
+  const { voltar, erro, perfil, novo, modo } = await searchParams;
+  const modoInicial: Modo = modo === "esqueci" || modo === "codigo" || modo === "criar" ? modo : novo ? "criar" : "entrar";
   // Já logado: não mostra o login de novo.
   if (await usuarioAtual()) redirect((voltar?.startsWith("/") && !voltar.startsWith("//") ? voltar : "/inicio") as Route);
   // Só aceita caminhos internos, para o link de login não virar redirecionamento aberto.
@@ -91,7 +92,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
               <strong>Primeira vez?</strong> Crie a conta e busque carros na sua cidade. Se recebeu um convite do locador, abra o link dele neste celular.
             </p>
           )}
-          <FormularioEntrar destino={destino} modoInicial={novo ? "criar" : "entrar"} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um novo." : undefined} />
+          <FormularioEntrar destino={destino} modoInicial={modoInicial} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um novo." : undefined} />
           <p className="mt-6 text-center text-sm text-suave">
             {tipo === "motorista" ? (
               <>É locador? <Link href="/entrar?perfil=locador" className="font-semibold text-marca">Entre pela área do locador</Link></>

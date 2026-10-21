@@ -1,0 +1,75 @@
+# Conta, perfil e configurações
+
+Área da conta para motoristas (`/m/conta`) e locadores (`/painel/conta`). Ela abre
+pela caixa do perfil no menu ☰, pelo avatar no topo e pela aba **Conta** do app do
+motorista. As telas são as mesmas para os dois perfis, com textos de cada um. O
+locador tem também **Dados da locadora**.
+
+## Estrutura
+
+| Tela | O que tem |
+|---|---|
+| Início da conta | Cartão do perfil (foto, nome, e-mail, papel), progresso da verificação e a lista de configurações |
+| Dados pessoais | Foto de perfil, nome de exibição, e-mail e celular (com situação) |
+| Verificação da conta | E-mail confirmado, celular confirmado por SMS, foto, e: documentos e CNH (motorista) ou recebimentos no Pix (locador) |
+| Senha e acesso | Criar ou trocar a senha, trocar o e-mail de login, sair de todos os aparelhos |
+| Dados da locadora | Nome, cidade, UF e "Aprovar antes de enviar" (modo assistido). Só o dono edita |
+| Aparência | Tema Claro (padrão), Escuro ou Automático |
+| Notificações | Canais (WhatsApp, e-mail, notificação no celular) e assuntos |
+| Privacidade e dados | O que guardamos, por quanto tempo, baixar meus dados, pedir exclusão |
+| Ajuda e suporte | Perguntas frequentes, como funciona, e-mail do suporte |
+
+## Requisitos funcionais
+
+| Req. | Descrição | Prioridade |
+|---|---|---|
+| RF-130 | A pessoa vê e edita o nome de exibição e a foto de perfil. A foto é reduzida no próprio celular (512 px) antes do envio. | M |
+| RF-131 | A conta mostra a situação da verificação (e-mail, celular, foto, documentos ou recebimentos), com atalho para resolver cada item pendente. | M |
+| RF-132 | O celular é confirmado por código SMS antes de ser usado nos avisos pelo WhatsApp. | M |
+| RF-133 | A pessoa cria ou troca a senha, troca o e-mail (com confirmação no endereço novo) e encerra a sessão em todos os aparelhos. | M |
+| RF-134 | O tema padrão é claro. A pessoa escolhe Escuro ou Automático, e a escolha vale em todos os aparelhos em que ela entrar. | M |
+| RF-135 | A pessoa escolhe por quais canais e sobre quais assuntos quer avisos. Avisos do contrato (cobrança, atraso, notificação formal) não podem ser desligados, e pelo menos um canal fica ligado. | M |
+| RF-136 | A pessoa baixa um arquivo com os dados pessoais ligados à conta (LGPD, direito de acesso). | M |
+| RF-137 | A pessoa pede a exclusão da conta. O pedido vai para o suporte. Nada é apagado automaticamente: contratos ativos precisam ser encerrados, e as provas seguem o prazo de retenção. | M |
+| RF-138 | O dono da conta do locador edita nome, cidade, UF e o modo assistido. A alteração fica na auditoria. O CPF/CNPJ só muda pelo suporte. | M |
+| RF-139 | Recuperação de senha: o link do e-mail abre a tela "Criar senha nova". Link expirado mostra a explicação e o botão para pedir outro. | M |
+
+## Requisitos não funcionais
+
+| Req. | Descrição |
+|---|---|
+| RNF-130 | **Links de e-mail funcionam em qualquer navegador** (fluxo implícito, ver `configurar-supabase.md`). Cada link vale uma vez, por 1 hora. |
+| RNF-131 | **Reenvio com espera:** 60 s entre pedidos de código ou link para o mesmo endereço, com contagem na tela. |
+| RNF-132 | **Sem piscar de tema:** o tema é aplicado por um script antes da primeira pintura; a escolha fica no aparelho e na conta. |
+| RNF-133 | **Resposta ao toque:** ao tocar numa opção, uma barra de progresso aparece no topo na hora e a tela mostra um esqueleto enquanto carrega. |
+| RNF-134 | **Privacidade da foto:** a foto fica num bucket público, num caminho com o id do usuário; a anterior é apagada na troca. Só o servidor gera o endereço de envio. |
+| RNF-135 | **Preferências validadas no servidor:** os metadados do usuário são editáveis pelo próprio usuário, então o servidor sempre normaliza o que lê (`normalizarPreferencias`, com teste). |
+| RNF-136 | **Retenção:** contratos, vistorias, check-ins e conversas ficam 5 anos após o fim do contrato (RNF-005). O resto sai na exclusão. |
+
+## Onde ficam os dados
+
+- **Nome, foto e preferências:** metadados do usuário no Supabase Auth
+  (`user_metadata.nome`, `.foto`, `.preferencias`). Não precisou de migração.
+  Quando a régua de notificações chegar, as preferências passam a ser lidas pelo
+  servidor de lá mesmo (com o admin), sem mudar a tela.
+- **Foto:** bucket `avatares`, criado sozinho na primeira foto.
+- **Tema neste aparelho:** `localStorage` (`aluguei_tema`), para aplicar antes da
+  primeira pintura.
+- **Dados da locadora:** tabela `organizacoes`, alterada pelo servidor depois de
+  conferir que quem pede é o dono, com registro na `auditoria`.
+
+## Navegação das áreas logadas
+
+- **Logo** leva ao início do app (`/m` ou `/painel`). "Início" não aparece no menu ☰.
+- **Menu ☰** abre pela direita, no mesmo estilo do menu do site: caixa do perfil no
+  topo (leva à conta), opções em faixas por seção, "Ver o site", "Sair" e rodapé.
+- **Abas do motorista:** Início, Buscar, Conversas (com contador), Pagamentos e Conta.
+  A busca de carros tem versão dentro do app (`/m/buscar`), com as abas.
+- **Abas do locador:** Início, Frota, botão de criar, Financeiro e Conversas (com
+  contador). Motoristas, Contratos, Anúncios e Recebimentos ficam no menu ☰.
+
+## Próximas etapas
+
+- Instalar o app (PWA) a partir de Notificações, com o pedido de permissão do push.
+- Equipe do locador (convidar operador) em Dados da locadora.
+- Termos de uso e política de privacidade, depois da revisão do advogado.

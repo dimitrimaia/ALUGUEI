@@ -13,7 +13,8 @@ o marketplace fica para a Fase 3.
 - [Revisão dos requisitos](docs/revisao-requisitos.md): o que faltava na proposta, correções e decisões em aberto
 - [Roadmap do MVP](docs/roadmap-mvp.md): 12 semanas, com rastreio dos requisitos
 - [Decisões de produto](docs/decisoes.md): Pix, PWA, mensalidade por split, o app como administrador
-- [Configurar o Supabase](docs/configurar-supabase.md): banco, login por código, SMS
+- [Configurar o Supabase](docs/configurar-supabase.md): banco, login, modelos de e-mail, SMS
+- [Conta, perfil e configurações](docs/conta-e-configuracoes.md): requisitos RF-130 a RF-139 e navegação das áreas logadas
 - [Busca de carros e chat](docs/marketplace-chat.md)
 - [Hospedagem e domínio](docs/hospedagem.md)
 - [Arquitetura](docs/arquitetura.md): os quatro pilares e as camadas

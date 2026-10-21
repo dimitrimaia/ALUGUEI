@@ -161,13 +161,14 @@ export function Aviso({ tom = "alerta", titulo, children }: { tom?: Tom; titulo?
 
 export function Indicador({ icone: Icone, rotulo, valor, tom = "marca", detalhe }: { icone: LucideIcon; rotulo: string; valor: ReactNode; tom?: Tom; detalhe?: ReactNode }) {
   return (
-    <Cartao className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-3">
+    <Cartao className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-3">
       <span className={`grid size-8 shrink-0 place-items-center rounded-lg sm:size-9 ${TONS[tom]}`}>
         <Icone size={17} aria-hidden />
       </span>
       <div className="min-w-0">
         <p className="text-xs font-medium text-suave">{rotulo}</p>
-        <p className="truncate text-lg font-extrabold tracking-tight tabular-nums sm:text-xl">{valor}</p>
+        {/* Valores longos quebram a linha em vez de vazar do cartão. */}
+        <p className="text-base leading-tight font-bold tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-lg">{valor}</p>
         {detalhe && <p className="truncate text-[0.7rem] text-suave">{detalhe}</p>}
       </div>
     </Cartao>
@@ -253,11 +254,18 @@ export function Placa({ placa, tamanho = "md" }: { placa: string; tamanho?: "sm"
   );
 }
 
-export function Avatar({ nome, tamanho = "md" }: { nome: string; tamanho?: "md" | "lg" }) {
+const TAMANHOS_AVATAR = { sm: "size-9 text-xs", md: "size-10 text-sm", lg: "size-14 text-lg", xl: "size-20 text-2xl" } as const;
+
+/** Foto de perfil, ou as iniciais quando não há foto. */
+export function Avatar({ nome, foto, tamanho = "md", className = "" }: { nome: string; foto?: string | null; tamanho?: keyof typeof TAMANHOS_AVATAR; className?: string }) {
   const p = nome.trim().split(/\s+/);
   const letras = ((p[0]?.[0] ?? "") + (p.length > 1 ? (p.at(-1)?.[0] ?? "") : "")).toUpperCase();
+  if (foto) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={foto} alt="" className={`shrink-0 rounded-full object-cover ${TAMANHOS_AVATAR[tamanho]} ${className}`} />;
+  }
   return (
-    <span className={`grid shrink-0 place-items-center rounded-full bg-marca-suave font-bold text-marca ${tamanho === "lg" ? "size-14 text-lg" : "size-10 text-sm"}`} aria-hidden>
+    <span className={`grid shrink-0 place-items-center rounded-full bg-marca-suave font-bold text-marca ${TAMANHOS_AVATAR[tamanho]} ${className}`} aria-hidden>
       {letras}
     </span>
   );

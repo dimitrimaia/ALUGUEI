@@ -11,17 +11,27 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const a = await anuncioPublico((await params).id);
-  return { title: a ? `${a.veiculo.modelo} em ${a.cidade}` : "Carro" };
+  if (!a) return { title: "Carro" };
+  const titulo = `${a.veiculo.modelo} para alugar em ${a.cidade}`;
+  const descricao = `${formatarBRL(a.aluguelSemanal)} por semana · caução ${formatarBRL(a.caucao)} · ${a.locador.nome}. Converse com o locador pelo Aluguei.`;
+  // Na prévia do WhatsApp aparece a primeira foto do carro; sem foto, a imagem padrão do site.
+  return {
+    title: titulo,
+    description: descricao,
+    openGraph: { title: titulo, description: descricao, ...(a.fotos[0] ? { images: [{ url: a.fotos[0], alt: a.veiculo.modelo }] } : {}) },
+    twitter: { card: "summary_large_image", title: titulo, description: descricao },
+  };
 }
 
-export default async function Anuncio({ params }: { params: Promise<{ id: string }> }) {
+export default async function Anuncio({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ de?: string }> }) {
   const { id } = await params;
+  const doApp = (await searchParams).de === "app";
   const a = await anuncioPublico(id);
   if (!a) notFound();
 
   return (
     <div className="tema-claro min-h-dvh bg-fundo">
-      <CabecalhoPublico voltar={{ href: "/carros", rotulo: "Carros" }} />
+      <CabecalhoPublico voltar={doApp ? { href: "/m/buscar", rotulo: "Buscar carros" } : { href: "/carros", rotulo: "Carros" }} />
       <main className="mx-auto max-w-5xl px-5 pt-5 pb-28 lg:grid lg:grid-cols-[1.3fr_1fr] lg:gap-8 lg:pb-16">
         <div>
           <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-[1.1rem]">

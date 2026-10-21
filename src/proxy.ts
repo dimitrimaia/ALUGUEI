@@ -21,11 +21,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Link de e-mail expirado: o Supabase devolve para a raiz com ?error=; mandamos para o login com aviso.
+  // Link de e-mail expirado: o Supabase devolve para a raiz com ?error_code=; a tela de confirmação explica.
   if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("error_code")) {
     const destino = request.nextUrl.clone();
-    destino.pathname = "/entrar";
-    destino.search = "?erro=link";
+    destino.pathname = "/auth/confirmar";
     return NextResponse.redirect(destino);
   }
   if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("code")) {
@@ -49,5 +48,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|icone/|manifest.webmanifest|api/|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|icone/|opengraph-image|twitter-image|manifest.webmanifest|api/|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
 };

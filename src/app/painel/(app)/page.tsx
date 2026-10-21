@@ -71,7 +71,7 @@ export default async function VisaoGeral() {
           <div>
             <p className="text-sm font-medium text-white/75">{saudacao()}, {organizacao.nome}</p>
             <p className="mt-3 text-sm font-medium text-white/75">A receber nos próximos 7 dias</p>
-            <p className="mt-1 text-[2rem] leading-tight font-extrabold tracking-tight sm:text-5xl">{formatarBRL(aReceber)}</p>
+            <p className="mt-1 text-[1.85rem] leading-tight font-bold tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl">{formatarBRL(aReceber)}</p>
             <p className="mt-2 text-sm text-white/75">{(() => { const n = (proximas ?? []).filter((o) => o.tipo !== "checkin").length; return n === 1 ? "1 cobrança programada" : `${n} cobranças programadas`; })()}</p>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -80,9 +80,9 @@ export default async function VisaoGeral() {
               { rotulo: "Ocupação", valor: `${ocupacao}%` },
               { rotulo: "Frota", valor: v.length },
             ].map((x) => (
-              <div key={x.rotulo} className="rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15 backdrop-blur sm:min-w-28 sm:px-4">
-                <p className="text-xs font-medium text-white/70">{x.rotulo}</p>
-                <p className="text-xl font-extrabold sm:text-2xl">{x.valor}</p>
+              <div key={x.rotulo} className="min-w-0 rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15 backdrop-blur sm:min-w-28 sm:px-4">
+                <p className="truncate text-xs font-medium text-white/70">{x.rotulo}</p>
+                <p className="text-lg leading-tight font-bold tabular-nums sm:text-2xl">{x.valor}</p>
               </div>
             ))}
           </div>

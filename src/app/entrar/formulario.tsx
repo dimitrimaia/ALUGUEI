@@ -2,19 +2,27 @@
 
 import { Eye, EyeOff, MailCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Aviso, Botao, Campo, classeEntrada } from "@/components/ui";
 import { normalizarCelular } from "@/dominio/cadastro/telefone";
+import { supabaseLinks, urlConfirmacao } from "@/lib/supabase/links";
 import { supabaseNavegador } from "@/lib/supabase/navegador";
 
-type Modo = "entrar" | "criar" | "codigo" | "esqueci";
+export type Modo = "entrar" | "criar" | "codigo" | "esqueci";
+
+const ESPERA_REENVIO = 60; // segundos: o Supabase recusa um novo e-mail para o mesmo endereço antes disso
 
 const ERROS: Record<string, string> = {
   invalid_credentials: "E-mail ou senha incorretos.",
   email_not_confirmed: "Confirme seu e-mail pelo link que enviamos antes de entrar.",
   user_already_exists: "Já existe uma conta com esse e-mail. Entre com a sua senha.",
   weak_password: "Senha fraca. Use pelo menos 8 caracteres, com letras e números.",
-  over_email_send_rate_limit: "Muitos e-mails em pouco tempo. Espere um minuto e tente de novo.",
+  over_email_send_rate_limit: "Acabamos de enviar um e-mail para esse endereço. Espere um minuto antes de pedir outro.",
+  over_request_rate_limit: "Muitas tentativas seguidas. Espere um minuto e tente de novo.",
+  over_sms_send_rate_limit: "Acabamos de enviar um SMS para esse número. Espere um minuto antes de pedir outro.",
+  otp_expired: "Código expirado ou já usado. Use o código do e-mail mais recente ou peça outro.",
+  email_address_invalid: "Esse e-mail não é válido.",
+  same_password: "A senha nova precisa ser diferente da atual.",
 };
 
 /** Entrar com senha, criar conta, entrar com código ou recuperar a senha. */
@@ -31,13 +39,21 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
   const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState<string | null>(erroInicial ?? null);
   const [ocupado, setOcupado] = useState(false);
+  const [espera, setEspera] = useState(0);
 
-  const retorno = (caminho: string) => `${window.location.origin}/auth/callback?voltar=${encodeURIComponent(caminho)}`;
-  const mensagemErro = (e: { code?: string; message: string }) => ERROS[e.code ?? ""] ?? "Não deu certo. Confira os dados e tente de novo.";
+  useEffect(() => {
+    if (espera <= 0) return;
+    const t = setTimeout(() => setEspera((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [espera]);
+
+  const mensagemErro = (e: { code?: string; message: string; status?: number }) =>
+    ERROS[e.code ?? ""] ?? (e.status === 429 ? ERROS.over_request_rate_limit! : "Não deu certo. Confira os dados e tente de novo.");
 
   function trocar(m: Modo) {
     setModo(m);
     setErro(null);
+    setSenha("");
     setAviso(null);
     setEnviadoPara(null);
     setCodigo("");
@@ -63,43 +79,50 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
     setErro(null);
     if (senha.length < 8) return setErro("A senha precisa ter pelo menos 8 caracteres.");
     setOcupado(true);
-    const { data, error } = await supabaseNavegador().auth.signUp({
+    const { data, error } = await supabaseLinks().auth.signUp({
       email: email.trim().toLowerCase(),
       password: senha,
-      options: { emailRedirectTo: retorno(destino) },
+      options: { emailRedirectTo: urlConfirmacao(destino) },
     });
     setOcupado(false);
     if (error) return setErro(mensagemErro(error));
     // Com a confirmação de e-mail ligada, a sessão só nasce depois do clique no link.
-    if (data.session) return concluir();
+    if (data.session) {
+      await supabaseNavegador().auth.setSession(data.session);
+      return concluir();
+    }
     if (data.user && !data.user.identities?.length) return setErro(ERROS.user_already_exists!);
-    setAviso(`Enviamos um link de confirmação para ${email.trim().toLowerCase()}. Abra o e-mail neste aparelho para ativar a conta.`);
+    setAviso(`Enviamos um link de confirmação para ${email.trim().toLowerCase()}. Toque no link do e-mail para ativar a conta.`);
   }
 
   async function esqueci(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
     setOcupado(true);
-    const { error } = await supabaseNavegador().auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: retorno("/nova-senha") });
+    const { error } = await supabaseLinks().auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: urlConfirmacao("/nova-senha") });
     setOcupado(false);
     if (error) return setErro(mensagemErro(error));
+    setEspera(ESPERA_REENVIO);
     setAviso(`Se existir uma conta com ${email.trim().toLowerCase()}, enviamos um link para criar uma senha nova.`);
   }
 
-  async function enviarCodigo(e: React.FormEvent) {
-    e.preventDefault();
+  async function enviarCodigo(e?: React.FormEvent) {
+    e?.preventDefault();
     setErro(null);
+    if (espera > 0) return;
     const alvo = canal === "celular" ? normalizarCelular(celular) : email.trim().toLowerCase();
     if (!alvo || (canal === "email" && !alvo.includes("@"))) return setErro(canal === "celular" ? "Informe um celular com DDD." : "Informe um e-mail válido.");
     setOcupado(true);
-    const supabase = supabaseNavegador();
+    const supabase = supabaseLinks();
     const { error } =
       canal === "celular"
         ? await supabase.auth.signInWithOtp({ phone: alvo })
-        : await supabase.auth.signInWithOtp({ email: alvo, options: { emailRedirectTo: retorno(destino) } });
+        : await supabase.auth.signInWithOtp({ email: alvo, options: { emailRedirectTo: urlConfirmacao(destino) } });
     setOcupado(false);
     if (error) return setErro(mensagemErro(error));
     setEnviadoPara(alvo);
+    setCodigo("");
+    setEspera(ESPERA_REENVIO);
   }
 
   async function verificarCodigo(e: React.FormEvent) {
@@ -114,7 +137,7 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
         ? await supabase.auth.verifyOtp({ phone: enviadoPara, token, type: "sms" })
         : await supabase.auth.verifyOtp({ email: enviadoPara, token, type: "email" });
     setOcupado(false);
-    if (error) return setErro("Código inválido ou expirado.");
+    if (error) return setErro(error.code === "otp_expired" ? ERROS.otp_expired! : "Código incorreto. Confira os números do e-mail mais recente.");
     concluir();
   }
 
@@ -185,7 +208,7 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
         <form onSubmit={esqueci} className="flex flex-col gap-4">
           <p className="text-sm text-suave">Informe o e-mail da conta. Enviamos um link para você criar uma senha nova.</p>
           {campoEmail}
-          <Botao tamanho="lg" disabled={ocupado}>{ocupado ? "Enviando…" : "Enviar link"}</Botao>
+          <Botao tamanho="lg" disabled={ocupado || espera > 0}>{ocupado ? "Enviando…" : espera > 0 ? `Aguarde ${espera}s para pedir outro` : "Enviar link"}</Botao>
           <p className="text-center text-sm">{link("Voltar para entrar", "entrar")}</p>
         </form>
       )}
@@ -202,19 +225,24 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
               <input className={classeEntrada} type="tel" inputMode="tel" autoComplete="tel-national" placeholder="(31) 99999-9999" value={celular} onChange={(e) => setCelular(e.target.value)} required />
             </Campo>
           )}
-          <Botao tamanho="lg" disabled={ocupado}>{ocupado ? "Enviando…" : "Receber código"}</Botao>
+          <Botao tamanho="lg" disabled={ocupado || espera > 0}>{ocupado ? "Enviando…" : espera > 0 ? `Aguarde ${espera}s para pedir outro` : "Receber código"}</Botao>
           <p className="text-center text-sm">{link("Entrar com senha", "entrar")}</p>
         </form>
       )}
 
       {modo === "codigo" && enviadoPara && (
         <form onSubmit={verificarCodigo} className="flex flex-col gap-4">
-          <p className="text-sm">Enviamos um código para <strong>{enviadoPara}</strong>. Se chegar um link, é só tocar nele neste aparelho.</p>
+          <p className="text-sm">Enviamos um código para <strong>{enviadoPara}</strong>. Digite os números abaixo{canal === "email" ? " ou toque no link do e-mail" : ""}. Vale só o último código enviado.</p>
           <Campo rotulo="Código">
             <input className={`${classeEntrada} h-13 text-center text-2xl font-bold tracking-[0.4em]`} inputMode="numeric" autoComplete="one-time-code" maxLength={8} value={codigo} onChange={(e) => setCodigo(e.target.value)} autoFocus />
           </Campo>
           <Botao tamanho="lg" disabled={ocupado || codigo.replace(/\D/g, "").length < 6}>{ocupado ? "Verificando…" : "Entrar"}</Botao>
-          <p className="text-center text-sm">{link("Usar outro e-mail", "codigo")}</p>
+          <div className="flex justify-between text-sm">
+            {link(canal === "celular" ? "Usar outro número" : "Usar outro e-mail", "codigo")}
+            <button type="button" disabled={espera > 0 || ocupado} onClick={() => enviarCodigo()} className="font-semibold text-marca disabled:text-suave">
+              {espera > 0 ? `Reenviar em ${espera}s` : "Reenviar código"}
+            </button>
+          </div>
         </form>
       )}
     </div>

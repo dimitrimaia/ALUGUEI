@@ -29,6 +29,8 @@ export function SiteInicial({ locador, motorista, logado }: { locador: ReactNode
   const [menu, setMenu] = useState(false);
 
   useEffect(() => {
+    // Link de e-mail que caiu na raiz (endereço de volta não liberado no Supabase): segue para a confirmação.
+    if (/access_token|error_code/.test(location.hash)) return location.replace(`/auth/confirmar${location.search}${location.hash}`);
     const daUrl = new URLSearchParams(location.search).get("para");
     const inicial = daUrl === "motorista" || daUrl === "locador" ? daUrl : lerPerfilEscolhido();
     if (inicial) {
