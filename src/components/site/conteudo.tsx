@@ -7,7 +7,7 @@ export const LOCADOR: ConteudoPerfil = {
   selo: "Para quem aluga carro para motorista de app",
   titulo: "Alugue seu carro para motorista de app sem virar cobrador.",
   texto: "O Aluguei cuida da rotina do contrato: cadastro e análise do motorista, contrato digital, vistoria com fotos e cobrança semanal no Pix. Você acompanha pelo painel e decide o que importa.",
-  ctas: [{ rotulo: "Criar conta de locador", href: "/entrar?perfil=locador" }, { rotulo: "Ver como funciona", href: "#como-funciona" }],
+  ctas: [{ rotulo: "Criar conta de locador", href: "/entrar?perfil=locador&novo=1" }, { rotulo: "Ver como funciona", href: "#como-funciona" }],
   marcas: ["Sem planilha", "Pix direto na sua conta", "Carro parado não paga"],
   mockup: <MockupLocador />,
   destaques: [
@@ -66,7 +66,7 @@ export const LOCADOR: ConteudoPerfil = {
     sufixo: "/mês",
     detalhe: "Equivale a R$ 57,53 por semana de aluguel.",
     itens: ["Carro parado não paga", "Cobrada junto com o aluguel", "Contrato, vistoria, Pix e extrato incluídos", "Pessoa física ou empresa"],
-    cta: { rotulo: "Criar conta de locador", href: "/entrar?perfil=locador" },
+    cta: { rotulo: "Criar conta de locador", href: "/entrar?perfil=locador&novo=1" },
   },
   duvidas: [
     { p: "O dinheiro do aluguel passa pelo Aluguei?", r: "Não. O Pix cai numa conta de recebimento no seu nome, no Asaas, instituição de pagamento autorizada pelo Banco Central. O Aluguei recebe só a própria taxa, separada no pagamento." },
@@ -80,7 +80,7 @@ export const LOCADOR: ConteudoPerfil = {
   final: {
     titulo: "Comece pelo primeiro carro",
     texto: "Crie a conta, cadastre o carro e mande o convite para o motorista. Leva poucos minutos.",
-    ctas: [{ rotulo: "Criar conta de locador", href: "/entrar?perfil=locador" }, { rotulo: "Já tenho conta", href: "/entrar?perfil=locador" }],
+    ctas: [{ rotulo: "Criar conta de locador", href: "/entrar?perfil=locador&novo=1" }, { rotulo: "Já tenho conta", href: "/entrar?perfil=locador" }],
   },
 };
 

@@ -11,7 +11,7 @@ export const ACOES_PERFIL = {
     { href: "/entrar?perfil=motorista", rotulo: "Entrar como motorista", detalhe: "Pagamentos e contrato", icone: Car },
   ],
   criar: [
-    { href: "/entrar?perfil=locador", rotulo: "Sou locador", detalhe: "Tenho carros para alugar", icone: Building2 },
+    { href: "/entrar?perfil=locador&novo=1", rotulo: "Sou locador", detalhe: "Tenho carros para alugar", icone: Building2 },
     { href: "/entrar?perfil=motorista&novo=1", rotulo: "Sou motorista", detalhe: "Recebi um convite do locador", icone: Car },
   ],
 } as const;

@@ -53,7 +53,9 @@ export default async function Anuncio({ params }: { params: Promise<{ id: string
               <DadoRotulado rotulo="Prazo mínimo">{a.prazoMinimoMeses} {a.prazoMinimoMeses === 1 ? "mês" : "meses"}</DadoRotulado>
               <DadoRotulado rotulo="Km atual">{a.veiculo.odometro.toLocaleString("pt-BR")} km</DadoRotulado>
             </dl>
-            <BotaoLink href={`/carros/${a.id}/interesse`} tamanho="lg" className="mt-5 hidden w-full lg:inline-flex"><MessageCircle size={18} /> Tenho interesse</BotaoLink>
+            <div className="mt-5 hidden lg:block">
+              <BotaoLink href={`/carros/${a.id}/interesse`} tamanho="lg" className="w-full"><MessageCircle size={18} /> Tenho interesse</BotaoLink>
+            </div>
           </Cartao>
           <Cartao className="flex flex-col gap-3 text-sm">
             {[

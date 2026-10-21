@@ -2,6 +2,8 @@ import { ArrowLeft, Building2, CalendarCheck, Camera, Car, FileSignature, Shield
 import type { Route } from "next";
 import Link from "next/link";
 import { Marca } from "@/components/ui";
+import { redirect } from "next/navigation";
+import { usuarioAtual } from "@/lib/sessao";
 import { FormularioEntrar } from "./formulario";
 import { LembrarPerfil } from "./lembrar";
 
@@ -37,6 +39,8 @@ const PERFIS = {
 
 export default async function Entrar({ searchParams }: { searchParams: Promise<{ voltar?: string; erro?: string; perfil?: string; novo?: string }> }) {
   const { voltar, erro, perfil, novo } = await searchParams;
+  // Já logado: não mostra o login de novo.
+  if (await usuarioAtual()) redirect((voltar?.startsWith("/") && !voltar.startsWith("//") ? voltar : "/inicio") as Route);
   // Só aceita caminhos internos, para o link de login não virar redirecionamento aberto.
   const tipo = perfil === "locador" || perfil === "motorista" ? perfil : "geral";
   const padrao = tipo === "locador" ? "/painel" : tipo === "motorista" ? "/m" : "/inicio";
@@ -81,14 +85,13 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
       </section>
       <section className="relative -mt-14 px-4 pb-10 lg:mt-0 lg:grid lg:place-items-center lg:p-14">
         <div className={`mx-auto w-full max-w-sm rounded-[1.5rem] border bg-cartao p-6 shadow-flutuante lg:border-0 lg:p-0 lg:shadow-none ${claro ? "border-marca/25" : "border-borda"}`}>
-          <h2 className="text-xl font-extrabold tracking-tight">{tipo === "locador" ? "Entrar ou criar conta" : "Entrar"}</h2>
-          <p className="mt-1 mb-6 text-sm text-suave">Vamos enviar um código de 6 dígitos para confirmar que é você.</p>
+          <h2 className="mb-5 text-xl font-extrabold tracking-tight">{tipo === "motorista" ? "Acesse sua conta de motorista" : tipo === "locador" ? "Acesse sua locadora" : "Acesse sua conta"}</h2>
           {tipo === "motorista" && novo && (
             <p className="mb-5 rounded-xl bg-marca-suave p-3 text-sm">
-              <strong>Primeira vez?</strong> O cadastro de motorista começa pelo link de convite que o locador manda no WhatsApp. Abra o link neste celular.
+              <strong>Primeira vez?</strong> Crie a conta e busque carros na sua cidade. Se recebeu um convite do locador, abra o link dele neste celular.
             </p>
           )}
-          <FormularioEntrar destino={destino} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um código novo." : undefined} />
+          <FormularioEntrar destino={destino} modoInicial={novo ? "criar" : "entrar"} erroInicial={erro === "link" ? "O link expirou ou já foi usado. Peça um novo." : undefined} />
           <p className="mt-6 text-center text-sm text-suave">
             {tipo === "motorista" ? (
               <>É locador? <Link href="/entrar?perfil=locador" className="font-semibold text-marca">Entre pela área do locador</Link></>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Car, ChevronRight, CircleHelp, Layers, ListOrdered, LogIn, Menu, Tag, UserPlus } from "lucide-react";
+import { Building2, Car, ChevronRight, CircleHelp, Layers, ListOrdered, LogIn, LogOut, Menu, Tag, UserPlus, UserRound } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
@@ -23,7 +23,7 @@ const SECOES = [
  * Página inicial com duas versões, alternadas pelo seletor flutuante:
  * locador (azul forte) e motorista (claro). O cabeçalho fica fixo no topo.
  */
-export function SiteInicial({ locador, motorista }: { locador: ReactNode; motorista: ReactNode }) {
+export function SiteInicial({ locador, motorista, logado }: { locador: ReactNode; motorista: ReactNode; logado: { nome: string } | null }) {
   const [perfil, setPerfil] = useState<Perfil>("locador");
   const [rolou, setRolou] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -68,8 +68,16 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
             {SECOES.map((s) => <a key={s.href} href={s.href} className="hover:text-current hover:opacity-100">{s.rotulo}</a>)}
           </nav>
           <div className="hidden items-center gap-2 md:flex">
-            <BotaoPerfil tipo="entrar" rotulo="Entrar" estilo={sobreAzul ? "text-white hover:bg-white/10" : "hover:bg-cartao-2"} />
-            <BotaoPerfil tipo="criar" rotulo="Criar conta" estilo={sobreAzul ? "bg-white text-[#0b2a6b] hover:bg-white/90" : "bg-marca text-white shadow-marca hover:bg-marca-forte"} />
+            {logado ? (
+              <Link href="/inicio" className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold ${sobreAzul ? "bg-white text-[#0b2a6b]" : "bg-marca text-white shadow-marca"}`}>
+                <UserRound size={17} /> Minha área
+              </Link>
+            ) : (
+              <>
+                <BotaoPerfil tipo="entrar" rotulo="Entrar" estilo={sobreAzul ? "text-white hover:bg-white/10" : "hover:bg-cartao-2"} />
+                <BotaoPerfil tipo="criar" rotulo="Criar conta" estilo={sobreAzul ? "bg-white text-[#0b2a6b] hover:bg-white/90" : "bg-marca text-white shadow-marca hover:bg-marca-forte"} />
+              </>
+            )}
           </div>
           <button
             onClick={() => setMenu(true)}
@@ -118,7 +126,20 @@ export function SiteInicial({ locador, motorista }: { locador: ReactNode; motori
               </a>
             ))}
           </nav>
-          <div className="mt-8 flex flex-col gap-6">
+          {logado && (
+            <div className="mt-8 flex flex-col gap-2">
+              <p className="px-1 text-[0.7rem] font-semibold tracking-[0.12em] text-white/50 uppercase">Você está logado</p>
+              <Link href="/inicio" className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-[#0b2a6b]">
+                <UserRound size={20} className="text-[#1f56e8]" />
+                <span className="flex-1"><span className="block text-sm font-semibold">Ir para minha área</span><span className="block truncate text-xs text-[#5b6880]">{logado.nome}</span></span>
+                <ChevronRight size={18} className="opacity-50" />
+              </Link>
+              <form action="/sair" method="post">
+                <button className="flex w-full items-center gap-3 rounded-xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/12"><LogOut size={18} /> Sair</button>
+              </form>
+            </div>
+          )}
+          <div className={`mt-8 flex flex-col gap-6 ${logado ? "hidden" : ""}`}>
             {([["criar", "Criar conta", UserPlus], ["entrar", "Já tenho conta", LogIn]] as const).map(([tipo, titulo, Icone]) => (
               <div key={tipo}>
                 <p className="mb-2 flex items-center gap-2 px-1 text-[0.7rem] font-semibold tracking-[0.12em] text-white/50 uppercase"><Icone size={14} /> {titulo}</p>
