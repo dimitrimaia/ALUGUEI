@@ -34,7 +34,7 @@ export function FormFoto({ nome, foto }: { nome: string; foto: string | null }) 
       const pronta = await comprimirImagem(arquivo, { ladoMaximo: 512, qualidade: 0.85 });
       setPrevia(URL.createObjectURL(pronta));
       const { caminho, token } = await prepararFoto();
-      const { error } = await supabaseNavegador().storage.from("avatares").uploadToSignedUrl(caminho, token, pronta, { contentType: "image/jpeg" });
+      const { error } = await supabaseNavegador().storage.from("avatares").uploadToSignedUrl(caminho, token, pronta, { contentType: "image/jpeg", cacheControl: "31536000" }); // cada foto tem caminho novo: pode ficar em cache por 1 ano
       if (error) throw error;
       const r = await salvarFoto(caminho);
       if (!r.ok) throw new Error(r.erro);

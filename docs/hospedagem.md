@@ -26,6 +26,7 @@ ou um blog.
    - `CHAVE_CIFRA`: 64 caracteres hex; cifra as chaves das subcontas. **Nunca troque depois de criada**,
      ou as subcontas existentes ficam ilegíveis.
    - `CRON_SECRET`: a Vercel envia no cabeçalho da rotina diária (`/api/cron/diario`, 06:00).
+   - `ADMINS`: e-mails da equipe do Aluguei, separados por vírgula (acesso a `/admin/verificacoes`).
    - `NEXT_PUBLIC_SITE_URL` = `https://aluguei.xyz` (só em Production; nas prévias o app usa o endereço acessado)
 3. *Deploy*.
 4. *Settings → Domains*: adicionar `seudominio.com.br` e `www.seudominio.com.br`.

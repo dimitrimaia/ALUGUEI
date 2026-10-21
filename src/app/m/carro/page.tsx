@@ -2,6 +2,7 @@ import { CalendarRange, ChevronRight, ClipboardCheck, FileText, Gauge, MapPin, W
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
+import { BotaoEmergencia } from "@/components/motorista/emergencia";
 import { Cartao, DadoRotulado, Placa, Selo, Vazio } from "@/components/ui";
 import type { ParametrosContrato } from "@/dominio/contrato/parametros";
 import { data, formatarData } from "@/dominio/datas/data";
@@ -111,6 +112,7 @@ export default async function MeuCarro() {
         </Cartao>
       )}
       <p className="flex items-center justify-center gap-1.5 text-xs text-suave"><MapPin size={14} /> {org?.cidade}/{org?.uf} <CalendarRange size={14} className="ml-2" /> Contrato até {formatarData(p.fim)}</p>
+      <BotaoEmergencia variante="linha" />
     </div>
   );
 }

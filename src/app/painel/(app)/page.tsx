@@ -1,10 +1,11 @@
-import { ArrowRight, CalendarClock, Car, CheckCircle2, ClipboardCheck, FileSignature, KeyRound, Plus, UserCheck, UserPlus, Wrench } from "lucide-react";
+import { ArrowRight, Wallet, CalendarClock, Car, CheckCircle2, ClipboardCheck, FileSignature, KeyRound, Plus, UserCheck, UserPlus, Wrench } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { BotaoLink, Cartao, ItemLista, Lista, Placa, Selo, Vazio } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
 import { data, formatarData, hoje, somarDias } from "@/dominio/datas/data";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { perfilResumido } from "@/lib/conta";
 import { exigirEquipe } from "@/lib/sessao";
 import { STATUS_VEICULO, TIPO_OBRIGACAO } from "@/lib/rotulos";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -16,10 +17,11 @@ function saudacao() {
 
 /** Painel do locador (RF-120): o que precisa de atenção hoje, e a semana que vem. */
 export default async function VisaoGeral() {
-  const { organizacao } = await exigirEquipe();
+  const [{ organizacao }, perfil] = await Promise.all([exigirEquipe(), perfilResumido()]);
+  const primeiroNome = (perfil?.nomeInformado || "").split(" ")[0];
   const supabase = await supabaseServidor();
   const dia = hoje();
-  const [{ data: veiculos }, { data: motoristas }, { data: contratos }, { data: proximas }] = await Promise.all([
+  const [{ data: veiculos }, { data: motoristas }, { data: contratos }, { data: proximas }, { data: informados }] = await Promise.all([
     supabase.from("veiculos").select("id, status, placa, modelo, odometro_atual").eq("organizacao_id", organizacao.id).order("criado_em"),
     supabase.from("locatarios").select("id, nome, status").eq("organizacao_id", organizacao.id),
     supabase.from("contratos").select("id, status, locatario_id, veiculo_id").eq("organizacao_id", organizacao.id),
@@ -32,6 +34,7 @@ export default async function VisaoGeral() {
       .lte("vencimento", somarDias(dia, 7))
       .order("vencimento")
       .limit(8),
+    supabase.from("obrigacoes").select("id, contrato_id, valor_centavos").eq("organizacao_id", organizacao.id).in("status", ["pendente", "atrasada"]).not("pagamento_informado_em", "is", null),
   ]);
 
   const v = veiculos ?? [];
@@ -47,13 +50,14 @@ export default async function VisaoGeral() {
 
   const passos = [
     { feito: v.length > 0, titulo: "Cadastre um veículo", href: "/painel/veiculos/novo", icone: Car },
-    { feito: m.length > 0, titulo: "Convide um motorista", href: "/painel/motoristas/convidar", icone: UserPlus },
+    { feito: m.length > 0, titulo: "Anuncie e aprove um motorista", href: "/painel/anuncios", icone: UserPlus },
     { feito: c.length > 0, titulo: "Gere e assine o contrato", href: "/painel/motoristas", icone: FileSignature },
     { feito: c.some((x) => x.status === "ativo"), titulo: "Faça a vistoria de entrega", href: "/painel/contratos", icone: ClipboardCheck },
   ] as const;
   const feitos = passos.filter((p) => p.feito).length;
 
   const pendencias = [
+    ...(informados ?? []).map((o) => ({ id: o.id, href: "/painel/financeiro", icone: Wallet, titulo: `${nomeMotorista(o.contrato_id)} avisou que pagou`, detalhe: `Pix direto de ${formatarBRL(o.valor_centavos ?? 0)}: confira no banco e dê baixa`, tom: "ok" as const, selo: "Conferir" })),
     ...m.filter((x) => x.status === "em_analise").map((x) => ({ id: x.id, href: `/painel/motoristas/${x.id}`, icone: UserCheck, titulo: x.nome, detalhe: "Cadastro para analisar", tom: "alerta" as const, selo: "Analisar" })),
     ...c.filter((x) => x.status === "aguardando_assinatura").map((x) => ({ id: x.id, href: `/painel/contratos/${x.id}`, icone: FileSignature, titulo: m.find((y) => y.id === x.locatario_id)?.nome ?? "Contrato", detalhe: "Aguardando a assinatura do motorista", tom: "neutro" as const, selo: "Assinatura" })),
     ...c.filter((x) => x.status === "assinado").map((x) => {
@@ -64,13 +68,16 @@ export default async function VisaoGeral() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="-mb-2">
+        <p className="text-sm text-suave">{saudacao()}{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
+        <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight">{organizacao.nome} hoje</h1>
+      </div>
       {/* Destaque */}
       <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante sm:p-7">
         <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(70%_80%_at_80%_20%,black,transparent)]" aria-hidden />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-white/75">{saudacao()}, {organizacao.nome}</p>
-            <p className="mt-3 text-sm font-medium text-white/75">A receber nos próximos 7 dias</p>
+            <p className="text-sm font-medium text-white/75">A receber nos próximos 7 dias</p>
             <p className="mt-1 text-[1.85rem] leading-tight font-bold tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl">{formatarBRL(aReceber)}</p>
             <p className="mt-2 text-sm text-white/75">{(() => { const n = (proximas ?? []).filter((o) => o.tipo !== "checkin").length; return n === 1 ? "1 cobrança programada" : `${n} cobranças programadas`; })()}</p>
           </div>

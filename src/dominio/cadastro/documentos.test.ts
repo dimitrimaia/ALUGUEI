@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cpfValido, formatarCpf, formatarPlaca, normalizarPlaca } from "./documentos";
+import { cpfValido, renavamValido, formatarCpf, formatarPlaca, normalizarPlaca } from "./documentos";
 
 describe("cpfValido", () => {
   it.each(["529.982.247-25", "52998224725", "111.444.777-35"])("aceita %s", (cpf) => {
@@ -22,5 +22,18 @@ describe("placa", () => {
   it("formata a antiga com traço", () => {
     expect(formatarPlaca("ABC1234")).toBe("ABC-1234");
     expect(formatarPlaca("RTA1B23")).toBe("RTA1B23");
+  });
+});
+
+describe("renavamValido", () => {
+  it("aceita RENAVAM com dígito certo, com ou sem máscara", () => {
+    expect(renavamValido("00639884962")).toBe(true);
+    expect(renavamValido("639884962")).toBe(true); // 9 dígitos antigos
+    expect(renavamValido("0063.988.496-2")).toBe(true);
+  });
+  it("recusa dígito errado, tamanho errado e repetidos", () => {
+    expect(renavamValido("00639884963")).toBe(false);
+    expect(renavamValido("1234")).toBe(false);
+    expect(renavamValido("11111111111")).toBe(false);
   });
 });

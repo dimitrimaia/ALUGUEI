@@ -262,8 +262,14 @@ export function Avatar({ nome, foto, tamanho = "md", className = "" }: { nome: s
   const p = nome.trim().split(/\s+/);
   const letras = ((p[0]?.[0] ?? "") + (p.length > 1 ? (p.at(-1)?.[0] ?? "") : "")).toUpperCase();
   if (foto) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={foto} alt="" className={`shrink-0 rounded-full object-cover ${TAMANHOS_AVATAR[tamanho]} ${className}`} />;
+    // As iniciais ficam por baixo: aparecem na hora, e a foto cobre quando terminar de carregar.
+    return (
+      <span className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-marca-suave font-bold text-marca ${TAMANHOS_AVATAR[tamanho]} ${className}`}>
+        <span aria-hidden>{letras}</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={foto} alt="" decoding="async" fetchPriority="high" className="absolute inset-0 size-full object-cover" />
+      </span>
+    );
   }
   return (
     <span className={`grid shrink-0 place-items-center rounded-full bg-marca-suave font-bold text-marca ${TAMANHOS_AVATAR[tamanho]} ${className}`} aria-hidden>

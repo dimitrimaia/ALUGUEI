@@ -1,9 +1,12 @@
-import { date, index, integer, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { date, index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { criadoEm, id, organizacaoId } from "./comum";
 
 export const statusVeiculo = pgEnum("status_veiculo", [
   "disponivel", "alugado", "em_manutencao", "em_recuperacao", "vendido",
 ]);
+
+/** Verificação do documento do carro (CRLV) pela equipe do Aluguei. Só carro verificado é anunciado. */
+export const statusVerificacaoVeiculo = pgEnum("status_verificacao_veiculo", ["pendente", "em_analise", "verificado", "recusado"]);
 
 export const veiculos = pgTable(
   "veiculos",
@@ -18,9 +21,14 @@ export const veiculos = pgTable(
     renavam: text("renavam"),
     odometroAtual: integer("odometro_atual").notNull(),
     status: statusVeiculo("status").notNull().default("disponivel"),
+    verificacao: statusVerificacaoVeiculo("verificacao").notNull().default("pendente"),
+    crlvEvidenciaId: uuid("crlv_evidencia_id"),
+    verificacaoMotivo: text("verificacao_motivo"),
+    verificadoEm: timestamp("verificado_em", { withTimezone: true }),
+    verificadoPor: uuid("verificado_por"),
     criadoEm: criadoEm(),
   },
-  (t) => [index("veiculos_org").on(t.organizacaoId)],
+  (t) => [index("veiculos_org").on(t.organizacaoId), index("veiculos_verificacao").on(t.verificacao)],
 );
 
 /** Todo km conhecido do veículo, venha de vistoria, check-in ou manutenção (RF-074). */

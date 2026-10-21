@@ -21,7 +21,7 @@ export default async function Convidar({ searchParams }: { searchParams: Promise
     <div className="max-w-2xl">
       <CabecalhoPagina
         voltar={{ href: "/painel/motoristas", rotulo: "Motoristas" }}
-        titulo="Convidar motorista"
+        titulo="Cadastrar motorista"
         subtitulo="Ele recebe um link, vê o carro e as condições e faz o cadastro pelo celular."
       />
       <Cartao>

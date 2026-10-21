@@ -21,6 +21,8 @@ export interface AnuncioPublico {
   prazoMinimoMeses: number;
   descricao: string | null;
   fotos: string[];
+  /** CRLV conferido pela equipe do Aluguei. */
+  verificado: boolean;
   veiculo: { modelo: string; anoModelo: number | null; anoFabricacao: number | null; cor: string | null; placa: string; odometro: number };
   locador: { nome: string; cidade: string; uf: string };
 }
@@ -30,7 +32,7 @@ async function montar(linhas: { id: string; organizacao_id: string; veiculo_id: 
   if (!linhas.length) return [];
   const admin = supabaseAdmin();
   const [{ data: veiculos }, { data: orgs }] = await Promise.all([
-    admin.from("veiculos").select("id, modelo, ano_modelo, ano_fabricacao, cor, placa, odometro_atual, status").in("id", linhas.map((l) => l.veiculo_id)),
+    admin.from("veiculos").select("*").in("id", linhas.map((l) => l.veiculo_id)),
     admin.from("organizacoes").select("id, nome, cidade, uf").in("id", linhas.map((l) => l.organizacao_id)),
   ]);
   return linhas.flatMap((l) => {
@@ -49,6 +51,7 @@ async function montar(linhas: { id: string; organizacao_id: string; veiculo_id: 
       prazoMinimoMeses: l.prazo_minimo_meses,
       descricao: l.descricao,
       fotos: ((l.fotos as string[]) ?? []).map(urlFoto),
+      verificado: v.verificacao === "verificado",
       veiculo: { modelo: v.modelo, anoModelo: v.ano_modelo, anoFabricacao: v.ano_fabricacao, cor: v.cor, placa: v.placa, odometro: v.odometro_atual },
       locador: { nome: o.nome, cidade: o.cidade, uf: o.uf },
     }];

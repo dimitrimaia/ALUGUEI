@@ -26,7 +26,7 @@ export function AbasMotorista() {
         {ABAS.map(({ href, rotulo, icone: Icone, ativo }) => {
           const atual = ativo(caminho);
           return (
-            <Link key={href} href={href as Route} aria-current={atual ? "page" : undefined} className={`relative flex flex-col items-center gap-1 pt-2 pb-1.5 text-[0.66rem] font-semibold ${atual ? "text-marca" : "text-suave"}`}>
+            <Link key={href} href={href as Route} prefetch aria-current={atual ? "page" : undefined} className={`relative flex flex-col items-center gap-1 pt-2 pb-1.5 text-[0.66rem] font-semibold ${atual ? "text-marca" : "text-suave"}`}>
               <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${atual ? "bg-marca-suave" : ""}`}>
                 {href === "/m/conta" && perfil.foto ? <Avatar nome={perfil.nome} foto={perfil.foto} className={`!size-6 ${atual ? "ring-2 ring-marca" : ""}`} /> : <Icone size={20} />}
               </span>

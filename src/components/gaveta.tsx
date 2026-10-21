@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -18,6 +18,7 @@ export function Gaveta({
   escura = false,
   rotulo,
   children,
+  manterAberta,
 }: {
   aberta: boolean;
   aoFechar: () => void;
@@ -25,6 +26,8 @@ export function Gaveta({
   escura?: boolean;
   rotulo: string;
   children: ReactNode;
+  /** Quando ligado, a próxima troca de página não fecha a gaveta (troca de modo pelo menu). */
+  manterAberta?: RefObject<boolean>;
 }) {
   const caminho = usePathname();
   const painel = useRef<HTMLDivElement>(null);
@@ -34,8 +37,12 @@ export function Gaveta({
   useEffect(() => setMontada(true), []);
 
   useEffect(() => {
+    if (manterAberta?.current) {
+      manterAberta.current = false;
+      return;
+    }
     fechar.current();
-  }, [caminho]);
+  }, [caminho, manterAberta]);
 
   useEffect(() => {
     if (!aberta) return;

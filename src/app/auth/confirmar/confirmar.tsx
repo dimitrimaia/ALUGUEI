@@ -33,7 +33,13 @@ export function Confirmar() {
     const hash = new URLSearchParams(location.hash.slice(1));
     const tipo = hash.get("type") ?? busca.get("type");
     const recuperacao = tipo === "recovery";
-    const destino = recuperacao ? "/nova-senha" : destinoSeguro(busca.get("voltar"), "/inicio");
+    // Nos modelos de e-mail com token_hash, o endereço de volta original vem inteiro em `next`.
+    let voltar = busca.get("voltar");
+    try {
+      const proximo = busca.get("next");
+      if (!voltar && proximo) voltar = new URL(proximo, location.origin).searchParams.get("voltar");
+    } catch {}
+    const destino = recuperacao ? "/nova-senha" : destinoSeguro(voltar, "/inicio");
     const supabase = supabaseNavegador();
 
     (async () => {

@@ -13,6 +13,8 @@ export const organizacoes = pgTable("organizacoes", {
   modoAssistido: boolean("modo_assistido").notNull().default(true),
   /** Mensalidade por carro com contrato ativo, cobrada por split em cada aluguel pago. */
   mensalidadePorCarro: integer("mensalidade_por_carro_centavos").notNull().default(25000),
+  /** Pix direto (sem gateway): chave Pix do locador para o QR Code estático. Sem baixa automática. */
+  chavePixDireto: text("chave_pix_direto"),
   criadoEm: criadoEm(),
 });
 

@@ -1,4 +1,4 @@
-import { Calendar, Car, Gauge, MapPin, MessageCircle, ShieldCheck, Wallet } from "lucide-react";
+import { BadgeCheck, Calendar, Car, Gauge, MapPin, MessageCircle, ShieldCheck, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CabecalhoPublico } from "@/components/site/cabecalho-publico";
@@ -57,6 +57,7 @@ export default async function Anuncio({ params, searchParams }: { params: Promis
           <h1 className="mt-5 text-[1.6rem] leading-tight font-extrabold tracking-tight">{a.veiculo.modelo}</h1>
           <p className="text-sm text-suave">{[a.veiculo.anoFabricacao && a.veiculo.anoModelo ? `${a.veiculo.anoFabricacao}/${a.veiculo.anoModelo}` : a.veiculo.anoModelo, a.veiculo.cor, placaParcial(a.veiculo.placa)].filter(Boolean).join(" · ")}</p>
           <p className="mt-2 inline-flex items-center gap-1.5 text-sm"><MapPin size={15} className="text-marca" /> {a.cidade}/{a.uf} · {a.locador.nome}</p>
+          {a.verificado && <p className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-ok-suave px-2.5 py-1 text-xs font-semibold text-ok"><BadgeCheck size={14} /> Documento do carro verificado pelo Aluguei</p>}
 
           {a.descricao && <p className="mt-5 text-[0.95rem] leading-relaxed whitespace-pre-line">{a.descricao}</p>}
         </div>

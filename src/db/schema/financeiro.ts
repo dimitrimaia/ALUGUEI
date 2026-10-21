@@ -19,6 +19,8 @@ export const obrigacoes = pgTable(
     periodoInicio: date("periodo_inicio"),
     periodoFim: date("periodo_fim"),
     status: statusObrigacao("status").notNull().default("pendente"),
+    /** Pix direto: o motorista avisou que pagou; o locador confirma ao ver o dinheiro na conta. */
+    pagamentoInformadoEm: timestamp("pagamento_informado_em", { withTimezone: true }),
     criadoEm: criadoEm(),
   },
   (t) => [uniqueIndex("obrigacoes_chave").on(t.chave), index("obrigacoes_vencimento").on(t.vencimento, t.status)],

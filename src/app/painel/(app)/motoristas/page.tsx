@@ -20,10 +20,10 @@ export default async function Motoristas() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Motoristas" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Convidar</BotaoLink>} />
+      <CabecalhoPagina titulo="Motoristas" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Cadastrar</BotaoLink>} />
       {!motoristas.length ? (
-        <Vazio icone={Users} titulo="Nenhum motorista ainda" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Convidar motorista</BotaoLink>}>
-          Você manda o convite pelo WhatsApp e o motorista faz o cadastro pelo celular.
+        <Vazio icone={Users} titulo="Nenhum motorista ainda" acao={<BotaoLink href="/painel/motoristas/convidar" icone={UserPlus}>Cadastrar motorista</BotaoLink>}>
+          Os motoristas chegam pelos seus anúncios e pelo chat. Se você já conhece alguém, mande o link de cadastro pelo WhatsApp.
         </Vazio>
       ) : (
         <Lista>

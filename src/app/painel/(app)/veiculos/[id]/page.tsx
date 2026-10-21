@@ -1,4 +1,4 @@
-import { Gauge, UserPlus } from "lucide-react";
+import { BadgeCheck, Gauge, ShieldAlert, UserPlus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Botao, BotaoLink, CabecalhoPagina, Cartao, DadoRotulado, Placa, Selo, classeEntrada } from "@/components/ui";
 import { formatarPlaca } from "@/dominio/cadastro/documentos";
@@ -7,8 +7,15 @@ import { exigirEquipe } from "@/lib/sessao";
 import { STATUS_VEICULO } from "@/lib/rotulos";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { mudarStatusVeiculo, registrarKm } from "../acoes";
+import { FormCrlv } from "./crlv";
 
 const km = new Intl.NumberFormat("pt-BR");
+const VERIFICACAO = {
+  pendente: { rotulo: "Não verificado", tom: "neutro" },
+  em_analise: { rotulo: "Em análise", tom: "alerta" },
+  verificado: { rotulo: "Verificado", tom: "ok" },
+  recusado: { rotulo: "Recusado", tom: "perigo" },
+} as const;
 const ORIGEM: Record<string, string> = { manual: "Manual", vistoria: "Vistoria", checkin: "Check-in", manutencao: "Manutenção" };
 
 /** Ficha do veículo (RF-013). Contratos, manutenções e custos entram aqui conforme forem criados. */
@@ -22,14 +29,36 @@ export default async function FichaVeiculo({ params }: { params: Promise<{ id: s
   ]);
   if (!v) notFound();
   const status = STATUS_VEICULO[v.status];
+  // Sem a migração 0005 a coluna ainda não existe: trata como não verificado.
+  const verificacao = (v.verificacao ?? "pendente") as keyof typeof VERIFICACAO;
 
   return (
     <>
       <CabecalhoPagina
         voltar={{ href: "/painel/veiculos", rotulo: "Veículos" }}
         titulo={<span className="flex flex-wrap items-center gap-3"><Placa placa={v.placa} tamanho="lg" /> {v.modelo} <Selo tom={status.tom}>{status.rotulo}</Selo></span>}
-        acao={v.status === "disponivel" ? <BotaoLink href={`/painel/motoristas/convidar?veiculo=${v.id}`} icone={UserPlus}>Convidar motorista</BotaoLink> : undefined}
+        acao={v.status === "disponivel" ? <BotaoLink href={`/painel/motoristas/convidar?veiculo=${v.id}`} icone={UserPlus}>Cadastrar motorista</BotaoLink> : undefined}
       />
+
+      <Cartao id="documento" className="mb-4 scroll-mt-24">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {verificacao === "verificado" ? <BadgeCheck size={19} className="text-ok" /> : <ShieldAlert size={19} className="text-alerta" />}
+          <p className="font-semibold">Documento do carro</p>
+          <Selo tom={VERIFICACAO[verificacao].tom}>{VERIFICACAO[verificacao].rotulo}</Selo>
+        </div>
+        {verificacao === "verificado" ? (
+          <p className="text-sm text-suave">CRLV conferido pela equipe do Aluguei{v.verificado_em ? ` em ${new Date(v.verificado_em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}. O anúncio mostra o selo “Documento verificado”.</p>
+        ) : verificacao === "em_analise" ? (
+          <p className="text-sm text-suave">Recebemos o CRLV. Conferimos placa, RENAVAM, modelo e titular em até 1 dia útil.</p>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-suave">
+              {verificacao === "recusado" ? `Não foi possível verificar: ${v.verificacao_motivo ?? "documento ilegível ou diferente do cadastro"}. Envie de novo.` : "Para anunciar na busca, envie o CRLV. Conferimos se a placa existe e se o carro é o mesmo do cadastro."}
+            </p>
+            <FormCrlv veiculoId={v.id} renavam={v.renavam} />
+          </>
+        )}
+      </Cartao>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Cartao className="lg:col-span-2">

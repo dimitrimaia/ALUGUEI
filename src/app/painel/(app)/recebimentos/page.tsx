@@ -5,6 +5,7 @@ import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { contaDoLocador, garantirPixAtivo } from "@/lib/cobrancas";
 import { exigirEquipe } from "@/lib/sessao";
 import { FormularioRecebimentos } from "./formulario";
+import { FormPixDireto } from "./pix-direto";
 
 export default async function Recebimentos() {
   const { organizacao, papel } = await exigirEquipe();
@@ -54,6 +55,20 @@ export default async function Recebimentos() {
           <p className="font-bold">Ativar recebimentos</p>
           <p className="mt-1 mb-5 text-sm text-suave">Dados exigidos pelo Banco Central para abrir a conta de recebimento em nome de {organizacao.nome}.</p>
           <FormularioRecebimentos pessoaFisica={organizacao.documento.length === 11} />
+        </Cartao>
+      )}
+
+      {!conta && papel === "dono" && (
+        <Cartao className="mt-5">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <p className="font-bold">Pix direto, sem taxa</p>
+            {organizacao.chave_pix_direto ? <Selo tom="ok">Ligado</Selo> : <Selo tom="neutro">Opcional</Selo>}
+          </div>
+          <p className="mb-4 text-sm text-suave">
+            Enquanto a conta de recebimento não está ativa, o motorista paga com um QR Code para a sua própria chave Pix. Não tem taxa, mas também não tem baixa automática:
+            quando ele avisar que pagou, você confere no seu banco e confirma no Financeiro.
+          </p>
+          <FormPixDireto chave={organizacao.chave_pix_direto} />
         </Cartao>
       )}
     </div>

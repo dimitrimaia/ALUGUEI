@@ -25,3 +25,17 @@ export function normalizarPlaca(entrada: string): string | null {
 export function formatarPlaca(placa: string): string {
   return /^[A-Z]{3}\d{4}$/.test(placa) ? `${placa.slice(0, 3)}-${placa.slice(3)}` : placa;
 }
+
+/**
+ * RENAVAM: 11 dígitos (os antigos, de 9, ganham zeros à esquerda), com dígito
+ * verificador. Pega digitação errada antes de mandar o carro para verificação.
+ */
+export function renavamValido(entrada: string): boolean {
+  let d = entrada.replace(/\D/g, "");
+  if (d.length === 9) d = d.padStart(11, "0");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const pesos = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const soma = pesos.reduce((s, p, i) => s + p * Number(d[i]), 0);
+  const dv = (soma * 10) % 11;
+  return (dv === 10 ? 0 : dv) === Number(d[10]);
+}

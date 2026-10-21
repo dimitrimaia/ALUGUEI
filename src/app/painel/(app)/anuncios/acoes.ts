@@ -40,9 +40,12 @@ export async function salvarAnuncio(veiculoId: string, _: EstadoAnuncio, form: F
   if (d.fotos.some((f) => !f.startsWith(`${organizacao.id}/`))) return { mensagem: "Foto inválida." };
 
   const supabase = await supabaseServidor();
-  const { data: v } = await supabase.from("veiculos").select("id, status").eq("id", veiculoId).eq("organizacao_id", organizacao.id).maybeSingle();
+  const { data: v } = await supabase.from("veiculos").select("*").eq("id", veiculoId).eq("organizacao_id", organizacao.id).maybeSingle();
   if (!v) return { mensagem: "Veículo não encontrado." };
   if (v.status !== "disponivel") return { mensagem: "Só dá para anunciar carro com situação Disponível." };
+  // Só carro com documento conferido vai para a busca (os anúncios antigos continuam até serem editados).
+  const { data: existente } = await supabase.from("anuncios").select("id").eq("veiculo_id", veiculoId).maybeSingle();
+  if (v.verificacao !== "verificado" && !existente) return { mensagem: "Envie o CRLV na ficha do veículo. Depois da conferência, o anúncio pode ir para a busca." };
 
   const dados = {
     organizacao_id: organizacao.id,

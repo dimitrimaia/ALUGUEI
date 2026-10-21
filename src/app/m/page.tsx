@@ -2,8 +2,9 @@ import { Building2, CalendarClock, Camera, ChevronRight, Receipt, Check, Clipboa
 import type { Route } from "next";
 import Link from "next/link";
 import { ListaConversas } from "@/components/motorista/lista-conversas";
-import { MenuMotorista } from "@/components/motorista/menu";
-import { Avatar, BotaoLink, Marca, Placa, Selo, Suave } from "@/components/ui";
+import { CabecalhoInicio } from "@/components/motorista/cabecalho";
+import { BotaoEmergencia } from "@/components/motorista/emergencia";
+import { BotaoLink, Placa, Selo, Suave } from "@/components/ui";
 import type { Linha } from "@/db/tipos";
 import { nomeDiaDaSemana } from "@/dominio/contrato/variaveis";
 import { data, diaDaSemana, formatarData, hoje, somarDias } from "@/dominio/datas/data";
@@ -59,11 +60,7 @@ export default async function Motorista() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="-mx-4 flex items-center gap-2 px-4 pt-3 pb-1">
-        <Link href="/m" className="flex-1" aria-label="Início do app"><Marca /></Link>
-        <Link href="/m/conta" aria-label="Perfil e configurações"><Avatar nome={perfil?.nome ?? "Conta"} foto={perfil?.foto} tamanho="sm" /></Link>
-        <MenuMotorista />
-      </header>
+      <CabecalhoInicio inicio="/m" />
 
       <div>
         <p className="text-sm text-suave">Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋</p>
@@ -158,7 +155,7 @@ export default async function Motorista() {
         )}
 
         {ativo && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { icone: Camera, rotulo: "Check-in", href: null },
               { icone: FileText, rotulo: "Contrato", href: `/m/contrato/${contrato.id}` },
@@ -177,6 +174,7 @@ export default async function Motorista() {
                 <span key={rotulo} className="flex flex-col items-center gap-2 rounded-[1.25rem] border border-borda bg-cartao p-3 opacity-60">{conteudo}</span>
               );
             })}
+            <BotaoEmergencia />
           </div>
         )}
 

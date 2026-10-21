@@ -1,4 +1,4 @@
-import { Car, Gauge, MapPin } from "lucide-react";
+import { BadgeCheck, Car, Gauge, MapPin } from "lucide-react";
 import Link from "next/link";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import type { AnuncioPublico } from "@/lib/marketplace";
@@ -13,6 +13,7 @@ export function CartaoAnuncio({ a, doApp = false }: { a: AnuncioPublico; doApp?:
         ) : (
           <Car className="absolute inset-0 m-auto text-marca/30" size={64} strokeWidth={1.3} />
         )}
+        {a.verificado && <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-cartao/95 px-2 py-0.5 text-[0.68rem] font-semibold text-ok shadow-cartao"><BadgeCheck size={12} /> Verificado</span>}
         <span className="absolute bottom-3 left-3 rounded-full bg-cartao/95 px-2.5 py-1 text-xs font-bold shadow-cartao">{formatarBRL(a.aluguelSemanal)}<span className="font-medium text-suave">/sem</span></span>
       </div>
       <div className="p-4">

@@ -1,5 +1,4 @@
 import { ArrowLeft, UserRound } from "lucide-react";
-import type { Route } from "next";
 import Link from "next/link";
 import { BotaoLink, Marca } from "@/components/ui";
 import { BotaoVoltar } from "@/components/voltar";

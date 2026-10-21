@@ -6,7 +6,7 @@ import { FormularioNovaSenha } from "@/app/nova-senha/formulario";
 import { sairDeTodosOsAparelhos } from "@/lib/acoes-conta";
 import type { PerfilConta } from "@/lib/conta";
 import { TEMAS } from "@/lib/tema";
-import { TrocaModo } from "@/components/menu-app";
+import { TrocaModoDaConta } from "@/components/menu-app";
 import { FormAparencia, FormEmail, FormFoto, FormLocadora, FormNome, FormNotificacoes, VerificarCelular } from "./formularios";
 
 export type Papel = "motorista" | "locador";
@@ -111,7 +111,7 @@ export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: P
 
       <section>
         <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-suave uppercase">Modo do app</h2>
-        <TrocaModo />
+        <TrocaModoDaConta />
         <p className="mt-2 px-1 text-xs text-suave">
           {locadora
             ? `Uma conta só: alugue carros como motorista e gerencie ${locadora.nome} como locador.`

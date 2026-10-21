@@ -41,39 +41,48 @@ a contagem para reenviar.
 
 ### Modelos de e-mail (Authentication → Emails → Templates)
 
-Cole os modelos abaixo. Eles mostram o código **e** o link, em português. O
-`{{ .ConfirmationURL }}` já aponta para o endereço certo; não troque por outro.
+Os botões apontam para o **nosso domínio** (`aluguei.xyz/auth/confirmar`), não para
+`supabase.co`. E-mail enviado por `aluguei.xyz` com link para outro domínio é um dos
+sinais que mais levam ao spam. O `token_hash` é validado pela tela de confirmação e
+funciona em qualquer navegador.
 
-**Magic Link** (assunto: `Seu código para entrar no Aluguei`):
+Troque só o `href` do botão de cada modelo:
+
+| Modelo | `href` do botão |
+|---|---|
+| Magic Link | `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=magiclink&next={{ .RedirectTo }}` |
+| Confirm signup | `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=signup&next={{ .RedirectTo }}` |
+| Reset Password | `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=recovery` |
+| Change Email Address | `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=email_change&next={{ .RedirectTo }}` |
+
+Exemplo completo do **Magic Link** (assunto: `Seu código para entrar no Aluguei`):
 
 ```html
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0b1630">
   <p style="font-size:20px;font-weight:bold;color:#1f56e8;letter-spacing:2px">ALUGUEI</p>
-  <p>Use este código para entrar:</p>
+  <p>Olá! Use este código para entrar no Aluguei:</p>
   <p style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:16px 0">{{ .Token }}</p>
   <p>Ou toque no botão:</p>
-  <p><a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1f56e8;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Entrar no Aluguei</a></p>
+  <p><a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=magiclink&next={{ .RedirectTo }}" style="display:inline-block;background:#1f56e8;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Entrar no Aluguei</a></p>
   <p style="color:#5b6880;font-size:13px">O código e o link valem por 1 hora e uma vez só. Se você não pediu, ignore este e-mail.</p>
+  <p style="color:#5b6880;font-size:12px">Aluguei · aluguei.xyz</p>
 </div>
 ```
 
-**Confirm signup** (assunto: `Confirme seu e-mail no Aluguei`): o mesmo modelo, com
-o texto "Confirme seu e-mail para ativar a conta", o código `{{ .Token }}` e o
-botão "Confirmar e-mail" em `{{ .ConfirmationURL }}`.
+Os outros três seguem o mesmo modelo, com o texto e o `href` da tabela.
 
-**Reset Password** (assunto: `Criar senha nova no Aluguei`):
+### Para o e-mail não cair no spam
 
-```html
-<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0b1630">
-  <p style="font-size:20px;font-weight:bold;color:#1f56e8;letter-spacing:2px">ALUGUEI</p>
-  <p>Recebemos um pedido para criar uma senha nova para a sua conta.</p>
-  <p><a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1f56e8;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Criar senha nova</a></p>
-  <p style="color:#5b6880;font-size:13px">O link vale por 1 hora e uma vez só. Se você não pediu, ignore: sua senha continua a mesma.</p>
-</div>
-```
-
-**Change Email Address** (assunto: `Confirme seu novo e-mail no Aluguei`): o mesmo
-modelo, com o botão "Confirmar novo e-mail" em `{{ .ConfirmationURL }}`.
+1. **DMARC**: no DNS do domínio, crie um registro TXT `_dmarc` com
+   `v=DMARC1; p=none; rua=mailto:dmarc@aluguei.xyz`. Gmail e Yahoo cobram DMARC de
+   quem envia. O SPF e o DKIM do Resend você já verificou.
+2. **Remetente**: em Authentication → Emails → SMTP, use o nome `Aluguei` e o
+   endereço `nao-responda@aluguei.xyz` (o mesmo domínio verificado no Resend).
+3. **Links do mesmo domínio**: os modelos acima.
+4. **Domínio novo** leva algumas semanas para ganhar reputação. Nos primeiros envios,
+   peça para quem recebeu marcar "Não é spam": isso ensina o Gmail.
+5. Confira a nota em [mail-tester.com](https://www.mail-tester.com): mande um código
+   para o endereço que ele mostra e veja o que falta.
 
 O envio usa o SMTP próprio (Resend, domínio `aluguei.xyz`), configurado em
 Authentication → Emails → SMTP. O envio embutido do Supabase só manda poucos e-mails
