@@ -1,4 +1,4 @@
-import { BarChart3, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
+import { BarChart3, History, LineChart, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -19,6 +19,8 @@ const FERRAMENTAS = [
   { href: "/m/plantao/calculadora", rotulo: "Calculadora", detalhe: "Corrida, viagem e combustível", icone: Calculator },
   { href: "/m/plantao/semaforo", rotulo: "Copiloto", detalhe: "Bolha sobre o inDrive e a Uber", icone: Gauge },
   { href: "/m/plantao/extrato", rotulo: "Extrato", detalhe: "Ganhos e gastos, um a um", icone: BarChart3 },
+  { href: "/m/plantao/historico", rotulo: "Ofertas", detalhe: "Aceitas, recusadas e prejuízo evitado", icone: History },
+  { href: "/m/plantao/relatorios", rotulo: "Relatórios", detalhe: "Gráficos do dia, semana e mês", icone: LineChart },
   { href: "/m/caronas", rotulo: "Caronas", detalhe: "Divida o custo da viagem", icone: Users },
   { href: "/m/clientes", rotulo: "Meus clientes", detalhe: "Seu link de corridas", icone: Link2 },
   { href: "/m/plantao/custos", rotulo: "Custos do carro", detalhe: "Base do lucro real", icone: Settings2 },
@@ -152,7 +154,10 @@ export default async function Plantao() {
 
       {!!dados.corridas.length && (
         <section>
-          <h2 className="mt-1 mb-2.5 text-base font-bold tracking-tight">Ofertas avaliadas hoje</h2>
+          <div className="mt-1 mb-2.5 flex items-center justify-between">
+            <h2 className="text-base font-bold tracking-tight">Ofertas avaliadas hoje</h2>
+            <Link href="/m/plantao/historico?periodo=hoje" className="text-sm font-semibold text-marca">Ver todas</Link>
+          </div>
           <div className="flex flex-wrap gap-2">
             {(["verde", "amarelo", "vermelho"] as const).map((s) => (
               <Selo key={s} tom={s === "verde" ? "ok" : s === "amarelo" ? "alerta" : "perigo"}>{dados.corridas.filter((c) => c.sinal === s).length} {s === "verde" ? "boas" : s === "amarelo" ? "a avaliar" : "ruins"}</Selo>
