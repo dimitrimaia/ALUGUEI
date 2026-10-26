@@ -1,5 +1,6 @@
 "use client";
 
+import { acaoSegura } from "@/lib/versao";
 import { ChevronRight, Lock, Plus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -120,9 +121,9 @@ export function EditorCustos({ inicial, metaInicial, aluguelSemanal }: { inicial
         disabled={salvando}
         onClick={() =>
           iniciar(async () => {
-            const r = await salvarCustos({ perfil: p, meta: meta ?? 0 });
+            const r = await acaoSegura(() => salvarCustos({ perfil: p, meta: meta ?? 0 }));
             setEstado(r);
-            if (r.ok) router.refresh();
+            if ("ok" in r && r.ok) router.refresh();
           })
         }
         className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] w-full"

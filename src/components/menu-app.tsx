@@ -106,19 +106,24 @@ export function ProvedorMenu({ children }: { children: ReactNode }) {
   const [dados, setDados] = useState<DadosMenu | null>(null);
   const [trocando, setTrocando] = useState<Modo | null>(null);
   // Vinheta da troca de modo: aparece, segura até o outro modo carregar e some.
-  const [vinheta, setVinheta] = useState<{ modo: Modo; saindo: boolean } | null>(null);
+  const [vinheta, setVinheta] = useState<{ modo: Modo; inicio: number; pronto: boolean; saindo: boolean } | null>(null);
   const manter = useRef(false);
 
   const registrar = useCallback((d: DadosMenu) => {
     setDados(d);
     setTrocando((t) => (t === d.modo ? null : t));
-    setVinheta((v) => (v && v.modo === d.modo && !v.saindo ? { ...v, saindo: true } : v));
+    setVinheta((v) => (v && v.modo === d.modo && !v.pronto ? { ...v, pronto: true } : v));
   }, []);
 
+  // A vinheta fica pelo menos 700 ms (para a animação aparecer inteira, mesmo com a
+  // outra tela pronta na hora), sai em 340 ms e nunca fica presa: no máximo 2,5 s.
+  const MINIMO_VINHETA = 700;
   useEffect(() => {
     if (!vinheta) return;
-    // Some depois da saída; e nunca fica presa (rede lenta): no máximo 2,5 s.
-    const t = window.setTimeout(() => setVinheta(null), vinheta.saindo ? 380 : 2500);
+    const passou = Date.now() - vinheta.inicio;
+    const t = vinheta.saindo
+      ? window.setTimeout(() => setVinheta(null), 380)
+      : window.setTimeout(() => setVinheta((v) => (v ? { ...v, saindo: true } : v)), vinheta.pronto ? Math.max(0, MINIMO_VINHETA - passou) : Math.max(0, 2500 - passou));
     return () => window.clearTimeout(t);
   }, [vinheta]);
 
@@ -130,7 +135,7 @@ export function ProvedorMenu({ children }: { children: ReactNode }) {
         manter.current = true;
         setTrocando(m);
       }
-      setVinheta({ modo: m, saindo: false });
+      setVinheta({ modo: m, inicio: Date.now(), pronto: false, saindo: false });
       router.push(telaNoOutroModo(location.pathname, m) as Route);
     },
     [aberto, dados?.modo, dados?.locadora, router],

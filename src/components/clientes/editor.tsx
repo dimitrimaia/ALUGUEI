@@ -1,5 +1,6 @@
 "use client";
 
+import { acaoSegura } from "@/lib/versao";
 import { Copy, Plus, Save, Share2, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { EntradaReais, Rotulo } from "@/components/plantao/entradas";
@@ -83,9 +84,9 @@ export function EditorClientes({ inicial, salvo, site }: { inicial: Perfil; salv
         className="w-full"
         onClick={() =>
           iniciar(async () => {
-            const r = await salvarPerfilParticular(p);
+            const r = await acaoSegura(() => salvarPerfilParticular(p));
             setEstado(r);
-            if (r.slug) {
+            if ("slug" in r && r.slug) {
               setPublicado(r.slug);
               setP((a) => ({ ...a, slug: r.slug! }));
             }

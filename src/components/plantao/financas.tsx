@@ -1,5 +1,6 @@
 "use client";
 
+import { acaoSegura } from "@/lib/versao";
 import { Check, PiggyBank, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
@@ -55,7 +56,7 @@ export function ConfigurarFinancas({ inicial }: { inicial: ConfigFinancas }) {
         <span className="text-xs text-suave">Com a virada às 4h, o que você lança de madrugada conta no dia anterior.</span>
       </div>
       {ok && <Aviso tom="ok">{ok}</Aviso>}
-      <Botao icone={Save} disabled={salvando} onClick={() => iniciar(async () => { const r = await salvarFinancas(c); setOk(r.ok ? "Salvo." : (r.erro ?? null)); if (r.ok) router.refresh(); })}>{salvando ? "Salvando…" : "Salvar"}</Botao>
+      <Botao icone={Save} disabled={salvando} onClick={() => iniciar(async () => { const r = await acaoSegura(() => salvarFinancas(c)); setOk("ok" in r && r.ok ? "Salvo." : (r.erro ?? null)); if ("ok" in r && r.ok) router.refresh(); })}>{salvando ? "Salvando…" : "Salvar"}</Botao>
     </Cartao>
   );
 }

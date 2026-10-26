@@ -1,5 +1,6 @@
 "use client";
 
+import { acaoSegura } from "@/lib/versao";
 import { ArrowDown, ArrowUp, Home, LocateFixed, MessageSquareText, Plus, Save, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
@@ -176,9 +177,9 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
         className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] w-full"
         onClick={() =>
           iniciar(async () => {
-            const r = await salvarPreferenciasCopiloto(p);
+            const r = await acaoSegura(() => salvarPreferenciasCopiloto(p));
             setEstado(r);
-            if (r.ok) router.refresh();
+            if ("ok" in r && r.ok) router.refresh();
           })
         }
       >

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { data as dataISO, hoje } from "@/dominio/datas/data";
 import { lerReais } from "@/dominio/dinheiro/centavos";
 import { normalizarCriterios, normalizarPerfil } from "@/dominio/ganhos/custos";
-import { normalizarPreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
+import { comCampoVolta, normalizarPreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 import { diaOperacional, normalizarFinancas } from "@/dominio/ganhos/financas";
 import { geocodificar } from "@/integracoes/rotas";
 import { CATEGORIAS_DESPESA, PLATAFORMAS } from "@/dominio/ganhos/plantao";
@@ -193,7 +193,12 @@ async function gravarPerfil(usuarioId: string, campos: Record<string, unknown>) 
 /** Régua completa do Copiloto (tela Régua). */
 export async function salvarReguaCompleta(criterios: unknown): Promise<EstadoForm> {
   const usuario = await exigirUsuario("/m/plantao/regua");
-  return gravarPerfil(usuario.id, { criterios: normalizarCriterios(criterios) });
+  const c = normalizarCriterios(criterios);
+  if (!c.contarVolta) return gravarPerfil(usuario.id, { criterios: c });
+  // Volta ligada: o cartão passa a mostrar o campo "Volta" para o motorista ver o custo.
+  const { data } = await supabaseAdmin().from("perfis_custo").select("*").eq("usuario_id", usuario.id).maybeSingle();
+  const preferencias = comCampoVolta(normalizarPreferenciasCopiloto((data as { preferencias?: unknown } | null)?.preferencias));
+  return gravarPerfil(usuario.id, { criterios: c, preferencias });
 }
 
 export async function salvarPreferenciasCopiloto(preferencias: unknown): Promise<EstadoForm> {

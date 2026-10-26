@@ -51,7 +51,7 @@ export type PreferenciasCopiloto = {
 export const MENSAGEM_PADRAO = "{saudacao}, {nome}! Já estou a caminho e chego em aproximadamente {tempo}. Por gentileza, me aguarde no local de embarque.";
 
 export const PREFERENCIAS_PADRAO: PreferenciasCopiloto = {
-  campos: ["porKm", "porHora", "lucro", "nota", "tempoTotal", "distanciaTotal"],
+  campos: ["porKm", "porHora", "lucro", "nota", "distanciaTotal", "volta"],
   tamanhoFonte: "m",
   segundosCartao: 12,
   opacidadeBolha: 100,
@@ -105,4 +105,11 @@ export function montarMensagem(modelo: string, d: { hora: number; nome?: string 
     .replaceAll("{nome}", d.nome?.trim() || "tudo bem")
     .replaceAll("{tempo}", tempo)
     .replace(/,\s*tudo bem!/, ", tudo bem?");
+}
+
+/** Com a volta ligada na régua, o campo "Volta" precisa estar no cartão (entra no lugar do último). */
+export function comCampoVolta(p: PreferenciasCopiloto): PreferenciasCopiloto {
+  if (p.campos.includes("volta")) return p;
+  const campos: CampoCartao[] = p.campos.length >= 6 ? [...p.campos.slice(0, 5), "volta"] : [...p.campos, "volta"];
+  return { ...p, campos };
 }

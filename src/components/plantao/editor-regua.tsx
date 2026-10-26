@@ -1,5 +1,6 @@
 "use client";
 
+import { acaoSegura } from "@/lib/versao";
 import { Clock, MapPin, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState, useTransition } from "react";
@@ -118,7 +119,7 @@ export function EditorRegua({ inicial }: { inicial: Criterios }) {
           <label className="flex flex-col gap-1 text-xs font-semibold">Viagem de até<EntradaNumero rotulo="Distância máxima da viagem" valor={c.viagemMaximaKm || null} sufixo="km" placeholder="Sem" aoMudar={(v) => mudar({ viagemMaximaKm: v ?? 0 })} /></label>
           <label className="flex flex-col gap-1 text-xs font-semibold">Viagem em até<EntradaNumero rotulo="Tempo máximo da viagem" inteiro valor={c.viagemMaximaMin || null} sufixo="min" placeholder="Sem" aoMudar={(v) => mudar({ viagemMaximaMin: v ?? 0 })} /></label>
         </div>
-        <Interruptor titulo="Contar a volta para casa" texto="Desconta o custo de voltar vazio do destino até a sua base (defina a base no Copiloto)." ligado={c.contarVolta} aoMudar={(v) => mudar({ contarVolta: v })} />
+        <Interruptor titulo="Contar a volta para casa" texto="O lucro do cartão já desconta o custo de voltar vazio do destino até a sua base, e o cartão mostra “volta X km · R$ Y”. Defina a base em Ajustes do Copiloto; sem ela, usa onde você está (precisa da localização)." ligado={c.contarVolta} aoMudar={(v) => mudar({ contarVolta: v })} />
       </Cartao>
 
       <Cartao className="flex flex-col gap-1">
@@ -174,9 +175,9 @@ export function EditorRegua({ inicial }: { inicial: Criterios }) {
         className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] w-full"
         onClick={() =>
           iniciar(async () => {
-            const r = await salvarReguaCompleta(c);
+            const r = await acaoSegura(() => salvarReguaCompleta(c));
             setEstado(r);
-            if (r.ok) router.refresh();
+            if ("ok" in r && r.ok) router.refresh();
           })
         }
       >
