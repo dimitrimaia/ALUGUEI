@@ -16,9 +16,14 @@ celular
       ├── LeitorInDrive.kt      telas do inDrive: oferta aberta, lista, contraproposta, fim, área de risco
       ├── LeitorUber.kt / Leitor99.kt  leitor genérico (LeitorOferta) sem os "R$ x/km"
       ├── LeitorOferta.kt       mesmas regras de src/dominio/ganhos/oferta.ts
-      ├── Calculo.kt            mesmas regras de src/dominio/ganhos/custos.ts e corrida.ts
-      ├── Copiloto.kt           lugares a evitar, nota mínima, risco e contraproposta sugerida
-      ├── Armazenamento.kt      perfil, critérios, tema, régua, lugares, resumo do dia e fila (SharedPreferences)
+      ├── Calculo.kt            mesmas regras de custos.ts e corrida.ts (régua v2, faixas de horário, bateLista, precoIdeal)
+      ├── Preferencias.kt       mesmas regras de copiloto.ts (preferências, mensagem pronta) e normalizarCriterios
+      ├── Copiloto.kt           risco do app, lugares da bolha e contraproposta sugerida
+      ├── Cartao.kt             textos dos campos do cartão e da voz ("Verde. Dois reais e dez por quilômetro.")
+      ├── Volta.kt              volta destino → base (Photon + OSRM, reserva em linha reta), cache LRU
+      ├── Localizacao.kt        posição pelo LocationManager (sem Google Play Services)
+      ├── Avisos.kt             voz (TextToSpeech pt-BR) e bip
+      ├── Armazenamento.kt      perfil, critérios, preferências, régua, lugares, base, resumo do dia e fila (SharedPreferences)
       └── PlantaoPlugin.kt      a ponte com a tela web (métodos e eventos abaixo)
 ```
 
@@ -30,10 +35,11 @@ celular
 - **Pouco gasto de bateria:** durante a jornada quem trabalha é só o serviço nativo pequeno
   (bolha + leitor). A WebView pode estar fechada. As corridas avaliadas ficam numa fila local e
   a tela web envia ao servidor quando for aberta (`corridasPendentes` → enviar → `confirmarEnvio`).
-- **Mesma regra nos dois lados:** `Calculo.kt` e `LeitorOferta.kt` são espelho exato do
-  TypeScript. Mudou `custos.ts`, `corrida.ts` ou `oferta.ts`? Mude o `.kt` e os testes
-  JUnit em `android/app/src/test/java/xyz/aluguei/app/plantao/` (mesmos casos de
-  `ganhos.test.ts`).
+- **Mesma regra nos dois lados:** `Calculo.kt`, `Preferencias.kt` e `LeitorOferta.kt` são espelho
+  exato do TypeScript. Mudou `custos.ts`, `corrida.ts`, `copiloto.ts` ou `oferta.ts`? Mude o `.kt`
+  e os testes JUnit em `android/app/src/test/java/xyz/aluguei/app/plantao/` (`CalculoTest` e
+  `ReguaTest` têm os casos de `ganhos.test.ts` e `regua.test.ts`; `PreferenciasTest` os de
+  `copiloto.ts`).
 
 ## O que o motorista vê
 
@@ -55,19 +61,49 @@ celular
    "Pode aceitar". Enviada a contraproposta ("Oferecendo sua tarifa R$ 22"), o cartão recalcula
    com "Sua oferta: R$ 22". Expirou / já aceita / procurando → o cartão some.
 5. **Área de risco** (aviso do inDrive): faixa "⚠ Área de risco" e botão "Evitar este lugar", que
-   guarda o bairro (ou a rua) na lista local de lugares a evitar. Endereço com um lugar da lista
-   (`criterios.evitar` + os da bolha) → cartão vermelho "Lugar que você evita: X". Nota abaixo de
+   guarda o bairro (ou a rua) na lista local de lugares a evitar. Embarque ou destino com um lugar da
+   lista (`criterios.evitar` + os da bolha) → cartão vermelho "Lugar que você evita: X". Nota abaixo de
    `criterios.notaMinima` → no mínimo amarelo, "Nota baixa".
-6. **Aceitei** / **Recusei** só registram a decisão. "Recusei" (ou fechar) não deixa a mesma
+6. **Régua v2** (a mesma de `corrida.ts`): duas linhas por métrica (mínimo e "bom"; com o bom em 0
+   vale a régua simples com 15% de tolerância), valor mínimo, lucro mínimo (R$ e %), busca e viagem
+   máximas (km e minutos), nota mínima, passageiro novo (menos de 5 corridas), corrida com parada
+   (endereços além do embarque e do destino), lugares a evitar (embarque ou destino: vermelho) e
+   destinos desejados (selo verde "📍 Destino desejado: Contagem"). Vale a faixa de horário do
+   momento (relógio de Brasília); dentro de uma faixa o cartão mostra o nome dela, pequeno ("Madrugada").
+7. **Campos do cartão** (`preferencias.campos`, na ordem): os 3 primeiros grandes, os demais numa
+   linha pequena. Formatos: R$/km "R$ 2,10", R$/h "R$ 48", lucro, lucro/h "R$ 35/h", lucro "62%",
+   valor, R$/min "R$ 0,70", nota "★4,71", tempo "21 min", distância "20,6 km", busca "a 2,1 km",
+   volta "volta 18 km · R$ 11". Fonte p/m/g (0,9/1/1,15), opacidade da bolha e tema seguem as preferências.
+8. **Volta para a base:** com `contarVolta` (ou o campo "volta") e destino na oferta, o cartão aparece
+   na hora com "calculando volta…" e, numa thread de fundo (no máximo 4 s), o destino é procurado no
+   Photon (só resultados do Brasil) e a rota destino → base no OSRM; se o OSRM falhar, linha reta × 1,35
+   a 25 km/h. Cache por destino (50). Com `contarVolta`, o custo da volta sai do lucro e a
+   contraproposta já considera a volta. Base = `preferencias.base`, ou a definida pela bolha, ou
+   "onde estou agora". Selo verde **"🏠 Te leva para casa"** quando o destino fica pelo menos 30% mais
+   perto da base (em linha reta) que a posição atual.
+9. **Voz e bip:** com `voz`, fala curto ao aparecer a oferta ("Verde. Dois reais e dez por quilômetro.",
+   "Vermelho. Não compensa."). Com `bip`, um bip curto só no verde.
+10. **"Você aceitou?"** (`perguntarAceite`): se a oferta sai da tela (lista, fim, outra tela do inDrive,
+    ou o tempo do cartão acaba) sem Aceitei/Recusei, aparece por 8 s "Você aceitou a corrida de R$ 26?"
+    [Sim] [Não] e "Não perguntar mais" (desliga no aparelho e emite `preferencia`). A resposta vira a
+    decisão da corrida na fila. Fechar o cartão no ✕ não pergunta.
+11. **Mensagem pronta:** depois de Aceitei (ou do Sim), o botão **Copiar mensagem** monta a mensagem
+    (`preferencias.mensagem`, com saudação pela hora de Brasília, nome do passageiro e minutos até o
+    embarque) e copia; aviso "Mensagem copiada: cole no chat do app". O motorista cola no chat.
+12. **Economia** (`preferencias.economia`, padrão ligada): com o inDrive offline ("Offline" sem
+    "Online" na tela, ou o botão de ficar online), o leitor dorme: não monta a árvore da tela, só olha
+    o texto dos eventos, e acorda ao ver "Online" ou uma oferta (confere a tela inteira no máximo a
+    cada 2 s em telas novas e 20 s no geral). O Diagnóstico mostra "dormindo (offline)".
+13. **Aceitei** / **Recusei** só registram a decisão. "Recusei" (ou fechar) não deixa a mesma
    oferta reaparecer enquanto ela estiver aberta. **O app nunca toca no app de corrida e nunca
    aceita, recusa ou oferece tarifa pelo motorista** (sem performAction, sem gestos).
-7. **Toque na bolha** → digitação rápida (o teclado só abre ao tocar no campo; toque fora fecha):
+14. **Toque na bolha** → digitação rápida (o teclado só abre ao tocar no campo; toque fora fecha):
    valor, km, minutos e km até o passageiro, atalhos "+R$ 5" e "+1 km", resultado ao vivo.
-8. **Segurar a bolha** → menu em leque: Pausar/Retomar, Digitar oferta, Tema claro/escuro, Régua
+15. **Segurar a bolha** → menu em leque: Pausar/Retomar, Digitar oferta, Tema claro/escuro, Régua
    rápida (+/− nos mínimos por km e por hora; emite `regua` e fica pendente para o app salvar),
-   Resumo do dia, Diagnóstico (rótulo junto da bolha com o último app/tela lida: "oferta lida",
+   Resumo do dia, **Definir base aqui** (pega a posição, guarda no aparelho e emite `base`), Diagnóstico (rótulo junto da bolha com o último app/tela lida: "oferta lida",
    "lista", "sem oferta"…), Abrir o Aluguei, Desligar.
-9. Arrastar a bolha até o **X** no rodapé desliga. Ao soltar em outro lugar, ela encosta na borda
+16. Arrastar a bolha até o **X** no rodapé desliga. Ao soltar em outro lugar, ela encosta na borda
    e a posição fica salva.
 
 **Desempenho:** o leitor junta os eventos e lê no máximo a cada 700 ms, com limite de nós
@@ -181,6 +217,9 @@ também `Pacotes.plataforma()`.
 | `VIBRATE` | Vibração curta quando o cartão aparece | automática |
 | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Manter o plantão vivo durante a jornada, com a notificação fixa | automática |
 | `POST_NOTIFICATIONS` | Mostrar "Copiloto ligado" com a última oferta e os botões (Android 13+ pergunta) | caixa do sistema, ou tela de notificações do app (`pedirNotificacoes`) |
+| `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` | Volta para a base ("onde estou agora", selo "Te leva para casa") e "Definir base aqui". Só a posição do momento da oferta; não guarda trajeto. Opcional | explicação + caixa do sistema (`pedirLocalizacao`); negada de vez → configurações do app, com volta automática |
+| `FOREGROUND_SERVICE_LOCATION` | O Android só entrega a posição a serviço em primeiro plano do tipo `location`; a bolha usa `specialUse` e, com a localização permitida, também `location` | automática (só vale com a localização permitida) |
+| `<queries>` TTS_SERVICE | Achar o motor de voz (TextToSpeech) no Android 11+ para a voz do cartão | automática |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Pedir para o Android não matar o plantão no meio da jornada | caixa do sistema (`pedirSemOtimizacaoBateria`). Veja o alerta da Play Store abaixo |
 
 **Volta automática:** depois de abrir a tela de configurações, o plugin confere a cada
@@ -225,13 +264,20 @@ volta não acontecer, o evento fica guardado e chega quando o motorista voltar p
    plano): tipo **specialUse**, descrição igual à do manifesto ("Mostrar o cálculo de ganho
    da corrida por cima do app de corrida, a pedido do motorista"), com o mesmo vídeo
    mostrando a notificação fixa e o botão Desligar.
-6. **Alerta sobre `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`:** a Play Store só aceita essa
+6. **Localização:** declarar em Segurança dos dados "Local aproximado/exato", usado só no aparelho
+   (para a volta até a base; a base salva vai para a conta). O serviço em primeiro plano passa a ter
+   também o tipo **location**: na declaração de serviços em primeiro plano, explicar "calcular a
+   volta do destino da corrida até a base do motorista enquanto a bolha está ligada" e mostrar no
+   vídeo. Não pedimos localização em segundo plano (`ACCESS_BACKGROUND_LOCATION`). Os endereços de
+   destino vão para photon.komoot.io e router.project-osrm.org (serviços públicos, sem conta) só
+   para calcular a volta: citar na política de privacidade.
+7. **Alerta sobre `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`:** a Play Store só aceita essa
    permissão para alguns tipos de app e pode recusar a versão. Se recusar, tire a permissão do
    manifesto: `pedirSemOtimizacaoBateria` já cai sozinho na lista geral de otimização de
    bateria, onde o próprio motorista marca o Aluguei.
-7. Ficha da loja: ícone 512×512, imagem de destaque 1024×500, capturas de tela, descrição
+8. Ficha da loja: ícone 512×512, imagem de destaque 1024×500, capturas de tela, descrição
    deixando claro "não é da Uber, 99 ou inDrive" (não use as marcas delas no ícone ou nome).
-8. Classificação de conteúdo, público-alvo (adultos) e país (Brasil).
+9. Classificação de conteúdo, público-alvo (adultos) e país (Brasil).
 
 ## Publicar na App Store (iPhone)
 
@@ -266,6 +312,13 @@ volta não acontecer, o evento fica guardado e chega quando o motorista voltar p
   "início automático" nas configurações do fabricante.
 - O cálculo usa o perfil de custo e os critérios que o app web mandou por `configurar`. Sem
   isso, vale o padrão (`PERFIL_PADRAO`, `CRITERIOS_PADRAO`).
+- **Volta:** Photon e OSRM são serviços públicos gratuitos, sem garantia; sem internet ou fora do
+  ar, a linha mostra "volta —" e a régua não desconta a volta. Endereços muito curtos ("Rua F, 70")
+  podem não ser achados; aí tenta o bairro/cidade entre parênteses. Sem base salva, a volta usa a
+  última posição conhecida (até 10 min); se o Android recusar o primeiro plano com localização
+  (reinício em segundo plano), só a base salva funciona.
+- **Economia:** reconhece "Offline"/"Online" e "Ficar online" na tela do inDrive; se o inDrive mudar
+  esses textos, o leitor não dorme (gasta um pouco mais, mas não perde oferta).
 
 ## Interface do plugin para a tela web
 
@@ -275,8 +328,9 @@ O site, aberto dentro do app, recebe a ponte do Capacitor. Exemplo de uso (o pac
 ```ts
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
+import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 
-export type TipoPermissao = "sobreposicao" | "acessibilidade" | "notificacoes" | "bateria";
+export type TipoPermissao = "sobreposicao" | "acessibilidade" | "notificacoes" | "bateria" | "localizacao";
 
 export type Tema = "claro" | "escuro" | "auto";
 
@@ -295,15 +349,14 @@ export type EstadoPlantao = {
   pausado: boolean;
   tema: Tema;
   vibrar: boolean;
+  /** Permissão de localização dada (volta para a base, "Definir base aqui"). */
+  localizacao: boolean;
+  /** Economia: o inDrive está offline e o leitor está dormindo. */
+  dormindo: boolean;
 };
 
-/** Critérios do app mais os do Copiloto (ver custos.ts). */
-export type CriteriosCopiloto = Criterios & {
-  /** Nota mínima do passageiro (0 = desligado). Abaixo → amarelo "Nota baixa". */
-  notaMinima?: number;
-  /** Ruas, bairros ou palavras que o motorista evita (sem acento/maiúscula). Bateu → vermelho. */
-  evitar?: string[];
-};
+/** Critérios v2 (Criterios de custos.ts, já com nota, evitar, destinos, faixas e contarVolta). */
+export type CriteriosCopiloto = Criterios;
 
 /** Régua mudada pela bolha, em centavos. */
 export type Regua = { minimoPorKm: number; minimoPorHora: number };
@@ -315,7 +368,9 @@ export type AvaliacaoNativa = {
   sinal: "verde" | "amarelo" | "vermelho";
   kmTotal: number; minutosTotal: number; tempoEstimado: boolean;
   porKm: number; porHora: number; custo: number; lucro: number; lucroPorHora: number; // centavos
+  custoVolta: number;         // centavos (0 sem volta)
   motivos: string[];
+  destaques: string[];        // ex.: "Destino desejado: Contagem"
 };
 
 export type CorridaNativa = {
@@ -337,15 +392,27 @@ export type CorridaNativa = {
   destino: string | null;     // endereço de destino como o app mostrou
   risco: boolean;             // o app avisou que a região é perigosa
   suaOferta: number | null;   // inDrive: contraproposta do motorista (centavos)
+  kmVolta: number | null;     // volta destino → base (km), quando calculada
+  custoVolta: number | null;  // custo da volta (centavos), quando calculada (mesmo sem contarVolta)
+  paradas: number;            // endereços além do embarque e do destino
+  faixa: string | null;       // faixa de horário da régua no momento (ex.: "Madrugada")
 };
 
 export interface PlantaoPlugin {
   estado(): Promise<EstadoPlantao>;
-  configurar(o: { perfil?: PerfilCusto; criterios?: CriteriosCopiloto; segundosCartao?: number; tema?: Tema; vibrar?: boolean }): Promise<EstadoPlantao>;
+  /**
+   * preferencias (formato de copiloto.ts) manda; segundosCartao/vibrar soltos ficam por
+   * compatibilidade. tema = tema do app web, usado quando preferencias.tema = "app".
+   */
+  configurar(o: { perfil?: PerfilCusto; criterios?: CriteriosCopiloto; preferencias?: PreferenciasCopiloto; segundosCartao?: number; tema?: Tema; vibrar?: boolean }): Promise<EstadoPlantao>;
   pedirSobreposicao(): Promise<PedidoPermissao>;
   pedirAcessibilidade(): Promise<PedidoPermissao>;
   pedirNotificacoes(): Promise<PedidoPermissao>;
   pedirSemOtimizacaoBateria(): Promise<PedidoPermissao>;
+  /** Explicação + caixa do sistema; negada de vez → configurações do app (volta automática + evento "permissao"). */
+  pedirLocalizacao(): Promise<PedidoPermissao & { tipo: "localizacao" }>;
+  /** Posição atual para salvar como base (o app web dá o nome). Rejeita com code "SEM_LOCALIZACAO". */
+  definirBaseAqui(): Promise<{ lat: number; lon: number }>;
   /** Rejeita com code "SEM_SOBREPOSICAO" ou "NAO_INICIOU". */
   ligar(): Promise<EstadoPlantao>;
   desligar(): Promise<EstadoPlantao>;
@@ -366,6 +433,10 @@ export interface PlantaoPlugin {
   addListener(e: "permissao", f: (p: { tipo: TipoPermissao; concedida: true }) => void): Promise<PluginListenerHandle>;
   addListener(e: "estado", f: (s: EstadoPlantao) => void): Promise<PluginListenerHandle>;
   addListener(e: "regua", f: (r: Regua) => void): Promise<PluginListenerHandle>;
+  /** "Definir base aqui" no menu da bolha: salve na conta com um nome (preferencias.base). */
+  addListener(e: "base", f: (b: { lat: number; lon: number }) => void): Promise<PluginListenerHandle>;
+  /** Preferência mudada na bolha ("Não perguntar mais"): salve na conta. */
+  addListener(e: "preferencia", f: (p: { perguntarAceite?: boolean }) => void): Promise<PluginListenerHandle>;
 }
 
 export const Plantao = registerPlugin<PlantaoPlugin>("Plantao");
@@ -373,6 +444,16 @@ export const temPlantaoNativo = () => Capacitor.getPlatform() === "android" && C
 ```
 
 Observações:
+- `preferencias` segue `normalizarPreferenciasCopiloto` (campo inválido volta ao padrão daquele
+  campo). Se vier, ela manda em `segundosCartao` e `vibrar`. `preferencias.tema = "app"` usa o `tema`
+  solto de `configurar` (ou "auto"). `voz` liga o TextToSpeech só quando ligada (e libera ao desligar).
+- **Pendentes da bolha:** "Definir base aqui" e "Não perguntar mais" valem na hora no aparelho e
+  emitem `base` / `preferencia` (guardados até a tela ouvir). Enquanto o `configurar({ preferencias })`
+  não trouxer a mesma base (ou `perguntarAceite: false`), o valor do aparelho continua valendo. Fluxo:
+  ouvir o evento → salvar na conta → `configurar` de novo.
+- `definirBaseAqui()` também guarda a base no aparelho (nome "Base") até o app mandar a base com nome.
+- A régua aplicada é `criteriosNoHorario(criterios, minuto de agora em America/Sao_Paulo)`; a régua
+  rápida da bolha muda os mínimos gerais (dentro de uma faixa, valem os da faixa).
 - `segundosCartao` aceita de 4 a 120 (padrão 12). No inDrive (leitura) o cartão fica enquanto a
   oferta estiver aberta (até 60 s) e some quando a tela vira lista ou a oferta acaba.
 - `tema`: "claro" | "escuro" | "auto" (padrão "auto", segue o modo escuro do sistema); o menu da

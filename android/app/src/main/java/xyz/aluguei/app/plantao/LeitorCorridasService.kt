@@ -17,21 +17,40 @@ import android.view.accessibility.AccessibilityNodeInfo
  * BolhaService mostrar ou esconder o cartão. Só trabalha com o Copiloto
  * ligado e não pausado.
  *
+ * Economia (preferencias.economia, padrão ligada): com o inDrive offline
+ * ("Offline" sem "Online", ou o botão de ficar online), o leitor dorme: não
+ * monta a árvore da tela e só olha o texto dos eventos; acorda ao ver
+ * "Online" ou uma oferta (e confere a tela inteira a cada 2 s em telas novas,
+ * ou a cada 20 s no máximo).
+ *
  * O que NÃO faz: não guarda a tela, não envia nada para fora do aparelho e não
  * executa nenhuma ação (performAction, gestos) nos outros apps. Quem aceita,
  * recusa ou oferece tarifa é sempre o motorista.
  */
 class LeitorCorridasService : AccessibilityService() {
 
-    private companion object {
-        const val MAXIMO_NOS = 500
-        const val MAXIMO_PROFUNDIDADE = 30
-        const val MAXIMO_CARACTERES = 6000
-        const val MAXIMO_TEXTOS = 250
-        const val PEDIDO_VALE_MS = 120_000L
+    companion object {
+        /**
+         * Economia: o inDrive está offline e o leitor não monta a árvore da tela,
+         * só olha o texto dos eventos até ver "Online" ou uma oferta.
+         */
+        @Volatile
+        var dormindo = false
+            private set
+
+        private const val MAXIMO_NOS = 500
+        private const val MAXIMO_PROFUNDIDADE = 30
+        private const val MAXIMO_CARACTERES = 6000
+        private const val MAXIMO_TEXTOS = 250
+        private const val PEDIDO_VALE_MS = 120_000L
         /** Intervalo mínimo entre duas leituras da tela (o mapa gera eventos sem parar). */
-        const val INTERVALO_LEITURA_MS = 700L
+        private const val INTERVALO_LEITURA_MS = 700L
+        /** Dormindo: uma leitura completa de conferência no máximo a cada tanto (tela nova / qualquer evento). */
+        private const val CONFERIR_TELA_NOVA_MS = 2_000L
+        private const val CONFERIR_SEMPRE_MS = 20_000L
     }
+
+    private var ultimaConferencia = 0L
 
     private val principal = Handler(Looper.getMainLooper())
     private var pacotePendente: String? = null
@@ -64,7 +83,29 @@ class LeitorCorridasService : AccessibilityService() {
         // Copiloto desligado ou pausado: não lê nada.
         if (!ativo()) {
             principal.removeCallbacks(lerPendente)
+            if (dormindo) definirDormindo(false)
             return
+        }
+
+        if (dormindo && Pacotes.plataforma(pacote) == "indrive") {
+            if (!Armazenamento.preferencias(this).economia) {
+                definirDormindo(false)
+            } else {
+                // Só o texto do próprio evento (barato); a árvore inteira só para conferir de vez em quando.
+                val textos = ArrayList<String>()
+                e.text?.forEach { t -> t?.toString()?.let { textos.add(it) } }
+                e.contentDescription?.toString()?.let { textos.add(it) }
+                val agora = SystemClock.elapsedRealtime()
+                val telaNova = e.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                when {
+                    textos.isNotEmpty() && LeitorInDrive.conexao(textos) == LeitorInDrive.Conexao.ONLINE -> definirDormindo(false)
+                    (telaNova && agora - ultimaConferencia > CONFERIR_TELA_NOVA_MS) || agora - ultimaConferencia > CONFERIR_SEMPRE_MS -> {
+                        ultimaConferencia = agora
+                        ultimoHash = 0
+                    }
+                    else -> return
+                }
+            }
         }
 
         // Junta a rajada de eventos: lê na hora se faz tempo, senão uma vez no fim do intervalo.
@@ -86,6 +127,16 @@ class LeitorCorridasService : AccessibilityService() {
             if (hash == ultimoHash) return
             ultimoHash = hash
             val app = Pacotes.plataforma(pacote)
+            if (app == "indrive" && Armazenamento.preferencias(this).economia) {
+                when (LeitorInDrive.conexao(textos)) {
+                    LeitorInDrive.Conexao.OFFLINE -> {
+                        definirDormindo(true)
+                        return
+                    }
+                    LeitorInDrive.Conexao.ONLINE -> definirDormindo(false)
+                    LeitorInDrive.Conexao.DESCONHECIDA -> if (dormindo) return
+                }
+            }
             val tela = Leitores.ler(app, textos)
             bolha.receberTela(app, tela)
         } catch (e: RuntimeException) {
@@ -93,8 +144,18 @@ class LeitorCorridasService : AccessibilityService() {
         }
     }
 
+    private fun definirDormindo(valor: Boolean) {
+        if (dormindo == valor) return
+        dormindo = valor
+        ultimaConferencia = SystemClock.elapsedRealtime()
+        if (!valor) ultimoHash = 0
+        BolhaService.instancia?.dormindoMudou(valor)
+        PlantaoPlugin.emitirEstado(this)
+    }
+
     override fun onDestroy() {
         principal.removeCallbacks(lerPendente)
+        dormindo = false
         super.onDestroy()
     }
 

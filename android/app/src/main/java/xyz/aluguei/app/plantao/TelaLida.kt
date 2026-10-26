@@ -61,16 +61,41 @@ data class OfertaDetalhada(
     val avisoRisco: String? = null,
     /** inDrive: tarifa que o motorista ofereceu (centavos); null = a do passageiro. */
     val suaOferta: Long? = null,
+    /** Volta do destino até a base, quando calculada (fora da tela: Photon + OSRM). */
+    val kmVolta: Double? = null,
+    val minutosVolta: Double? = null,
 ) {
     val embarque: String? get() = enderecos.firstOrNull()
     val destino: String? get() = if (enderecos.size >= 2) enderecos.last() else null
 
+    /** Paradas no meio do caminho: endereços além do embarque e do destino. */
+    val paradas: Int get() = (enderecos.size - 2).coerceAtLeast(0)
+
+    /** Tudo o que a régua v2 olha (valor original; a contraproposta entra em Copiloto.avaliar). */
     fun paraOferta() = Oferta(
         valor = valor,
         kmCorrida = kmCorrida,
         minutosCorrida = minutosCorrida,
         kmBusca = kmBusca,
         minutosBusca = minutosBusca,
+        nota = nota,
+        corridasPassageiro = corridasPassageiro,
+        paradas = paradas,
+        embarque = embarque,
+        destino = destino,
+        kmVolta = kmVolta,
+        minutosVolta = minutosVolta,
+    )
+
+    /** Só o que o preço muda (para a contraproposta): valor, distâncias, tempos e a volta. */
+    fun paraOfertaDePreco() = Oferta(
+        valor = valor,
+        kmCorrida = kmCorrida,
+        minutosCorrida = minutosCorrida,
+        kmBusca = kmBusca,
+        minutosBusca = minutosBusca,
+        kmVolta = kmVolta,
+        minutosVolta = minutosVolta,
     )
 
     /** Identifica a oferta enquanto ela está aberta (para "Recusei" não deixar reaparecer). */
@@ -84,6 +109,10 @@ data class OfertaDetalhada(
 
     /** Chave da oferta original (sem a contraproposta). */
     fun chaveOriginal(): String = copy(suaOferta = null).chave()
+
+    /** Mesma oferta de outra leitura, sem perder a volta já calculada. */
+    fun comVoltaDe(outra: OfertaDetalhada?): OfertaDetalhada =
+        if (outra != null && kmVolta == null && outra.destino == destino) copy(kmVolta = outra.kmVolta, minutosVolta = outra.minutosVolta) else this
 
     companion object {
         fun de(o: Oferta, app: String) = OfertaDetalhada(

@@ -2,8 +2,8 @@ package xyz.aluguei.app.plantao
 
 /**
  * Regras do Copiloto que vão além do cálculo da corrida (Calculo.kt, espelho do
- * TypeScript): lugares a evitar, nota do passageiro, aviso de risco e a
- * sugestão de contraproposta do inDrive.
+ * TypeScript): aviso de risco do app, lugares adicionados pela bolha, a
+ * sugestão de contraproposta do inDrive e a fala do resultado.
  *
  * Puro (sem Android): testado em CopilotoTest.kt.
  */
@@ -12,40 +12,39 @@ object Copiloto {
     const val MOTIVO_NOTA = "Nota baixa"
     const val MOTIVO_RISCO = "Área de risco"
     const val PREFIXO_EVITADO = "Lugar que você evita: "
+    const val PREFIXO_DESEJADO = "Destino desejado: "
 
     /** Resultado final do cartão: o cálculo mais os avisos do Copiloto. */
     data class Resultado(
         val avaliacao: Avaliacao,
-        /** Palavra da lista de lugares a evitar que bateu com algum endereço. */
+        /** Palavra da lista de lugares a evitar que bateu com o embarque ou o destino. */
         val lugarEvitado: String?,
         val notaBaixa: Boolean,
         val risco: Boolean,
     )
 
     /**
-     * Avalia a oferta: [avaliarCorrida] + lugares a evitar (vermelho), nota
-     * abaixo da mínima (no mínimo amarelo) e aviso de risco do app (no mínimo amarelo).
+     * Avalia a oferta: [avaliarCorrida] (régua v2 completa, com nota, passageiro
+     * novo, paradas, lugares e volta) com a contraproposta do motorista no lugar
+     * do valor, mais o aviso de risco do app (no mínimo amarelo). `evitarExtra`
+     * são os lugares adicionados pela bolha (somados a `c.evitar`).
      */
-    fun avaliar(o: OfertaDetalhada, t: Taxas, c: Criterios, evitar: List<String>): Resultado {
-        val base = avaliarCorrida(o.copy(valor = o.suaOferta ?: o.valor).paraOferta(), t, c)
-        val lugar = lugarEvitado(o.enderecos, evitar)
-        val notaBaixa = c.notaMinima > 0 && o.nota != null && o.nota < c.notaMinima
+    fun avaliar(o: OfertaDetalhada, t: Taxas, c: Criterios, evitarExtra: List<String> = emptyList()): Resultado {
+        val regua = if (evitarExtra.isEmpty()) c else c.copy(evitar = normalizarEvitar(c.evitar + evitarExtra))
+        val base = avaliarCorrida(o.paraOferta().copy(valor = o.suaOferta ?: o.valor), t, regua)
+        val lugar = base.motivos.firstOrNull { it.startsWith(PREFIXO_EVITADO) }?.removePrefix(PREFIXO_EVITADO)
         val motivos = base.motivos.toMutableList()
         var sinal = base.sinal
-        if (lugar != null) {
-            motivos.add(0, PREFIXO_EVITADO + lugar)
-            sinal = Sinal.VERMELHO
-        }
-        if (notaBaixa) {
-            motivos.add(MOTIVO_NOTA)
-            if (sinal == Sinal.VERDE) sinal = Sinal.AMARELO
-        }
         if (o.risco) {
             motivos.add(MOTIVO_RISCO)
             if (sinal == Sinal.VERDE) sinal = Sinal.AMARELO
         }
-        return Resultado(base.copy(sinal = sinal, motivos = motivos), lugar, notaBaixa, o.risco)
+        return Resultado(base.copy(sinal = sinal, motivos = motivos), lugar, MOTIVO_NOTA in base.motivos, o.risco)
     }
+
+    /** O motivo que o cartão mostra: o lugar evitado primeiro, senão o primeiro motivo (sem o risco, que tem faixa própria). */
+    fun motivoPrincipal(a: Avaliacao): String? =
+        a.motivos.firstOrNull { it.startsWith(PREFIXO_EVITADO) } ?: a.motivos.firstOrNull { it != MOTIVO_RISCO }
 
     /** Primeira palavra da lista que aparece em algum endereço (sem acento nem maiúscula). */
     fun lugarEvitado(enderecos: List<String>, evitar: List<String>): String? {
@@ -113,24 +112,9 @@ object Copiloto {
         data class NemODobro(val dobro: Long) : Sugestao()
     }
 
-    /**
-     * Menor valor em reais inteiros que deixa a avaliação verde, até 2× a oferta;
-     * null se nem o dobro deixa verde (ex.: passageiro longe demais).
-     */
-    fun precoIdeal(o: Oferta, t: Taxas, c: Criterios): Long? {
-        val limite = o.valor * 2
-        var reais = o.valor / 100 + 1
-        var passos = 0
-        while (reais * 100 <= limite && passos < 2000) {
-            if (avaliarCorrida(o.copy(valor = reais * 100), t, c).sinal == Sinal.VERDE) return reais * 100
-            reais++
-            passos++
-        }
-        return null
-    }
-
     fun sugerir(o: OfertaDetalhada, t: Taxas, c: Criterios, sinalFinal: Sinal): Sugestao? {
-        val base = o.paraOferta()
+        // Só o que o preço muda (valor, distâncias, tempos e a volta): nota, lugares e paradas não se resolvem com dinheiro.
+        val base = o.paraOfertaDePreco()
         if (sinalFinal == Sinal.VERDE) return Sugestao.PodeAceitar
         if (avaliarCorrida(base, t, c).sinal == Sinal.VERDE) return null // o problema não é o preço
         val ideal = precoIdeal(base, t, c) ?: return Sugestao.NemODobro(base.valor * 2)

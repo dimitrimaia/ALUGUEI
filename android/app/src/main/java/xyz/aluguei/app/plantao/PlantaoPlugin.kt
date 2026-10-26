@@ -1,6 +1,7 @@
 package xyz.aluguei.app.plantao
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -25,7 +26,10 @@ import org.json.JSONObject
  */
 @CapacitorPlugin(
     name = "Plantao",
-    permissions = [Permission(alias = "notificacoes", strings = [Manifest.permission.POST_NOTIFICATIONS])],
+    permissions = [
+        Permission(alias = "notificacoes", strings = [Manifest.permission.POST_NOTIFICATIONS]),
+        Permission(alias = "localizacao", strings = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION]),
+    ],
 )
 class PlantaoPlugin : Plugin() {
 
@@ -46,6 +50,7 @@ class PlantaoPlugin : Plugin() {
                 put("custo", a.custo)
                 put("lucroPorHora", a.lucroPorHora)
                 put("motivos", JSArray(a.motivos))
+                put("destaques", JSArray(a.destaques))
             }
             p.emitir("oferta", dados)
         }
@@ -62,6 +67,16 @@ class PlantaoPlugin : Plugin() {
         /** O motorista mudou a régua rápida na bolha (centavos). Também fica em reguaPendente(). */
         fun emitirRegua(minimoPorKm: Long, minimoPorHora: Long) {
             ativo?.emitir("regua", JSObject().put("minimoPorKm", minimoPorKm).put("minimoPorHora", minimoPorHora), true)
+        }
+
+        /** "Definir base aqui" no menu da bolha (o app web salva com um nome). Também fica guardada até a tela ouvir. */
+        fun emitirBase(lat: Double, lon: Double) {
+            ativo?.emitir("base", JSObject().put("lat", lat).put("lon", lon), true)
+        }
+
+        /** Preferência mudada na bolha ("Não perguntar mais"). */
+        fun emitirPreferencia(perguntarAceite: Boolean) {
+            ativo?.emitir("preferencia", JSObject().put("perguntarAceite", perguntarAceite), true)
         }
 
         fun emitirEstado(ctx: Context) {
@@ -103,6 +118,8 @@ class PlantaoPlugin : Plugin() {
         put("pausado", Armazenamento.pausado(c))
         put("tema", Armazenamento.tema(c))
         put("vibrar", Armazenamento.vibrar(c))
+        put("localizacao", Localizacao.permitida(c))
+        put("dormindo", LeitorCorridasService.dormindo && Armazenamento.ligado(c) && BolhaService.instancia != null)
     }
 
     // ------------------------------------------------------------------ estado e configuração
@@ -119,7 +136,10 @@ class PlantaoPlugin : Plugin() {
         val segundos = call.getInt("segundosCartao")
         val tema = call.getString("tema")?.takeIf { it in Armazenamento.TEMAS }
         val vibrar = call.getBoolean("vibrar")
-        Armazenamento.salvarConfiguracao(ctx, perfil, criterios, segundos, tema, vibrar)
+        // Formato de PreferenciasCopiloto (copiloto.ts); se vier, manda em segundosCartao e vibrar.
+        val preferencias: JSONObject? = call.getObject("preferencias")
+        Armazenamento.salvarConfiguracao(ctx, perfil, criterios, segundos, tema, vibrar, preferencias)
+        BolhaService.instancia?.aplicarPreferencias()
         call.resolve(estadoAtual(ctx))
     }
 
@@ -162,6 +182,86 @@ class PlantaoPlugin : Plugin() {
 
     @PluginMethod
     fun pedirSemOtimizacaoBateria(call: PluginCall) = pedir(call, Permissoes.BATERIA)
+
+    /**
+     * Localização (para a volta até a base e "Definir base aqui"): primeiro uma
+     * explicação, depois a caixa do sistema; se o motorista já negou de vez,
+     * abre as configurações do app e volta sozinho quando ele permitir.
+     */
+    @PluginMethod
+    fun pedirLocalizacao(call: PluginCall) {
+        if (Localizacao.permitida(ctx)) {
+            call.resolve(JSObject().put("tipo", Permissoes.LOCALIZACAO).put("concedida", true).put("aberto", false))
+            return
+        }
+        val atividade = activity
+        if (atividade == null) {
+            requestPermissionForAlias("localizacao", call, "aposPedirLocalizacao")
+            return
+        }
+        atividade.runOnUiThread {
+            try {
+                var respondeu = false
+                AlertDialog.Builder(atividade)
+                    .setTitle("Usar a sua localização?")
+                    .setMessage(
+                        "O Copiloto usa a localização do celular só no momento da oferta, para calcular a volta do destino até a sua base " +
+                            "e para “Definir base aqui”. O Aluguei não guarda o seu trajeto.",
+                    )
+                    .setPositiveButton("Continuar") { _, _ ->
+                        respondeu = true
+                        requestPermissionForAlias("localizacao", call, "aposPedirLocalizacao")
+                    }
+                    .setNegativeButton("Agora não") { _, _ ->
+                        respondeu = true
+                        call.resolve(JSObject().put("tipo", Permissoes.LOCALIZACAO).put("concedida", false).put("aberto", false))
+                    }
+                    .setOnDismissListener {
+                        if (!respondeu) call.resolve(JSObject().put("tipo", Permissoes.LOCALIZACAO).put("concedida", false).put("aberto", false))
+                    }
+                    .show()
+            } catch (e: RuntimeException) {
+                requestPermissionForAlias("localizacao", call, "aposPedirLocalizacao")
+            }
+        }
+    }
+
+    @PermissionCallback
+    fun aposPedirLocalizacao(call: PluginCall) {
+        if (Localizacao.permitida(ctx)) {
+            emitirPermissao(Permissoes.LOCALIZACAO, true)
+            BolhaService.instancia?.localizacaoConcedida()
+            call.resolve(JSObject().put("tipo", Permissoes.LOCALIZACAO).put("concedida", true).put("aberto", false))
+            return
+        }
+        // Negada de vez ("não perguntar de novo"): só pelas configurações do app.
+        val deVez = activity?.let { a ->
+            !a.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) &&
+                !a.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+        } ?: false
+        if (deVez) {
+            pedir(call, Permissoes.LOCALIZACAO)
+        } else {
+            call.resolve(JSObject().put("tipo", Permissoes.LOCALIZACAO).put("concedida", false).put("aberto", false))
+        }
+    }
+
+    /** Posição atual para o app web salvar como base (com nome). Rejeita "SEM_LOCALIZACAO". */
+    @PluginMethod
+    fun definirBaseAqui(call: PluginCall) {
+        if (!Localizacao.permitida(ctx)) {
+            call.reject("Falta a permissão de localização (use pedirLocalizacao).", "SEM_LOCALIZACAO")
+            return
+        }
+        Localizacao.atual(ctx) { p ->
+            if (p == null) {
+                call.reject("Não deu para pegar a localização agora.", "SEM_LOCALIZACAO")
+            } else {
+                Armazenamento.definirBaseLocal(ctx, p.lat, p.lon)
+                call.resolve(JSObject().put("lat", p.lat).put("lon", p.lon))
+            }
+        }
+    }
 
     @PluginMethod
     fun pedirNotificacoes(call: PluginCall) {
@@ -211,6 +311,7 @@ class PlantaoPlugin : Plugin() {
                 if (Permissoes.concedida(ctx, tipo)) {
                     verificadores.remove(tipo)
                     if (tipo == Permissoes.ACESSIBILIDADE) Armazenamento.limparPedidoAcessibilidade(ctx)
+                    if (tipo == Permissoes.LOCALIZACAO) BolhaService.instancia?.localizacaoConcedida()
                     Permissoes.trazerAppParaFrente(ctx)
                     emitirPermissao(tipo, true)
                 } else if (SystemClock.elapsedRealtime() - inicio < LIMITE_MS) {
@@ -271,7 +372,9 @@ class PlantaoPlugin : Plugin() {
             kmBusca = call.getDouble("kmBusca"),
             minutosBusca = call.getDouble("minutosBusca"),
         )
-        val avaliacao = avaliarCorrida(oferta, taxas(Armazenamento.perfil(ctx)), Armazenamento.criterios(ctx))
+        val agora = BolhaService.agoraBrasilia()
+        val regua = criteriosNoHorario(Armazenamento.criterios(ctx), agora.get(java.util.Calendar.HOUR_OF_DAY) * 60 + agora.get(java.util.Calendar.MINUTE))
+        val avaliacao = avaliarCorrida(oferta, taxas(Armazenamento.perfil(ctx)), regua.criterios)
         val rodando = BolhaService.instancia
         if (rodando != null) {
             rodando.receberOferta(oferta, "digitada", null)
@@ -305,6 +408,8 @@ class PlantaoPlugin : Plugin() {
         put("lucro", a.lucro)
         put("lucroPorHora", a.lucroPorHora)
         put("motivos", JSArray(a.motivos))
+        put("custoVolta", a.custoVolta)
+        put("destaques", JSArray(a.destaques))
     }
 
     // ------------------------------------------------------------------ fila de corridas

@@ -13,8 +13,9 @@ import kotlin.math.floor
 
 /**
  * Armazenamento local do Copiloto (SharedPreferences, só neste aparelho):
- *  - perfil de custo e critérios (recebidos do app web por Plantao.configurar);
+ *  - perfil de custo, critérios e preferências (recebidos do app web por Plantao.configurar);
  *  - ligado/pausado, tema, vibração, posição da bolha e do cartão;
+ *  - base definida pela bolha e "não perguntar mais" (pendentes até o app web salvar na conta);
  *  - lugares a evitar adicionados pela bolha e régua alterada pela bolha (pendentes para o app web);
  *  - resumo do dia (contadores);
  *  - fila de corridas avaliadas, para o app web enviar ao servidor depois.
@@ -44,6 +45,9 @@ object Armazenamento {
     private const val RESUMO_ACEITAS = "resumoAceitas"
     private const val RESUMO_GANHO = "resumoGanho"
     private const val RESUMO_LUCRO = "resumoLucro"
+    private const val PREFERENCIAS = "preferencias"
+    private const val BASE_PENDENTE = "basePendente"
+    private const val PERGUNTAR_PENDENTE = "perguntarAceitePendente"
 
     val TEMAS = setOf("claro", "escuro", "auto")
 
@@ -62,6 +66,7 @@ object Armazenamento {
         segundosCartao: Int?,
         tema: String? = null,
         vibrar: Boolean? = null,
+        preferencias: JSONObject? = null,
     ) {
         val e = prefs(ctx).edit()
         if (perfil != null) e.putString(PERFIL, perfil.toString())
@@ -75,19 +80,88 @@ object Armazenamento {
             }
             e.putString(CRITERIOS, c.toString())
         }
-        if (segundosCartao != null) e.putInt(SEGUNDOS_CARTAO, segundosCartao.coerceIn(4, 120))
         if (tema != null && tema in TEMAS) e.putString(TEMA, tema)
-        if (vibrar != null) e.putBoolean(VIBRAR, vibrar)
+        if (preferencias != null) {
+            // As preferências mandam; os campos antigos (segundosCartao, vibrar) só valem sem elas.
+            var p = Preferencias.deJson(preferencias)
+            val base = basePendente(ctx)
+            if (base != null) {
+                if (p.base != null && mesmoLugar(p.base!!, base)) e.remove(BASE_PENDENTE) else p = p.copy(base = base)
+            }
+            if (prefs(ctx).getBoolean(PERGUNTAR_PENDENTE, false)) {
+                if (!p.perguntarAceite) e.remove(PERGUNTAR_PENDENTE) else p = p.copy(perguntarAceite = false)
+            }
+            e.putString(PREFERENCIAS, p.paraJson().toString())
+            e.putInt(SEGUNDOS_CARTAO, p.segundosCartao)
+            e.putBoolean(VIBRAR, p.vibrar)
+            cachePreferencias = p
+        } else if (segundosCartao != null || vibrar != null) {
+            val atual = preferencias(ctx)
+            val p = atual.copy(segundosCartao = segundosCartao?.coerceIn(4, 120) ?: atual.segundosCartao, vibrar = vibrar ?: atual.vibrar)
+            if (segundosCartao != null) e.putInt(SEGUNDOS_CARTAO, p.segundosCartao)
+            if (vibrar != null) e.putBoolean(VIBRAR, p.vibrar)
+            if (prefs(ctx).contains(PREFERENCIAS)) e.putString(PREFERENCIAS, p.paraJson().toString())
+            cachePreferencias = null
+        }
         e.apply()
     }
 
-    fun tema(ctx: Context): String = prefs(ctx).getString(TEMA, "auto")?.takeIf { it in TEMAS } ?: "auto"
+    private fun mesmoLugar(a: Base, b: Base) = kotlin.math.abs(a.lat - b.lat) < 1e-5 && kotlin.math.abs(a.lon - b.lon) < 1e-5
 
-    fun definirTema(ctx: Context, tema: String) {
-        if (tema in TEMAS) prefs(ctx).edit().putString(TEMA, tema).apply()
+    // ---------- preferências do Copiloto ----------
+
+    @Volatile
+    private var cachePreferencias: PreferenciasCopiloto? = null
+
+    /** Preferências (do app web, com o que a bolha mudou e ainda está pendente). Em cache na memória. */
+    fun preferencias(ctx: Context): PreferenciasCopiloto {
+        cachePreferencias?.let { return it }
+        val p = prefs(ctx)
+        val salvo = p.getString(PREFERENCIAS, null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+        val r = if (salvo != null) {
+            Preferencias.deJson(salvo)
+        } else {
+            // Só os campos antigos (configurar sem preferencias).
+            Preferencias.PADRAO.copy(segundosCartao = p.getInt(SEGUNDOS_CARTAO, SEGUNDOS_CARTAO_PADRAO), vibrar = p.getBoolean(VIBRAR, true))
+        }
+        cachePreferencias = r
+        return r
     }
 
-    fun vibrar(ctx: Context): Boolean = prefs(ctx).getBoolean(VIBRAR, true)
+    private fun salvarPreferenciasLocal(ctx: Context, p: PreferenciasCopiloto, extra: (SharedPreferences.Editor) -> Unit = {}) {
+        val e = prefs(ctx).edit().putString(PREFERENCIAS, p.paraJson().toString())
+        extra(e)
+        e.apply()
+        cachePreferencias = p
+    }
+
+    /** "Definir base aqui" na bolha: vale na hora e fica pendente até o app web salvar (evento "base"). */
+    fun definirBaseLocal(ctx: Context, lat: Double, lon: Double) {
+        val base = Base("Base", lat, lon)
+        salvarPreferenciasLocal(ctx, preferencias(ctx).copy(base = base)) {
+            it.putString(BASE_PENDENTE, JSONObject().put("nome", base.nome).put("lat", lat).put("lon", lon).toString())
+        }
+    }
+
+    fun basePendente(ctx: Context): Base? = prefs(ctx).getString(BASE_PENDENTE, null)?.let { runCatching { Preferencias.baseDeJson(JSONObject(it)) }.getOrNull() }
+
+    /** "Não perguntar mais": vale na hora e fica pendente até o app web salvar (evento "preferencia"). */
+    fun naoPerguntarAceite(ctx: Context) {
+        salvarPreferenciasLocal(ctx, preferencias(ctx).copy(perguntarAceite = false)) { it.putBoolean(PERGUNTAR_PENDENTE, true) }
+    }
+
+    /** Tema do app web ("claro" | "escuro" | "auto"), usado quando preferencias.tema = "app". */
+    fun tema(ctx: Context): String = prefs(ctx).getString(TEMA, "auto")?.takeIf { it in TEMAS } ?: "auto"
+
+    /** Tema que a bolha usa: o das preferências ou, em "app", o tema que o app web mandou. */
+    fun temaEfetivo(ctx: Context): String = preferencias(ctx).tema.takeIf { it == "claro" || it == "escuro" } ?: tema(ctx)
+
+    /** Troca pelo menu da bolha (vale neste aparelho até o próximo configurar). */
+    fun definirTema(ctx: Context, tema: String) {
+        if (tema == "claro" || tema == "escuro") salvarPreferenciasLocal(ctx, preferencias(ctx).copy(tema = tema))
+    }
+
+    fun vibrar(ctx: Context): Boolean = preferencias(ctx).vibrar
 
     // ---------- régua rápida (mudada pela bolha) ----------
 
@@ -176,7 +250,7 @@ object Armazenamento {
 
     fun criterios(ctx: Context): Criterios = criteriosDeJson(prefs(ctx).getString(CRITERIOS, null)?.let { runCatching { JSONObject(it) }.getOrNull() })
 
-    fun segundosCartao(ctx: Context): Int = prefs(ctx).getInt(SEGUNDOS_CARTAO, SEGUNDOS_CARTAO_PADRAO)
+    fun segundosCartao(ctx: Context): Int = preferencias(ctx).segundosCartao
 
     fun configurado(ctx: Context): Boolean = prefs(ctx).contains(PERFIL)
 
@@ -237,6 +311,21 @@ object Armazenamento {
     fun atualizarSuaOferta(ctx: Context, id: String, suaOferta: Long) {
         var mudou = false
         val nova = corridas(ctx).map { if (it.id == id) it.copy(suaOferta = suaOferta).also { mudou = true } else it }
+        if (mudou) gravar(ctx, nova)
+    }
+
+    /** A volta chegou depois do cartão: atualiza a corrida (a régua pode ter mudado o sinal e o lucro). */
+    @Synchronized
+    fun atualizarVolta(ctx: Context, id: String, kmVolta: Double, custoVolta: Long, a: Avaliacao) {
+        var mudou = false
+        val nova = corridas(ctx).map {
+            if (it.id == id) {
+                mudou = true
+                it.copy(kmVolta = kmVolta, custoVolta = custoVolta, sinal = a.sinal.codigo, porKm = a.porKm, porHora = a.porHora, lucro = a.lucro)
+            } else {
+                it
+            }
+        }
         if (mudou) gravar(ctx, nova)
     }
 
@@ -308,20 +397,8 @@ object Armazenamento {
         )
     }
 
-    /** Igual ao normalizarCriterios do TS. */
-    fun criteriosDeJson(o: JSONObject?): Criterios {
-        if (o == null) return CRITERIOS_PADRAO
-        val c = CRITERIOS_PADRAO
-        return Criterios(
-            minimoPorKm = num(o, "minimoPorKm", 0.0, 100_000_000.0, true)?.toLong() ?: c.minimoPorKm,
-            minimoPorHora = num(o, "minimoPorHora", 0.0, 100_000_000.0, true)?.toLong() ?: c.minimoPorHora,
-            buscaMaximaKm = num(o, "buscaMaximaKm", 0.0, 100.0) ?: c.buscaMaximaKm,
-            notaMinima = num(o, "notaMinima", 0.0, 5.0) ?: 0.0,
-            evitar = o.optJSONArray("evitar")?.let { arr ->
-                Copiloto.normalizarEvitar((0 until arr.length()).mapNotNull { i -> arr.opt(i) as? String })
-            } ?: emptyList(),
-        )
-    }
+    /** Igual ao normalizarCriterios do TS (ver NormalizarCriterios em Preferencias.kt). */
+    fun criteriosDeJson(o: JSONObject?): Criterios = NormalizarCriterios.deJson(o)
 
     /** Agora em ISO 8601 UTC ("2026-10-26T23:10:05.123Z"); dá para comparar como texto. */
     fun agoraIso(): String {
@@ -364,6 +441,14 @@ data class CorridaAvaliada(
     val risco: Boolean = false,
     /** inDrive: tarifa que o motorista ofereceu (centavos). */
     val suaOferta: Long? = null,
+    /** Volta do destino até a base (km), quando calculada. */
+    val kmVolta: Double? = null,
+    /** Custo da volta (centavos), quando calculada. */
+    val custoVolta: Long? = null,
+    /** Paradas no meio do caminho. */
+    val paradas: Int = 0,
+    /** Nome da faixa de horário da régua (ex.: "Madrugada"), ou null. */
+    val faixa: String? = null,
 ) {
     fun paraJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -386,6 +471,10 @@ data class CorridaAvaliada(
         put("destino", destino ?: JSONObject.NULL)
         put("risco", risco)
         put("suaOferta", suaOferta ?: JSONObject.NULL)
+        put("kmVolta", kmVolta ?: JSONObject.NULL)
+        put("custoVolta", custoVolta ?: JSONObject.NULL)
+        put("paradas", paradas)
+        put("faixa", faixa ?: JSONObject.NULL)
     }
 
     companion object {
@@ -395,7 +484,7 @@ data class CorridaAvaliada(
 
         private fun JSONObject.duploOuNulo(chave: String): Double? = if (isNull(chave)) null else optDouble(chave, Double.NaN).takeUnless { it.isNaN() }
 
-        fun nova(o: OfertaDetalhada, a: Avaliacao, origem: String, app: String?) = CorridaAvaliada(
+        fun nova(o: OfertaDetalhada, a: Avaliacao, origem: String, app: String?, faixa: String? = null, custoVolta: Long? = null) = CorridaAvaliada(
             id = UUID.randomUUID().toString(),
             valor = o.valor,
             kmCorrida = o.kmCorrida,
@@ -416,6 +505,10 @@ data class CorridaAvaliada(
             destino = o.destino?.take(160),
             risco = o.risco,
             suaOferta = o.suaOferta,
+            kmVolta = o.kmVolta,
+            custoVolta = custoVolta,
+            paradas = o.paradas,
+            faixa = faixa,
         )
 
         fun deJson(o: JSONObject): CorridaAvaliada? = runCatching {
@@ -440,6 +533,10 @@ data class CorridaAvaliada(
                 destino = if (o.isNull("destino")) null else o.optString("destino").takeIf { it.isNotEmpty() },
                 risco = o.optBoolean("risco", false),
                 suaOferta = if (o.isNull("suaOferta") || !o.has("suaOferta")) null else o.optLong("suaOferta"),
+                kmVolta = if (o.isNull("kmVolta") || !o.has("kmVolta")) null else o.duploOuNulo("kmVolta"),
+                custoVolta = if (o.isNull("custoVolta") || !o.has("custoVolta")) null else o.optLong("custoVolta"),
+                paradas = o.optInt("paradas", 0),
+                faixa = if (o.isNull("faixa") || !o.has("faixa")) null else o.optString("faixa").takeIf { it.isNotEmpty() },
             )
         }.getOrNull()
     }

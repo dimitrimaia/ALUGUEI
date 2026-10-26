@@ -18,6 +18,8 @@ package xyz.aluguei.app.plantao
  */
 object LeitorInDrive {
 
+    enum class Conexao { ONLINE, OFFLINE, DESCONHECIDA }
+
     private val ACEITAR = Regex("[Aa]ceitar\\s+por\\s*R\\$\\s*([0-9][0-9.,]*)")
     private val BUSCA_KM = Regex("~\\s*([0-9]{1,3}(?:[.,][0-9]{1,2})?)\\s*[kK][mM](?![A-Za-z])")
     private val BUSCA_M = Regex("~\\s*([0-9]{2,4})\\s*m(?![A-Za-z])")
@@ -34,6 +36,33 @@ object LeitorInDrive {
     private val NAO_SAO_NOMES = setOf("pedido de viagem", "preco justo", "fechar", "pix", "dinheiro", "cartao", "aceitar", "novo", "nova")
 
     private data class Par(val min: Double, val km: Double)
+
+    private val FICAR_ONLINE = Regex("(?:ficar|ir|entrar|fique|va) (?:em |para )?on-?line(?![a-z])")
+    private val FICAR_OFFLINE = Regex("(?:ficar|ir|sair|fique|va) (?:em |para )?off-?line(?![a-z])")
+    private val ONLINE = Regex("(?<![a-z])on-?line(?![a-z])")
+    private val OFFLINE = Regex("(?<![a-z])off-?line(?![a-z])")
+
+    /**
+     * O motorista está online no inDrive? Usado pela economia de bateria: offline,
+     * o leitor dorme (não monta a árvore da tela) até ver "Online" ou uma oferta.
+     *  - oferta ("Aceitar por") ou lista de pedidos (R$/km) → ONLINE;
+     *  - botão para ficar online ("Ficar online") → OFFLINE;
+     *  - botão para ficar offline → ONLINE;
+     *  - "Offline" sem nenhum "Online" na tela → OFFLINE.
+     */
+    fun conexao(brutos: List<String>): Conexao {
+        val t = Textos.limpar(brutos)
+        if (t.isEmpty()) return Conexao.DESCONHECIDA
+        val n = t.map { Textos.semAcento(it) }
+        val junto = t.joinToString(" ")
+        if (ACEITAR.containsMatchIn(junto) || Textos.temPorKm(junto)) return Conexao.ONLINE
+        if (n.any { FICAR_ONLINE.containsMatchIn(it) }) return Conexao.OFFLINE
+        if (n.any { FICAR_OFFLINE.containsMatchIn(it) }) return Conexao.ONLINE
+        val online = n.any { ONLINE.containsMatchIn(it) }
+        if (online) return Conexao.ONLINE
+        if (n.any { OFFLINE.containsMatchIn(it) }) return Conexao.OFFLINE
+        return Conexao.DESCONHECIDA
+    }
 
     fun ler(brutos: List<String>): TelaLida {
         val t = Textos.limpar(brutos)

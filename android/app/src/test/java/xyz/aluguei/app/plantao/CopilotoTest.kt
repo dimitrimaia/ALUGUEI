@@ -18,7 +18,7 @@ class CopilotoTest {
     @Test
     fun `preço ideal é o menor valor inteiro que deixa verde`() {
         // 37,4 km: precisa de R$ 2,00/km → R$ 74,80 → R$ 75.
-        assertEquals(7500L, Copiloto.precoIdeal(inDrive58().paraOferta(), t, c))
+        assertEquals(7500L, precoIdeal(inDrive58().paraOferta(), t, c))
     }
 
     @Test
@@ -84,5 +84,47 @@ class CopilotoTest {
     fun `chave da oferta muda com a oferta`() {
         assertEquals(inDrive58().chave(), inDrive58(listOf(1)).chave())
         assertTrue(inDrive58().chave() != inDrive58().copy(valor = 6000).chave())
+    }
+
+    @Test
+    fun `régua v2 no cartão - paradas, passageiro novo e destino desejado`() {
+        val boa = inDrive58().copy(valor = 9000, corridasPassageiro = 3)
+        val tres = boa.copy(enderecos = listOf("Rua A 1 (Centro)", "Rua B 2 (Savassi)", "Rua F, 70 (Vila Nova Esperança, Contagem - MG)"))
+        assertEquals(1, tres.paradas)
+        assertEquals(0, boa.paradas)
+        val r = Copiloto.avaliar(tres, t, c.copy(alertaParadas = true, alertaPassageiroNovo = true, destinosDesejados = listOf("contagem")))
+        assertEquals(Sinal.AMARELO, r.avaliacao.sinal)
+        assertEquals(listOf("Passageiro novo", "Corrida com parada"), r.avaliacao.motivos)
+        assertEquals(listOf("Destino desejado: contagem"), r.avaliacao.destaques)
+    }
+
+    @Test
+    fun `lugar evitado só no embarque ou no destino, com os lugares da bolha`() {
+        val tres = inDrive58().copy(valor = 9000, enderecos = listOf("Rua A 1 (Centro)", "Rua B 2 (Savassi)", "Rua C 3 (Barreiro)"))
+        assertNull(Copiloto.avaliar(tres, t, c, listOf("Savassi")).lugarEvitado) // parada não conta
+        val r = Copiloto.avaliar(tres, t, c.copy(evitar = listOf("Centro")), listOf("Barreiro"))
+        assertEquals("Centro", r.lugarEvitado)
+        assertEquals("Lugar que você evita: Centro", Copiloto.motivoPrincipal(r.avaliacao))
+    }
+
+    @Test
+    fun `contraproposta usa a volta quando a régua conta a volta`() {
+        val o = inDrive58().copy(kmVolta = 20.0, minutosVolta = 40.0)
+        val semVolta = Copiloto.sugerir(o, t, c, Copiloto.avaliar(o, t, c).avaliacao.sinal) as Copiloto.Sugestao.Lapis
+        val regua = c.copy(contarVolta = true, lucroMinimo = 4000)
+        val comVolta = Copiloto.sugerir(o, t, regua, Copiloto.avaliar(o, t, regua).avaliacao.sinal) as Copiloto.Sugestao.Lapis
+        assertTrue(comVolta.valor > semVolta.valor)
+        assertEquals(Sinal.VERDE, comVolta.avaliacao.sinal)
+        assertTrue(comVolta.avaliacao.custoVolta > 0)
+    }
+
+    @Test
+    fun `nota e passageiro novo não viram contraproposta`() {
+        // O preço não resolve nota baixa: o cartão não sugere valor (null), só mostra o motivo.
+        val boa = inDrive58().copy(valor = 9000)
+        val regua = c.copy(notaMinima = 4.8)
+        val sinal = Copiloto.avaliar(boa, t, regua).avaliacao.sinal
+        assertEquals(Sinal.AMARELO, sinal)
+        assertNull(Copiloto.sugerir(boa, t, regua, sinal))
     }
 }

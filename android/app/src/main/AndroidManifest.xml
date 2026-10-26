@@ -26,12 +26,14 @@
 
         <!--
             Plantão: serviço em primeiro plano que desenha a bolha e o cartão por cima
-            do app de corrida. Tipo specialUse (nenhum tipo padrão do Android cobre isso).
+            do app de corrida. Tipo specialUse (nenhum tipo padrão do Android cobre isso)
+            e, só quando o motorista permite a localização, também location (para
+            calcular a volta do destino até a base).
         -->
         <service
             android:name=".plantao.BolhaService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse|location">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Mostrar o cálculo de ganho da corrida por cima do app de corrida, a pedido do motorista" />
@@ -78,7 +80,22 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Vibração curta quando o cartão aparece (verde 1 pulso, vermelho 2); dá para desligar. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Volta para a base e "Definir base aqui" (só no momento da oferta; não guarda trajeto). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- A localização é opcional: o app instala em aparelhos sem GPS. -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
     <!-- Pedir para o Android não suspender o Copiloto durante a jornada. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Voz do Copiloto (TextToSpeech): o Android 11+ só mostra o motor de voz com esta consulta. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
 
 </manifest>

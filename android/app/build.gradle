@@ -18,7 +18,7 @@ android {
         }
     }
     testOptions {
-        // Os testes JUnit do plantão (Calculo, LeitorOferta, Formato) são Kotlin puro.
+        // Os testes JUnit do plantão (Calculo, LeitorOferta, Formato, Preferencias, Volta) são Kotlin puro.
         unitTests.returnDefaultValues = true
     }
     buildTypes {
@@ -42,6 +42,8 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
+    // org.json de verdade nos testes JUnit (o android.jar dos testes só tem os nomes).
+    testImplementation "org.json:json:20240303"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')

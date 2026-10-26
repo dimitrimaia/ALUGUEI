@@ -162,4 +162,29 @@ class LeitorInDriveTest {
         assertNull(o.pagamento)
         assertEquals(4.0, o.kmCorrida, 0.001)
     }
+
+    @Test
+    fun `economia - offline, online e tela de ficar online`() {
+        val c = LeitorInDrive.Conexao.OFFLINE
+        assertEquals(c, LeitorInDrive.conexao(listOf("Cidade", "Offline", "Ganhos de hoje", "R$ 0")))
+        assertEquals(c, LeitorInDrive.conexao(listOf("Você está off-line", "Ficar online")))
+        assertEquals(LeitorInDrive.Conexao.ONLINE, LeitorInDrive.conexao(listOf("Online", "Procurando pedidos")))
+        assertEquals(LeitorInDrive.Conexao.ONLINE, LeitorInDrive.conexao(listOf("Offline", "Online"))) // o seletor mostra os dois
+        assertEquals(LeitorInDrive.Conexao.ONLINE, LeitorInDrive.conexao(listOf("Ficar offline")))
+        assertEquals(LeitorInDrive.Conexao.ONLINE, LeitorInDrive.conexao(oferta58))
+        assertEquals(LeitorInDrive.Conexao.ONLINE, LeitorInDrive.conexao(listOf("R$1,6/km", "~1,0 km")))
+        assertEquals(LeitorInDrive.Conexao.DESCONHECIDA, LeitorInDrive.conexao(listOf("Perfil", "Configurações")))
+        assertEquals(LeitorInDrive.Conexao.DESCONHECIDA, LeitorInDrive.conexao(emptyList()))
+    }
+
+    @Test
+    fun `paradas, embarque e destino para a régua`() {
+        val o = oferta(mapa58 + oferta58)
+        val r = o.paraOferta()
+        assertEquals(0, r.paradas)
+        assertEquals("Rua dos Otoni 927 (Santa Efigênia)", r.embarque)
+        assertEquals("Rua F, 70 (Vila Nova Esperança, Contagem - MG)", r.destino)
+        assertEquals(4.71, r.nota!!, 0.0)
+        assertEquals(38, r.corridasPassageiro)
+    }
 }
