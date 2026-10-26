@@ -1,4 +1,5 @@
-import { ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ChevronRight, Clock, ShieldCheck } from "lucide-react";
+import { DecisaoOferta } from "@/components/plantao/decisao";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -74,14 +75,15 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
                 <p className="flex items-baseline gap-2"><span className="font-bold tabular-nums">{formatarBRL(c.valor_centavos)}</span><span className="text-xs text-suave">{c.app ? NOME_APP[c.app] ?? c.app : "Digitada"} · {new Date(c.ocorrida_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}</span></p>
                 <p className="text-xs text-suave tabular-nums">{formatarBRL(c.a.porKm)}/km · {formatarBRL(c.a.porHora)}/h · lucro <span className={c.a.lucro < 0 ? "font-semibold text-perigo" : "font-semibold text-ok"}>{formatarBRL(c.a.lucro)}</span></p>
               </div>
-              {c.decisao === "aceitei" ? <ThumbsUp size={17} className="text-ok" aria-label="Aceita" /> : c.decisao === "recusei" ? <ThumbsDown size={17} className="text-suave" aria-label="Recusada" /> : null}
+              <DecisaoOferta id={c.id} decisao={c.decisao} />
             </Cartao>
           ))}
         </div>
       ) : (
         <Vazio titulo="Nenhuma oferta neste período">Ligue o Copiloto: cada oferta que ele avalia aparece aqui, com o que você aceitou e recusou.</Vazio>
       )}
-      <p className="text-center text-xs text-suave">O lucro é recalculado com os custos atuais do seu carro.</p>
+      <Link href="/m/plantao/horarios" className="flex items-center gap-3 rounded-[1.1rem] border border-borda bg-cartao p-4 text-sm font-semibold shadow-cartao"><Clock size={18} className="text-marca" /> <span className="flex-1">Melhores horários para rodar</span> <ChevronRight size={17} className="text-suave" /></Link>
+      <p className="text-center text-xs text-suave">Toque no 👍 ou 👎 para corrigir. O lucro é recalculado com os custos atuais do seu carro.</p>
     </div>
   );
 }

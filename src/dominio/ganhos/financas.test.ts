@@ -23,3 +23,14 @@ describe("finanças", () => {
     expect(sugestaoReserva(15, 2000, 10000)).toEqual({ deveria: 30000, falta: 20000 });
   });
 });
+
+import { melhorEPior, porBlocoDeHorario } from "./horarios";
+describe("melhores horários", () => {
+  it("agrupa em blocos de 2h no horário de Brasília e acha o melhor", () => {
+    const o = (h: string, valor: number, km: number, sinal = "verde") => ({ momento: `2026-10-26T${h}:00-03:00`, valor, metros: km * 1000, sinal });
+    const blocos = porBlocoDeHorario([o("07:10", 2000, 10), o("07:40", 2000, 10), o("08:30", 2000, 10), o("23:10", 3000, 10), o("22:05", 3000, 10), o("22:50", 3000, 10, "vermelho")]);
+    expect(blocos[3]).toEqual({ de: 6, ofertas: 2, mediaPorKm: 200, verdes: 2 });
+    expect(blocos[11]).toMatchObject({ de: 22, ofertas: 3, mediaPorKm: 300, verdes: 2 });
+    expect(melhorEPior(blocos, 2)).toMatchObject({ melhor: { de: 22 }, pior: { de: 6 } });
+  });
+});

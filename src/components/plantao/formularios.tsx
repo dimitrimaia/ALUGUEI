@@ -2,10 +2,10 @@
 
 import { Check, Play, Plus, Square } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useActionState, useEffect, useRef, useState } from "react";
+import { type ReactNode, useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Botao, Campo, classeEntrada } from "@/components/ui";
 import { CATEGORIAS_DESPESA, NOME_DESPESA, NOME_PLATAFORMA, PLATAFORMAS } from "@/dominio/ganhos/plantao";
-import { encerrarJornada, type EstadoForm, iniciarJornada, lancarDespesa, lancarGanho } from "@/lib/acoes-plantao";
+import { encerrarJornada, type EstadoForm, excluirLancamento, iniciarJornada, lancarDespesa, lancarGanho } from "@/lib/acoes-plantao";
 
 /** Campo de dinheiro: teclado numérico, "R$" fixo à esquerda. */
 export function CampoReais({ nome, rotulo, dica, obrigatorio, padrao, autoFoco }: { nome: string; rotulo: string; dica?: ReactNode; obrigatorio?: boolean; padrao?: string; autoFoco?: boolean }) {
@@ -90,8 +90,21 @@ export function FormEncerrar({ kmInicial }: { kmInicial: number | null }) {
   );
 }
 
-function Confirmacao({ texto }: { texto: string }) {
-  return <Aviso tom="ok">{texto}</Aviso>;
+/** Confirmação com "Desfazer": apaga o último lançamento se foi engano. */
+function Confirmacao({ texto, estado }: { texto: string; estado: EstadoForm }) {
+  const [desfeito, setDesfeito] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  if (estado.id && desfeito === estado.id) return <Aviso tom="neutro">Lançamento desfeito.</Aviso>;
+  return (
+    <div role="status" className="flex items-center justify-between gap-3 rounded-xl bg-ok-suave px-3.5 py-2.5 text-[0.85rem] text-ok">
+      <span className="font-semibold">{texto}</span>
+      {estado.id && estado.tipo && (
+        <button type="button" disabled={pendente} onClick={() => iniciar(async () => { await excluirLancamento(estado.tipo!, estado.id!); setDesfeito(estado.id!); })} className="shrink-0 rounded-lg px-2 py-1 font-bold underline-offset-2 hover:underline">
+          {pendente ? "Desfazendo…" : "Desfazer"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function FormGanho({ voltarPara }: { voltarPara?: string }) {
@@ -109,7 +122,7 @@ export function FormGanho({ voltarPara }: { voltarPara?: string }) {
         <input name="corridas" type="number" inputMode="numeric" min={1} max={200} defaultValue={1} className={classeEntrada} />
       </Campo>
       {estado.erro && <Aviso tom="perigo">{estado.erro}</Aviso>}
-      {salvos > 0 && !pendente && <Confirmacao texto={salvos === 1 ? "Ganho lançado. Pode lançar o próximo." : `${salvos} ganhos lançados.`} />}
+      {salvos > 0 && !pendente && <Confirmacao estado={estado} texto={salvos === 1 ? "Ganho lançado." : `${salvos} ganhos lançados.`} />}
       <div className="grid grid-cols-2 gap-2">
         <Botao type="button" variante="secundario" tamanho="lg" onClick={() => router.push((voltarPara ?? "/m/plantao") as never)}>Concluir</Botao>
         <Botao tamanho="lg" icone={Plus} disabled={pendente}>{pendente ? "Salvando…" : "Lançar"}</Botao>
@@ -147,7 +160,7 @@ export function FormDespesa() {
         <input name="descricao" maxLength={120} placeholder={categoria === "manutencao" ? "Ex.: troca de óleo" : "Ex.: posto da Av. Brasil"} className={classeEntrada} />
       </Campo>
       {estado.erro && <Aviso tom="perigo">{estado.erro}</Aviso>}
-      {salvos > 0 && !pendente && <Confirmacao texto="Despesa lançada." />}
+      {salvos > 0 && !pendente && <Confirmacao estado={estado} texto="Despesa lançada." />}
       <div className="grid grid-cols-2 gap-2">
         <Botao type="button" variante="secundario" tamanho="lg" onClick={() => router.push("/m/plantao")}>Concluir</Botao>
         <Botao tamanho="lg" icone={Plus} disabled={pendente}>{pendente ? "Salvando…" : "Lançar"}</Botao>

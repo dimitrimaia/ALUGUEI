@@ -34,7 +34,7 @@ function Faixa({ titulo, minimo, bom, aoMudar, maximo, formatar }: { titulo: str
       <BarraFaixa minimo={minimo} bom={bom} maximo={maximo} />
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-xs font-semibold text-perigo">Ruim abaixo de<EntradaReais rotulo={`${titulo}: ruim abaixo de`} valor={minimo} aoMudar={(v) => aoMudar(v ?? 0, bom)} /></label>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-ok">Boa a partir de<EntradaReais rotulo={`${titulo}: boa a partir de`} valor={bom || null} placeholder="Igual ao mínimo" aoMudar={(v) => aoMudar(minimo, v ?? 0)} /></label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-ok">Boa a partir de<EntradaReais rotulo={`${titulo}: boa a partir de`} valor={bom || null} placeholder="= mínimo" aoMudar={(v) => aoMudar(minimo, v ?? 0)} /></label>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { BarChart3, History, LineChart, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
+import { BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -20,7 +20,7 @@ const FERRAMENTAS = [
   { href: "/m/plantao/semaforo", rotulo: "Copiloto", detalhe: "Bolha sobre o inDrive e a Uber", icone: Gauge },
   { href: "/m/plantao/extrato", rotulo: "Extrato", detalhe: "Ganhos e gastos, um a um", icone: BarChart3 },
   { href: "/m/plantao/historico", rotulo: "Ofertas", detalhe: "Aceitas, recusadas e prejuízo evitado", icone: History },
-  { href: "/m/plantao/relatorios", rotulo: "Relatórios", detalhe: "Gráficos do dia, semana e mês", icone: LineChart },
+  { href: "/m/plantao/financas", rotulo: "Finanças", detalhe: "Meta do mês e reserva", icone: PiggyBank },
   { href: "/m/caronas", rotulo: "Caronas", detalhe: "Divida o custo da viagem", icone: Users },
   { href: "/m/clientes", rotulo: "Meus clientes", detalhe: "Seu link de corridas", icone: Link2 },
   { href: "/m/plantao/custos", rotulo: "Custos do carro", detalhe: "Base do lucro real", icone: Settings2 },
@@ -151,6 +151,8 @@ export default async function Plantao() {
           </div>
         </section>
       )}
+
+      <Link href="/m/plantao/ajuda" className="text-center text-sm font-semibold text-marca">Dúvidas e diagnóstico do Copiloto</Link>
 
       {!!dados.corridas.length && (
         <section>
