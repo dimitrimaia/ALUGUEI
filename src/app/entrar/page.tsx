@@ -2,6 +2,7 @@ import { ArrowLeft, Building2, CalendarCheck, Camera, Car, FileSignature, Shield
 import type { Route } from "next";
 import Link from "next/link";
 import { Marca } from "@/components/ui";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { usuarioAtual } from "@/lib/sessao";
 import { FormularioEntrar, type Modo } from "./formulario";
@@ -49,13 +50,15 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   const p = PERFIS[tipo];
   // Motorista: visual claro, igual ao site na visão do motorista. Locador (e geral): azul.
   const claro = tipo === "motorista";
-  const site = tipo === "geral" ? "/" : `/?para=${tipo}`;
+  // No app não há "site" para voltar: volta para as boas-vindas.
+  const noApp = (await headers()).get("user-agent")?.includes("AlugueiApp") ?? false;
+  const site = noApp ? "/app" : tipo === "geral" ? "/" : `/?para=${tipo}`;
 
   return (
     <main className={`min-h-dvh bg-cartao lg:grid lg:grid-cols-2 ${claro ? "tema-claro" : ""}`}>
       {tipo !== "geral" && <LembrarPerfil perfil={tipo} />}
       <section
-        className={`relative overflow-hidden px-6 pt-8 pb-24 lg:flex lg:flex-col lg:justify-between lg:p-14 ${claro ? "bg-gradient-to-b from-[#e6efff] via-[#f2f6ff] to-[#f8faff] text-[#0b1630] lg:border-r lg:border-borda" : "fundo-marca"}`}
+        className={`relative overflow-hidden px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-24 lg:flex lg:flex-col lg:justify-between lg:p-14 ${claro ? "bg-gradient-to-b from-[#e6efff] via-[#f2f6ff] to-[#f8faff] text-[#0b1630] lg:border-r lg:border-borda" : "fundo-marca"}`}
       >
         {!claro && <div className="grade-sutil absolute inset-0 [mask-image:radial-gradient(70%_70%_at_30%_20%,black,transparent)]" aria-hidden />}
         <div className="relative flex items-center justify-between">
@@ -64,7 +67,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
             href={site as Route}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold ${claro ? "bg-white text-[#0b1630] shadow-cartao ring-1 ring-borda hover:bg-cartao-2" : "bg-white/10 ring-1 ring-white/20 hover:bg-white/20"}`}
           >
-            <ArrowLeft size={16} /> Voltar ao site
+            <ArrowLeft size={16} /> {noApp ? "Voltar" : "Voltar ao site"}
           </Link>
         </div>
         <div className="relative mt-10 lg:mt-0">

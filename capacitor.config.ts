@@ -11,10 +11,11 @@ const config: CapacitorConfig = {
   // Só a tela de "Abrindo o Aluguei…"; o app de verdade vem de server.url.
   webDir: "public-nativo",
   server: {
-    // Com "www": o site redireciona aluguei.xyz para www.aluguei.xyz, e a ponte
-    // nativa (plugin Plantao) só entra no endereço exato configurado aqui.
-    // Abre direto na área logada (/inicio), não na página de apresentação.
-    url: "https://www.aluguei.xyz/inicio",
+    // O endereço oficial é sem "www" (www redireciona para cá, na Vercel). A ponte
+    // nativa (plugin Plantao) só entra no endereço EXATO daqui: se o domínio
+    // principal mudar na Vercel, mude aqui também e gere um APK novo.
+    // Abre direto na área do app (/inicio), não na página de apresentação.
+    url: "https://aluguei.xyz/inicio",
     androidScheme: "https",
     cleartext: false,
     allowNavigation: ["aluguei.xyz", "*.aluguei.xyz", "*.supabase.co"],

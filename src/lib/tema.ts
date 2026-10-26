@@ -36,4 +36,4 @@ export function aplicarTema(tema: Tema) {
 }
 
 /** Roda antes da primeira pintura, para a página não piscar no tema errado. */
-export const SCRIPT_TEMA = `(function(){try{var t=localStorage.getItem("${CHAVE}");if(t!=="escuro"&&t!=="auto")t="claro";document.documentElement.dataset.tema=t;var e=t==="escuro"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);if(e){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","${COR_BARRA.escuro}")}}catch(_){}})()`;
+export const SCRIPT_TEMA = `(function(){try{if(navigator.userAgent.indexOf("AlugueiApp")>-1)document.documentElement.dataset.app="1";var t=localStorage.getItem("${CHAVE}");if(t!=="escuro"&&t!=="auto")t="claro";document.documentElement.dataset.tema=t;var e=t==="escuro"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);if(e){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","${COR_BARRA.escuro}")}}catch(_){}})()`;

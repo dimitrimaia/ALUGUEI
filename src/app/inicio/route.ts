@@ -10,7 +10,8 @@ import { usuarioAtual } from "@/lib/sessao";
 export async function GET(request: Request) {
   const base = new URL(request.url).origin;
   const usuario = await usuarioAtual();
-  if (!usuario) return NextResponse.redirect(new URL("/entrar", base));
+  // No app, quem não entrou começa pelas boas-vindas; no site, pelo login.
+  if (!usuario) return NextResponse.redirect(new URL(request.headers.get("user-agent")?.includes("AlugueiApp") ? "/app" : "/entrar", base));
   const modo = (await cookies()).get(COOKIE_MODO)?.value;
   if (modo === "motorista") return NextResponse.redirect(new URL("/m", base));
   const locadora = await locadoraDoUsuario(usuario.id);

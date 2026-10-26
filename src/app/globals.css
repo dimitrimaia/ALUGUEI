@@ -201,3 +201,29 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .animar-entrada { animation: none; }
 }
+
+/*
+ * Dentro do app (Capacitor, data-app no <html>): o desfoque de fundo
+ * (backdrop-filter) é o efeito mais caro para a GPU do celular e era
+ * recalculado a cada rolagem nas barras fixas. No app, as barras ficam
+ * sólidas e animações contínuas param: menos engasgo e menos calor.
+ */
+[data-app] *,
+[data-app] *::before,
+[data-app] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+[data-app] header[class*="bg-cartao/"],
+[data-app] nav[class*="bg-cartao/"] {
+  background-color: var(--cartao) !important;
+}
+[data-app] .animate-ping {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
+  }
+}

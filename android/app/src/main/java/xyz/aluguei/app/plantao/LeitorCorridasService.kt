@@ -1,6 +1,8 @@
 package xyz.aluguei.app.plantao
 
 import android.accessibilityservice.AccessibilityService
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -25,7 +27,14 @@ class LeitorCorridasService : AccessibilityService() {
         const val MAXIMO_CARACTERES = 4000
         const val JANELA_REPETICAO_MS = 20_000L
         const val PEDIDO_VALE_MS = 120_000L
+        /** Intervalo mínimo entre duas leituras da tela (o mapa gera eventos sem parar). */
+        const val INTERVALO_LEITURA_MS = 700L
     }
+
+    private val principal = Handler(Looper.getMainLooper())
+    private var pacotePendente: String? = null
+    private var ultimaLeituraEm = 0L
+    private val lerPendente = Runnable { pacotePendente?.let { lerAgora(it) } }
 
     private var pacotes: Set<String> = emptySet()
 
@@ -51,10 +60,21 @@ class LeitorCorridasService : AccessibilityService() {
         val pacote = e.packageName?.toString() ?: return
         if (pacote !in pacotes) return
         // Plantão desligado: não lê nada.
+        if (BolhaService.instancia == null || !Armazenamento.ligado(this)) return
+
+        // Junta a rajada de eventos: lê na hora se faz tempo, senão uma vez no fim do intervalo.
+        pacotePendente = pacote
+        val espera = INTERVALO_LEITURA_MS - (SystemClock.elapsedRealtime() - ultimaLeituraEm)
+        principal.removeCallbacks(lerPendente)
+        if (espera <= 0) lerAgora(pacote) else principal.postDelayed(lerPendente, espera)
+    }
+
+    private fun lerAgora(pacote: String) {
+        pacotePendente = null
+        ultimaLeituraEm = SystemClock.elapsedRealtime()
         val bolha = BolhaService.instancia ?: return
         if (!Armazenamento.ligado(this)) return
-
-        val raiz = raizDe(e, pacote) ?: return
+        val raiz = rootInActiveWindow?.takeIf { it.packageName?.toString() == pacote } ?: return
         val texto = juntarTexto(raiz)
         val hash = texto.hashCode()
         if (hash == ultimoHash) return
@@ -69,19 +89,13 @@ class LeitorCorridasService : AccessibilityService() {
         bolha.receberOferta(oferta.paraOferta(), "leitura", Pacotes.plataforma(pacote))
     }
 
-    override fun onInterrupt() {
-        // nada a interromper: o leitor não fala nem vibra
+    override fun onDestroy() {
+        principal.removeCallbacks(lerPendente)
+        super.onDestroy()
     }
 
-    /** Raiz da janela do app de corrida (a ativa, ou subindo a partir do nó do evento). */
-    private fun raizDe(e: AccessibilityEvent, pacote: String): AccessibilityNodeInfo? {
-        rootInActiveWindow?.let { if (it.packageName?.toString() == pacote) return it }
-        var no = e.source ?: return null
-        var passos = 0
-        while (passos++ < MAXIMO_PROFUNDIDADE) {
-            no = no.parent ?: break
-        }
-        return no
+    override fun onInterrupt() {
+        // nada a interromper: o leitor não fala nem vibra
     }
 
     /** Texto dos nós visíveis, com limite de nós, profundidade e tamanho. */
