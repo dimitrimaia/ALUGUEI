@@ -33,6 +33,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(destino);
   }
 
+  // No app (Capacitor), a raiz é a área logada: a página de apresentação é para o site.
+  if (request.nextUrl.pathname === "/" && request.headers.get("user-agent")?.includes("AlugueiApp")) {
+    const destino = request.nextUrl.clone();
+    destino.pathname = "/inicio";
+    destino.search = "";
+    return NextResponse.redirect(destino);
+  }
+
   const { data } = await supabase.auth.getClaims();
   const caminho = request.nextUrl.pathname;
   const protegida = AREAS_PROTEGIDAS.some((a) => caminho === a || caminho.startsWith(`${a}/`));

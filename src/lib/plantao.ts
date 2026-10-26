@@ -77,3 +77,17 @@ export function intervalo(p: Periodo): { de: DataISO; ate: DataISO; dias: number
   const dias = p === "hoje" ? 1 : p === "semana" ? 7 : 30;
   return { de: somarDias(ate, -(dias - 1)), ate, dias };
 }
+
+/** Períodos do extrato (inclui ontem e o mês do calendário). */
+export const PERIODOS_EXTRATO = { hoje: "Hoje", ontem: "Ontem", semana: "7 dias", mes: "Este mês", trinta: "30 dias" } as const;
+export type PeriodoExtrato = keyof typeof PERIODOS_EXTRATO;
+export function intervaloExtrato(p: PeriodoExtrato): { de: DataISO; ate: DataISO; dias: number } {
+  const dia = hoje();
+  if (p === "ontem") return { de: somarDias(dia, -1), ate: somarDias(dia, -1), dias: 1 };
+  if (p === "mes") {
+    const de = `${dia.slice(0, 8)}01` as DataISO;
+    return { de, ate: dia, dias: Number(dia.slice(8, 10)) };
+  }
+  const dias = p === "hoje" ? 1 : p === "semana" ? 7 : 30;
+  return { de: somarDias(dia, -(dias - 1)), ate: dia, dias };
+}

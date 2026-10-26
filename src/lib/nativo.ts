@@ -44,10 +44,11 @@ type PluginPlantao = {
 
 type JanelaCapacitor = { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string; Plugins?: { Plantao?: PluginPlantao } } };
 
-export function plataforma(): "android" | "ios" | "web" {
+export function plataforma(): "android" | "ios" | "web" | "app-sem-ponte" {
   if (typeof window === "undefined") return "web";
   const c = (window as unknown as JanelaCapacitor).Capacitor;
-  if (!c?.isNativePlatform?.()) return "web";
+  // Dentro do app (o navegador dele se identifica), mas sem a ponte nativa: app desatualizado.
+  if (!c?.isNativePlatform?.()) return navigator.userAgent.includes("AlugueiApp") ? "app-sem-ponte" : "web";
   return c.getPlatform?.() === "ios" ? "ios" : "android";
 }
 

@@ -18,7 +18,7 @@ export const metadata = { title: "Plantão" };
 const FERRAMENTAS = [
   { href: "/m/plantao/calculadora", rotulo: "Calculadora", detalhe: "Corrida, viagem e combustível", icone: Calculator },
   { href: "/m/plantao/semaforo", rotulo: "Semáforo", detalhe: "Bolha sobre a Uber e a 99", icone: Gauge },
-  { href: "/m/plantao/relatorios", rotulo: "Relatórios", detalhe: "Dia, semana e mês", icone: BarChart3 },
+  { href: "/m/plantao/extrato", rotulo: "Extrato", detalhe: "Ganhos e gastos, um a um", icone: BarChart3 },
   { href: "/m/caronas", rotulo: "Caronas", detalhe: "Divida o custo da viagem", icone: Users },
   { href: "/m/clientes", rotulo: "Meus clientes", detalhe: "Seu link de corridas", icone: Link2 },
   { href: "/m/plantao/custos", rotulo: "Custos do carro", detalhe: "Base do lucro real", icone: Settings2 },
@@ -59,7 +59,7 @@ export default async function Plantao() {
                 {r.porHora !== null && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold tabular-nums">{formatarBRL(r.porHora)}/h</span>}
               </div>
               <p className="mt-1 text-[2.1rem] leading-tight font-bold tracking-tight tabular-nums">{formatarBRL(r.bruto)}</p>
-              <p className="text-sm text-white/75">ganhos hoje · lucro estimado <strong className="text-white">{formatarBRL(r.lucro)}</strong></p>
+              <Link href="/m/plantao/extrato" className="inline-flex items-center gap-1 text-sm text-white/75">ganhos hoje · lucro <strong className="text-white">{formatarBRL(r.lucro)}</strong> <ChevronRight size={14} /></Link>
               {meta > 0 && (
                 <div className="mt-3">
                   <div className="flex justify-between text-xs text-white/75">
@@ -97,14 +97,15 @@ export default async function Plantao() {
 
       <div className="grid grid-cols-3 gap-2">
         {[
-          { rotulo: "Lucro hoje", valor: formatarBRL(r.lucro), tom: r.lucro < 0 ? "text-perigo" : "" },
-          { rotulo: "Corridas", valor: String(r.corridas), tom: "" },
-          { rotulo: "Gastos", valor: formatarBRL(r.despesas + r.fixosDoPeriodo + r.combustivelEstimado), tom: "" },
+          { rotulo: "Lucro hoje", valor: formatarBRL(r.lucro), tom: r.lucro < 0 ? "text-perigo" : "", filtro: "tudo" },
+          { rotulo: "Corridas", valor: String(r.corridas), tom: "", filtro: "ganhos" },
+          { rotulo: "Gastos", valor: formatarBRL(r.despesas + r.fixosDoPeriodo + r.combustivelEstimado), tom: "", filtro: "gastos" },
         ].map((i) => (
-          <div key={i.rotulo} className="rounded-[1.1rem] border border-borda bg-cartao p-3 shadow-cartao">
+          <Link key={i.rotulo} href={`/m/plantao/extrato?periodo=hoje&filtro=${i.filtro}` as Route} className="relative rounded-[1.1rem] border border-borda bg-cartao p-3 shadow-cartao transition-transform active:scale-[0.97]">
             <p className="text-[0.7rem] font-semibold text-suave">{i.rotulo}</p>
             <p className={`text-[0.95rem] font-bold tabular-nums [overflow-wrap:anywhere] ${i.tom}`}>{i.valor}</p>
-          </div>
+            <ChevronRight size={14} className="absolute top-3 right-2 text-suave" />
+          </Link>
         ))}
       </div>
 
@@ -132,7 +133,7 @@ export default async function Plantao() {
         <section>
           <div className="mt-1 mb-2.5 flex items-center justify-between">
             <h2 className="text-base font-bold tracking-tight">Lançamentos de hoje</h2>
-            <Link href="/m/plantao/relatorios?periodo=hoje" className="text-sm font-semibold text-marca">Ver tudo</Link>
+            <Link href="/m/plantao/extrato" className="text-sm font-semibold text-marca">Ver extrato</Link>
           </div>
           <div className="divide-y divide-borda overflow-hidden rounded-[1.1rem] border border-borda bg-cartao shadow-cartao">
             {lancamentos.slice(0, 6).map((l) => (

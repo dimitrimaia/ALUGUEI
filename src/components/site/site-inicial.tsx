@@ -60,7 +60,7 @@ export function SiteInicial({ locador, motorista, logado }: { locador: ReactNode
     // A visão do motorista é sempre clara, mesmo com o aparelho no tema escuro.
     <div className={`min-h-dvh bg-cartao ${perfil === "motorista" ? "tema-claro" : ""}`}>
       <header
-        className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${sobreAzul ? "text-white" : "border-b border-borda bg-cartao/90 text-texto shadow-cartao backdrop-blur"}`}
+        className={`fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top)] transition-colors duration-300 ${sobreAzul ? "text-white" : "border-b border-borda bg-cartao/90 text-texto shadow-cartao backdrop-blur"}`}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
           <Link href="/" aria-label="Aluguei, início" onClick={() => window.scrollTo({ top: 0 })}>

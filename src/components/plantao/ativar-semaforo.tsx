@@ -69,7 +69,7 @@ const PASSOS: Passo[] = [
 ];
 
 export function AtivarSemaforo() {
-  const [ambiente, setAmbiente] = useState<"carregando" | "android" | "ios" | "web">("carregando");
+  const [ambiente, setAmbiente] = useState<"carregando" | ReturnType<typeof plataforma>>("carregando");
   const [aceite, setAceite] = useState(false);
   const [estado, setEstado] = useState<EstadoNativo | null>(null);
   const [pulados, setPulados] = useState<string[]>([]);
@@ -111,9 +111,11 @@ export function AtivarSemaforo() {
       <div className="flex flex-col gap-4">
         <Cartao className="flex flex-col gap-3">
           <span className="grid size-11 place-items-center rounded-2xl bg-marca-suave text-marca"><Smartphone size={22} /></span>
-          <h2 className="text-lg font-bold">{ambiente === "ios" ? "No iPhone, use a calculadora" : "A bolha funciona no app Android"}</h2>
+          <h2 className="text-lg font-bold">{ambiente === "ios" ? "No iPhone, use a calculadora" : ambiente === "app-sem-ponte" ? "Atualize o app do Aluguei" : "A bolha funciona no app Android"}</h2>
           <p className="text-sm text-suave">
-            {ambiente === "ios"
+            {ambiente === "app-sem-ponte"
+              ? "Esta versão do app não conectou a bolha. Instale a versão mais nova do Aluguei e abra esta tela de novo."
+              : ambiente === "ios"
               ? "A Apple não permite que um app apareça por cima de outro nem leia a tela dele. No iPhone, use a calculadora: digite valor e km e veja o semáforo na hora."
               : "Mostrar a bolha por cima da Uber e da 99 e ler a oferta sozinho só é possível no aplicativo do Aluguei para Android. Aqui no navegador, a calculadora faz a mesma conta com o que você digitar."}
           </p>
