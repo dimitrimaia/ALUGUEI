@@ -13,7 +13,7 @@ export default async function Regua() {
     <div>
       <CabecalhoMotorista titulo="Régua do Copiloto" voltar="/m/plantao/semaforo" />
       <SincronizarPlantao perfil={c.perfil} criterios={c.criterios} preferencias={c.preferencias} />
-      <EditorRegua inicial={c.criterios} />
+      <EditorRegua inicial={c.criterios} perfisIniciais={c.preferencias.perfis} />
     </div>
   );
 }

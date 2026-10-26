@@ -67,7 +67,7 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
     if (!a || !valor || !kmCorrida) return;
     iniciar(async () => {
       await registrarCorridas([{ valor, kmCorrida, minutosCorrida: minCorrida, kmBusca, minutosBusca: minBusca, sinal: a.sinal, decisao, origem: "digitada", momento: new Date().toISOString() }]);
-      setSalvo(decisao === "aceitei" ? "Salva como aceita." : "Salva como recusada.");
+      setSalvo(decisao === "aceitei" ? "Guardada como corrida que você pegou." : "Guardada como corrida que você não pegou.");
     });
   }
 
@@ -87,10 +87,11 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
         <>
           <CartaoSemaforo a={a} kmBusca={kmBusca} />
           <div className="grid grid-cols-2 gap-2">
-            <Botao variante="secundario" icone={ThumbsDown} disabled={salvando} onClick={() => salvar("recusei")}>Recusei</Botao>
-            <Botao variante="secundario" icone={ThumbsUp} disabled={salvando} onClick={() => salvar("aceitei")}>Aceitei</Botao>
+            <Botao variante="secundario" icone={ThumbsDown} disabled={salvando} onClick={() => salvar("recusei")}>Não peguei</Botao>
+            <Botao variante="secundario" icone={ThumbsUp} disabled={salvando} onClick={() => salvar("aceitei")}>Peguei</Botao>
           </div>
-          {salvo && <Aviso tom="ok">{salvo} Ela entra no histórico do Copiloto.</Aviso>}
+          <p className="-mt-2 text-center text-xs text-suave">Opcional: guarda esta oferta no histórico do Copiloto, para as suas estatísticas.</p>
+          {salvo && <Aviso tom="ok">{salvo} Veja em Plantão › Ofertas.</Aviso>}
         </>
       ) : (
         <p className="text-center text-sm text-suave">Digite o valor e os km da oferta para ver se vale a pena.</p>

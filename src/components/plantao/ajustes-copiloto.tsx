@@ -7,7 +7,7 @@ import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { Aviso, Botao, Cartao, classeAreaTexto } from "@/components/ui";
 import { CAMPOS_CARTAO, MENSAGEM_PADRAO, montarMensagem, NOME_CAMPO, type PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 import { buscarEnderecoBase, salvarPreferenciasCopiloto } from "@/lib/acoes-plantao";
-import { plantaoNativo } from "@/lib/nativo";
+import { type EstadoCamera, plantaoNativo } from "@/lib/nativo";
 
 function Interruptor({ titulo, texto, ligado, aoMudar }: { titulo: string; texto: string; ligado: boolean; aoMudar: (v: boolean) => void }) {
   return (
@@ -79,6 +79,10 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
         )}
         <p className="text-sm font-medium">Tamanho dos números</p>
         <Segmentos valor={p.tamanhoFonte} opcoes={[["p", "Pequeno"], ["m", "Médio"], ["g", "Grande"]]} aoMudar={(tamanhoFonte) => mudar({ tamanhoFonte })} />
+        <p className="text-sm font-medium">Estilo</p>
+        <Segmentos valor={p.estiloCartao} opcoes={[["completo", "Cartão completo"], ["bordas", "Peças na borda"]]} aoMudar={(estiloCartao) => mudar({ estiloCartao })} />
+        <p className="-mt-1 text-xs text-suave">{p.estiloCartao === "bordas" ? "Pílulas pequenas coladas na borda da tela; toque para ver o cartão inteiro." : "Um cartão com todos os números."}</p>
+        {p.estiloCartao === "completo" && <Interruptor titulo="Fixar no centro" texto="O cartão fica sempre no meio da largura; ao arrastar, só sobe e desce." ligado={p.fixarCentro} aoMudar={(fixarCentro) => mudar({ fixarCentro })} />}
         <p className="text-sm font-medium">Tema do cartão</p>
         <Segmentos valor={p.tema} opcoes={[["app", "Igual ao app"], ["claro", "Claro"], ["escuro", "Escuro"]]} aoMudar={(tema) => mudar({ tema })} />
         <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -101,6 +105,12 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
           <Interruptor titulo="Modo economia" texto="O leitor dorme quando o app de corrida está offline. Menos bateria e menos calor." ligado={p.economia} aoMudar={(economia) => mudar({ economia })} />
         </div>
       </Bloco>
+
+      <Bloco titulo="Navegação" texto="App que os botões Embarque e Destino do cartão e da notificação abrem.">
+        <Segmentos valor={p.appNavegacao} opcoes={[["padrao", "Padrão"], ["maps", "Google Maps"], ["waze", "Waze"], ["perguntar", "Perguntar"]]} aoMudar={(appNavegacao) => mudar({ appNavegacao })} />
+      </Bloco>
+
+      <SegurancaCorrida p={p} mudar={mudar} nativo={nativo} />
 
       <Bloco titulo="Base (casa)" texto="Para calcular quanto custa voltar do destino. Ligue “Contar a volta para casa” na régua.">
         {p.base ? (
@@ -186,5 +196,55 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
         {salvando ? "Salvando…" : "Salvar ajustes"}
       </Botao>
     </div>
+  );
+}
+
+/** Câmera de segurança e print das ofertas: ficam só no celular. */
+function SegurancaCorrida({ p, mudar, nativo }: { p: PreferenciasCopiloto; mudar: (x: Partial<PreferenciasCopiloto>) => void; nativo: boolean }) {
+  const [camera, setCamera] = useState<EstadoCamera | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  useEffect(() => {
+    if (nativo) plantaoNativo()?.cameraEstado().then(setCamera).catch(() => null);
+  }, [nativo]);
+  const c = p.camera;
+  return (
+    <Bloco titulo="Segurança da corrida" texto="Tudo fica guardado só no seu celular. Nada é enviado para o Aluguei.">
+      <Interruptor titulo="Print de cada oferta" texto="Guarda uma foto da tela de cada oferta (Galeria › Aluguei › Ofertas): comprovante para contestar valor ou corrida no app." ligado={p.printOfertas} aoMudar={(printOfertas) => mudar({ printOfertas })} />
+      <div className="flex flex-col gap-2 border-t border-borda pt-3">
+        <p className="text-sm font-semibold">Câmera de segurança</p>
+        <p className="text-xs text-suave">Grava a corrida em arquivos curtos (Galeria › Aluguei › Corridas). Quando passa do limite, apaga os mais antigos. Gravar no próprio carro é permitido; recomendamos o adesivo “veículo monitorado por câmera”, que ajuda se o vídeo virar prova. Não publique vídeos de passageiros.</p>
+        <Segmentos valor={c.lente} opcoes={[["frontal", "Frontal (interior)"], ["traseira", "Traseira"]]} aoMudar={(lente) => mudar({ camera: { ...c, lente } })} />
+        <Segmentos valor={c.qualidade} opcoes={[["baixa", "360p"], ["media", "480p"], ["alta", "720p"]]} aoMudar={(qualidade) => mudar({ camera: { ...c, qualidade } })} />
+        <label className="flex flex-col gap-1 text-sm font-medium">Arquivos de {c.minutosPorArquivo} min · limite {c.limiteGb} GB
+          <input type="range" min={1} max={15} value={c.minutosPorArquivo} onChange={(e) => mudar({ camera: { ...c, minutosPorArquivo: Number(e.target.value) } })} className="accent-[var(--marca)]" />
+          <input type="range" min={1} max={64} value={c.limiteGb} onChange={(e) => mudar({ camera: { ...c, limiteGb: Number(e.target.value) } })} className="accent-[var(--marca)]" />
+        </label>
+        {nativo ? (
+          <Botao
+            type="button"
+            variante={camera?.gravando ? "perigo" : "secundario"}
+            onClick={async () => {
+              setErro(null);
+              const pl = plantaoNativo()!;
+              try {
+                if (camera?.gravando) setCamera(await pl.cameraParar());
+                else {
+                  await pl.pedirCamera().catch(() => null);
+                  setCamera(await pl.cameraIniciar());
+                }
+              } catch {
+                setErro("Não consegui usar a câmera. Confira a permissão da câmera e salve os ajustes antes de gravar.");
+              }
+            }}
+          >
+            {camera?.gravando ? "Parar a gravação" : "Começar a gravar agora"}
+          </Botao>
+        ) : (
+          <p className="text-xs text-suave">A gravação funciona no app do Aluguei para Android.</p>
+        )}
+        {camera?.gravando && <p className="text-xs text-ok">Gravando{camera.arquivos ? ` · ${camera.arquivos} arquivos` : ""}{camera.usadoMb ? ` · ${camera.usadoMb} MB` : ""}. Também dá para parar pela notificação ou pelo menu da bolha.</p>}
+        {erro && <p className="text-sm text-perigo">{erro}</p>}
+      </div>
+    </Bloco>
   );
 }

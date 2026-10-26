@@ -25,6 +25,7 @@ export type CorridaNativa = {
   momento: string;
 };
 
+export type EstadoCamera = { gravando: boolean; desde?: string | null; arquivos?: number; usadoMb?: number };
 type RespostaPermissao = { tipo: string; concedida: boolean; aberto: boolean };
 type Ouvinte = { remove: () => Promise<void> | void };
 type PluginPlantao = {
@@ -32,6 +33,13 @@ type PluginPlantao = {
   configurar(o: { perfil: PerfilCusto; criterios: Criterios; segundosCartao?: number; tema?: "claro" | "escuro" | "auto"; vibrar?: boolean; preferencias?: PreferenciasCopiloto }): Promise<EstadoNativo>;
   pedirLocalizacao(): Promise<RespostaPermissao>;
   definirBaseAqui(): Promise<{ lat: number; lon: number }>;
+  pedirCamera(): Promise<RespostaPermissao>;
+  cameraIniciar(): Promise<EstadoCamera>;
+  cameraParar(): Promise<EstadoCamera>;
+  cameraEstado(): Promise<EstadoCamera>;
+  /** Perfil de régua escolhido na bolha e ainda não salvo na conta. */
+  perfilPendente(): Promise<{ perfil: { nome: string; criterios: unknown } | null }>;
+  limparPerfilPendente(): Promise<void>;
   /** Lugares marcados como "evitar" na bolha, ainda não levados para a conta. */
   lugaresAdicionados(): Promise<{ lugares: string[] }>;
   limparLugaresAdicionados(): Promise<void>;
@@ -48,7 +56,7 @@ type PluginPlantao = {
   simular(o: { valor: number; kmCorrida: number; minutosCorrida?: number; kmBusca?: number; minutosBusca?: number }): Promise<unknown>;
   corridasPendentes(): Promise<{ corridas: CorridaNativa[] }>;
   confirmarEnvio(o: { ate?: string; ids?: string[] }): Promise<{ corridasPendentes: number }>;
-  addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia", cb: (dados: unknown) => void): Promise<Ouvinte>;
+  addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia" | "perfil", cb: (dados: unknown) => void): Promise<Ouvinte>;
 };
 
 type JanelaCapacitor = { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string; Plugins?: { Plantao?: PluginPlantao } } };

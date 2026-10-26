@@ -71,10 +71,10 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
           {lista.map((c) => (
             <Cartao key={c.id} className="flex items-center gap-3 !p-3">
               <span className={`h-12 w-1.5 shrink-0 rounded-full ${COR_SINAL[c.a.sinal].fundo}`} aria-label={COR_SINAL[c.a.sinal].rotulo} />
-              <div className="min-w-0 flex-1">
+              <Link href={`/m/plantao/historico/${c.id}` as Route} className="min-w-0 flex-1">
                 <p className="flex items-baseline gap-2"><span className="font-bold tabular-nums">{formatarBRL(c.valor_centavos)}</span><span className="text-xs text-suave">{c.app ? NOME_APP[c.app] ?? c.app : "Digitada"} · {new Date(c.ocorrida_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}</span></p>
                 <p className="text-xs text-suave tabular-nums">{formatarBRL(c.a.porKm)}/km · {formatarBRL(c.a.porHora)}/h · lucro <span className={c.a.lucro < 0 ? "font-semibold text-perigo" : "font-semibold text-ok"}>{formatarBRL(c.a.lucro)}</span></p>
-              </div>
+              </Link>
               <DecisaoOferta id={c.id} decisao={c.decisao} />
             </Cartao>
           ))}
@@ -83,7 +83,7 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
         <Vazio titulo="Nenhuma oferta neste período">Ligue o Copiloto: cada oferta que ele avalia aparece aqui, com o que você aceitou e recusou.</Vazio>
       )}
       <Link href="/m/plantao/horarios" className="flex items-center gap-3 rounded-[1.1rem] border border-borda bg-cartao p-4 text-sm font-semibold shadow-cartao"><Clock size={18} className="text-marca" /> <span className="flex-1">Melhores horários para rodar</span> <ChevronRight size={17} className="text-suave" /></Link>
-      <p className="text-center text-xs text-suave">Toque no 👍 ou 👎 para corrigir. O lucro é recalculado com os custos atuais do seu carro.</p>
+      <p className="text-center text-xs text-suave">Toque numa oferta para editar, ou no 👍/👎 para corrigir rápido. O lucro é recalculado com os custos atuais do seu carro.</p>
     </div>
   );
 }

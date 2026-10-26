@@ -1,13 +1,13 @@
 "use client";
 
 import { acaoSegura } from "@/lib/versao";
-import { Clock, MapPin, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
+import { Bookmark, Clock, MapPin, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState, useTransition } from "react";
 import { Aviso, Botao, Cartao } from "@/components/ui";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
-import { type Criterios, type FaixaHorario } from "@/dominio/ganhos/custos";
-import { salvarReguaCompleta } from "@/lib/acoes-plantao";
+import { type Criterios, type FaixaHorario, normalizarCriterios } from "@/dominio/ganhos/custos";
+import { salvarPerfisRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
 import { EntradaNumero, EntradaReais } from "./entradas";
 
 /** Barra que mostra a faixa: vermelho até o mínimo, âmbar até o bom, verde depois. */
@@ -84,7 +84,7 @@ function Lista({ titulo, icone, texto, lista, aoMudar, tom, exemplo }: { titulo:
 
 const reais = (c: number) => formatarBRL(c).replace(",00", "");
 
-export function EditorRegua({ inicial }: { inicial: Criterios }) {
+export function EditorRegua({ inicial, perfisIniciais }: { inicial: Criterios; perfisIniciais: { nome: string; criterios: unknown }[] }) {
   const router = useRouter();
   const [c, setC] = useState(inicial);
   const [estado, setEstado] = useState<{ erro?: string; ok?: boolean }>({});
@@ -94,6 +94,7 @@ export function EditorRegua({ inicial }: { inicial: Criterios }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <Perfis atual={c} iniciais={perfisIniciais} aoUsar={(x) => mudar(x)} />
       <Cartao className="flex flex-col gap-3">
         <div>
           <h2 className="font-bold">Ganho</h2>
@@ -184,5 +185,46 @@ export function EditorRegua({ inicial }: { inicial: Criterios }) {
         {salvando ? "Salvando…" : "Salvar régua"}
       </Botao>
     </div>
+  );
+}
+
+/** Réguas salvas: troque de régua de uma vez (aqui ou pelo menu da bolha). */
+function Perfis({ atual, iniciais, aoUsar }: { atual: Criterios; iniciais: { nome: string; criterios: unknown }[]; aoUsar: (c: Criterios) => void }) {
+  const [perfis, setPerfis] = useState(iniciais);
+  const [nome, setNome] = useState("");
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [salvando, iniciar] = useTransition();
+  const gravar = (lista: typeof perfis, msg: string) =>
+    iniciar(async () => {
+      const r = await acaoSegura(() => salvarPerfisRegua(lista));
+      if ("ok" in r && r.ok) {
+        setPerfis(lista);
+        setAviso(msg);
+      } else setAviso(r.erro ?? "Não foi possível salvar.");
+    });
+  return (
+    <Cartao className="flex flex-col gap-3">
+      <div>
+        <h2 className="flex items-center gap-2 font-bold"><Bookmark size={18} className="text-marca" /> Perfis de régua</h2>
+        <p className="text-xs text-suave">Ex.: Dia, Noite, Aeroporto. Toque para usar; na bolha, segure e escolha “Perfil”.</p>
+      </div>
+      {!!perfis.length && (
+        <div className="flex flex-wrap gap-2">
+          {perfis.map((p) => (
+            <span key={p.nome} className="inline-flex h-10 items-center gap-1 rounded-full border border-borda bg-cartao pr-1 pl-1">
+              <button type="button" onClick={() => (aoUsar(normalizarCriterios(p.criterios)), setAviso(`Usando “${p.nome}”. Toque em Salvar régua para valer.`))} className="h-8 rounded-full px-3 text-sm font-semibold hover:bg-cartao-2">{p.nome}</button>
+              <button type="button" aria-label={`Apagar ${p.nome}`} disabled={salvando} onClick={() => gravar(perfis.filter((x) => x.nome !== p.nome), `“${p.nome}” apagado.`)} className="grid size-8 place-items-center rounded-full text-suave hover:bg-cartao-2"><X size={14} /></button>
+            </span>
+          ))}
+        </div>
+      )}
+      {perfis.length < 6 && (
+        <div className="flex gap-2">
+          <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={30} placeholder="Nome da régua atual (ex.: Noite)" className="h-11 min-w-0 flex-1 rounded-xl border border-borda bg-cartao px-3 text-sm outline-none focus:border-marca" />
+          <Botao type="button" variante="secundario" icone={Plus} disabled={salvando || !nome.trim()} onClick={() => { const n = nome.trim(); gravar([...perfis.filter((x) => x.nome !== n), { nome: n, criterios: atual }], `Régua salva como “${n}”.`); setNome(""); }}>Salvar</Botao>
+        </div>
+      )}
+      {aviso && <p className="text-sm text-suave">{aviso}</p>}
+    </Cartao>
   );
 }

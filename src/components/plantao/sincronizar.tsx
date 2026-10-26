@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { adicionarLugaresEvitar, registrarCorridas, salvarPreferenciasCopiloto, salvarRegua } from "@/lib/acoes-plantao";
+import { adicionarLugaresEvitar, registrarCorridas, salvarPreferenciasCopiloto, salvarRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
+import { normalizarCriterios } from "@/dominio/ganhos/custos";
 import { plantaoNativo } from "@/lib/nativo";
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
 import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
@@ -20,6 +21,13 @@ export function SincronizarPlantao({ perfil, criterios: daConta, preferencias }:
     async function sincronizar() {
       let criterios = daConta;
       try {
+        // Perfil escolhido na bolha (Dia, Noite...): vira a régua da conta.
+        const { perfil: escolhido } = await p!.perfilPendente().catch(() => ({ perfil: null }));
+        if (escolhido) {
+          criterios = normalizarCriterios(escolhido.criterios);
+          await salvarReguaCompleta(criterios);
+          await p!.limparPerfilPendente().catch(() => null);
+        }
         // Régua mudada na bolha vale mais que a da conta: salva primeiro e manda a combinada.
         const { regua } = await p!.reguaPendente().catch(() => ({ regua: null }));
         if (regua) {

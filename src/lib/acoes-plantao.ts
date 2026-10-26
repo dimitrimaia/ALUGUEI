@@ -266,3 +266,48 @@ export async function corrigirDecisao(id: string, decisao: "aceitei" | "recusei"
   await supabaseAdmin().from("corridas_avaliadas").update({ decisao }).eq("id", id).eq("usuario_id", usuario.id);
   revalidatePath("/m/plantao", "layout");
 }
+
+/** Perfis de régua (Dia, Noite, Aeroporto): guardados nas preferências do Copiloto. */
+export async function salvarPerfisRegua(perfis: { nome: string; criterios: unknown }[]): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/regua");
+  const { data } = await supabaseAdmin().from("perfis_custo").select("*").eq("usuario_id", usuario.id).maybeSingle();
+  const atual = normalizarPreferenciasCopiloto((data as { preferencias?: unknown } | null)?.preferencias);
+  const limpos = perfis.slice(0, 6).map((p) => ({ nome: String(p.nome).trim().slice(0, 30) || "Perfil", criterios: normalizarCriterios(p.criterios) }));
+  return gravarPerfil(usuario.id, { preferencias: { ...atual, perfis: limpos } });
+}
+
+/** Editar uma oferta do histórico (valor, distâncias, tempos e decisão). */
+export async function editarCorrida(id: string, _: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/historico");
+  const num = (k: string) => {
+    const t = String(form.get(k) ?? "").trim().replace(/\./g, "").replace(",", ".");
+    const n = Number(t);
+    return t && Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  const valor = lerReais(String(form.get("valor") ?? ""));
+  const km = num("km");
+  if (!valor || !km) return { erro: "Informe o valor e os km da viagem." };
+  const decisao = form.get("decisao");
+  const { error } = await supabaseAdmin()
+    .from("corridas_avaliadas")
+    .update({
+      valor_centavos: valor,
+      metros_corrida: Math.round(km * 1000),
+      minutos_corrida: num("minutos") !== null ? Math.round(num("minutos")!) : null,
+      metros_busca: num("kmBusca") !== null ? Math.round(num("kmBusca")! * 1000) : null,
+      minutos_busca: num("minutosBusca") !== null ? Math.round(num("minutosBusca")!) : null,
+      decisao: decisao === "aceitei" || decisao === "recusei" ? decisao : null,
+    })
+    .eq("id", id)
+    .eq("usuario_id", usuario.id);
+  if (error) return { erro: "Não foi possível salvar." };
+  revalidatePath("/m/plantao", "layout");
+  redirect("/m/plantao/historico");
+}
+
+export async function excluirCorrida(id: string) {
+  const usuario = await exigirUsuario("/m/plantao/historico");
+  await supabaseAdmin().from("corridas_avaliadas").delete().eq("id", id).eq("usuario_id", usuario.id);
+  revalidatePath("/m/plantao", "layout");
+  redirect("/m/plantao/historico");
+}

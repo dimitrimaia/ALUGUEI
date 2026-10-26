@@ -46,6 +46,18 @@ export type PreferenciasCopiloto = {
   base: Base;
   /** O leitor dorme quando o app de corrida está offline ou fechado. */
   economia: boolean;
+  /** "completo": cartão único. "bordas": peças pequenas coladas na borda da tela (mais discreto). */
+  estiloCartao: "completo" | "bordas";
+  /** Cartão sempre no centro da largura (só sobe e desce ao arrastar). */
+  fixarCentro: boolean;
+  /** App que os botões Embarque e Destino abrem. */
+  appNavegacao: "padrao" | "maps" | "waze" | "perguntar";
+  /** Réguas salvas (ex.: Dia, Noite, Aeroporto), trocadas pelo menu da bolha. */
+  perfis: { nome: string; criterios: unknown }[];
+  /** Câmera de segurança da corrida (grava no celular, nunca envia para fora). */
+  camera: { qualidade: "baixa" | "media" | "alta"; lente: "frontal" | "traseira"; minutosPorArquivo: number; limiteGb: number };
+  /** Guarda um print de cada oferta (comprovante para contestar no app). */
+  printOfertas: boolean;
 };
 
 export const MENSAGEM_PADRAO = "{saudacao}, {nome}! Já estou a caminho e chego em aproximadamente {tempo}. Por gentileza, me aguarde no local de embarque.";
@@ -63,6 +75,12 @@ export const PREFERENCIAS_PADRAO: PreferenciasCopiloto = {
   mensagem: MENSAGEM_PADRAO,
   base: null,
   economia: true,
+  estiloCartao: "completo",
+  fixarCentro: false,
+  appNavegacao: "padrao",
+  perfis: [],
+  camera: { qualidade: "media", lente: "frontal", minutosPorArquivo: 5, limiteGb: 8 },
+  printOfertas: false,
 };
 
 const esquema = z.object({
@@ -85,6 +103,22 @@ const esquema = z.object({
     .nullable()
     .catch(null),
   economia: z.boolean().catch(true),
+  estiloCartao: z.enum(["completo", "bordas"]).catch("completo"),
+  fixarCentro: z.boolean().catch(false),
+  appNavegacao: z.enum(["padrao", "maps", "waze", "perguntar"]).catch("padrao"),
+  perfis: z
+    .array(z.object({ nome: z.string().trim().min(1).max(30), criterios: z.unknown() }))
+    .max(6)
+    .catch([]),
+  camera: z
+    .object({
+      qualidade: z.enum(["baixa", "media", "alta"]).catch("media"),
+      lente: z.enum(["frontal", "traseira"]).catch("frontal"),
+      minutosPorArquivo: z.coerce.number().int().min(1).max(30).catch(5),
+      limiteGb: z.coerce.number().int().min(1).max(128).catch(8),
+    })
+    .catch(PREFERENCIAS_PADRAO.camera),
+  printOfertas: z.boolean().catch(false),
 });
 
 export function normalizarPreferenciasCopiloto(entrada: unknown): PreferenciasCopiloto {
