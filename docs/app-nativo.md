@@ -322,3 +322,39 @@ Observações:
 - A fila guarda no máximo 500 corridas (as mais antigas saem primeiro).
 - Fluxo de envio sugerido: `corridasPendentes()` → enviar ao servidor usando `id` como chave de
   idempotência → `confirmarEnvio({ ids })`.
+
+## Gerar o APK sem instalar nada (GitHub Actions)
+
+O GitHub compila o app na nuvem (`.github/workflows/android.yml`):
+
+1. No GitHub, abra o repositório → aba **Actions** → **App Android (APK)**.
+2. **Run workflow** → escolha o branch → **Run workflow**. Leva uns 10 minutos.
+   (Também roda sozinho quando algo em `android/` muda.)
+3. Abra a execução (bolinha verde) → no fim da página, em **Artifacts**, baixe
+   `aluguei-debug-apk` (vem em .zip; dentro está o `app-debug.apk`).
+
+## Instalar no celular Android
+
+1. Mande o `app-debug.apk` para o celular (Google Drive, WhatsApp para você mesmo
+   ou cabo USB) e toque nele.
+2. O Android pergunta se permite instalar de "fonte desconhecida": toque em
+   **Configurações** → ligue **Permitir desta fonte** → volte e **Instalar**.
+3. Se aparecer o Play Protect, toque em **Instalar mesmo assim** (é normal para
+   app fora da loja).
+4. Abra o Aluguei, entre na conta e vá em **Plantão → Semáforo**.
+5. **Leitura automática no Android 13 ou mais novo:** app instalado fora da loja
+   tem a acessibilidade bloqueada ("configuração restrita"). Libere em
+   Configurações → Apps → Aluguei → **⋮** (canto de cima) → **Permitir
+   configurações restritas**. Depois ative de novo pelo app. Na versão da Play
+   Store isso não acontece.
+
+Para atualizar: gere de novo e instale por cima (os dados continuam).
+
+## Se um dia quiser o Android Studio
+
+1. Baixe em developer.android.com/studio e instale com as opções padrão.
+2. Na primeira abertura, deixe ele baixar o SDK (Next até o fim).
+3. No projeto: `pnpm install` e `npx cap open android` (abre o Android Studio).
+4. Ligue o celular no cabo com a **Depuração USB** ativa (Configurações → Sobre
+   o telefone → toque 7 vezes em "Número da versão" → Opções do desenvolvedor →
+   Depuração USB) e aperte o ▶ verde.

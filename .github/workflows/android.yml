@@ -1,0 +1,36 @@
+# Gera o APK do app Android na nuvem do GitHub (sem Android Studio).
+# Rode em: GitHub → Actions → "App Android (APK)" → Run workflow.
+# O APK fica para baixar no fim da execução, em "Artifacts".
+name: App Android (APK)
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["android/**", "capacitor.config.ts", ".github/workflows/android.yml"]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile
+      - run: npx cap sync android
+      - name: Testes e APK
+        working-directory: android
+        run: ./gradlew testDebugUnitTest assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aluguei-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
