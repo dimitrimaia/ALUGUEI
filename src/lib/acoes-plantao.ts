@@ -146,3 +146,28 @@ export async function registrarCorridas(lista: unknown[]): Promise<{ salvas: num
   revalidatePath("/m/plantao", "layout");
   return { salvas: data?.length ?? 0 };
 }
+
+/** Lugares que o motorista marcou como "evitar" na bolha do Android: entram na régua dele. */
+export async function adicionarLugaresEvitar(lugares: string[]): Promise<void> {
+  const usuario = await exigirUsuario("/m/plantao");
+  const limpos = lugares.filter((l) => typeof l === "string").slice(0, 50);
+  if (!limpos.length) return;
+  const admin = supabaseAdmin();
+  const { data } = await admin.from("perfis_custo").select("criterios").eq("usuario_id", usuario.id).maybeSingle();
+  if (!data) return;
+  const atual = normalizarCriterios(data.criterios);
+  const criterios = normalizarCriterios({ ...atual, evitar: [...atual.evitar, ...limpos] });
+  await admin.from("perfis_custo").update({ criterios, atualizado_em: new Date().toISOString() }).eq("usuario_id", usuario.id);
+  revalidatePath("/m/plantao", "layout");
+}
+
+/** Mínimos ajustados pela régua rápida da bolha. */
+export async function salvarRegua(r: { minimoPorKm?: number; minimoPorHora?: number }): Promise<void> {
+  const usuario = await exigirUsuario("/m/plantao");
+  const admin = supabaseAdmin();
+  const { data } = await admin.from("perfis_custo").select("criterios").eq("usuario_id", usuario.id).maybeSingle();
+  if (!data) return;
+  const criterios = normalizarCriterios({ ...normalizarCriterios(data.criterios), ...(r.minimoPorKm != null ? { minimoPorKm: Math.round(r.minimoPorKm) } : {}), ...(r.minimoPorHora != null ? { minimoPorHora: Math.round(r.minimoPorHora) } : {}) });
+  await admin.from("perfis_custo").update({ criterios, atualizado_em: new Date().toISOString() }).eq("usuario_id", usuario.id);
+  revalidatePath("/m/plantao", "layout");
+}

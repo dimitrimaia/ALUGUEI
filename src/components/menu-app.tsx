@@ -105,12 +105,22 @@ export function ProvedorMenu({ children }: { children: ReactNode }) {
   const [aberto, setAberto] = useState(false);
   const [dados, setDados] = useState<DadosMenu | null>(null);
   const [trocando, setTrocando] = useState<Modo | null>(null);
+  // Vinheta da troca de modo: aparece, segura até o outro modo carregar e some.
+  const [vinheta, setVinheta] = useState<{ modo: Modo; saindo: boolean } | null>(null);
   const manter = useRef(false);
 
   const registrar = useCallback((d: DadosMenu) => {
     setDados(d);
     setTrocando((t) => (t === d.modo ? null : t));
+    setVinheta((v) => (v && v.modo === d.modo && !v.saindo ? { ...v, saindo: true } : v));
   }, []);
+
+  useEffect(() => {
+    if (!vinheta) return;
+    // Some depois da saída; e nunca fica presa (rede lenta): no máximo 2,5 s.
+    const t = window.setTimeout(() => setVinheta(null), vinheta.saindo ? 380 : 2500);
+    return () => window.clearTimeout(t);
+  }, [vinheta]);
 
   const trocarModo = useCallback(
     (m: Modo) => {
@@ -120,6 +130,7 @@ export function ProvedorMenu({ children }: { children: ReactNode }) {
         manter.current = true;
         setTrocando(m);
       }
+      setVinheta({ modo: m, saindo: false });
       router.push(telaNoOutroModo(location.pathname, m) as Route);
     },
     [aberto, dados?.modo, dados?.locadora, router],
@@ -129,6 +140,7 @@ export function ProvedorMenu({ children }: { children: ReactNode }) {
     <Contexto.Provider value={{ abrir: () => setAberto(true), registrar, aberto, trocarModo }}>
       {children}
       {dados && <MenuApp aberto={aberto} aoFechar={() => setAberto(false)} dados={dados} trocando={trocando} aoTrocar={trocarModo} manterAberto={manter} />}
+      {vinheta && <VinhetaModo modo={vinheta.modo} saindo={vinheta.saindo} />}
     </Contexto.Provider>
   );
 }
@@ -219,5 +231,18 @@ function MenuApp({
         <p className="mt-3 text-center text-[0.65rem] text-white/40 [@media(max-height:700px)]:hidden">© {new Date().getFullYear()} Aluguei · Locação para motoristas de app</p>
       </div>
     </Gaveta>
+  );
+}
+
+/** Troca de modo: fundo claro que aparece e o ícone do modo em "pop" (~400 ms). */
+function VinhetaModo({ modo, saindo }: { modo: Modo; saindo: boolean }) {
+  const Icone = modo === "locador" ? Building2 : Car;
+  return (
+    <div aria-live="polite" className={`vinheta-modo fixed inset-0 z-[60] grid place-items-center bg-cartao ${saindo ? "vinheta-sai" : ""}`}>
+      <div className="flex flex-col items-center gap-3">
+        <span className="vinheta-icone grid size-20 place-items-center rounded-[1.6rem] bg-marca text-white shadow-marca"><Icone size={38} /></span>
+        <p className="vinheta-texto text-base font-bold">{modo === "locador" ? "Modo locador" : "Modo motorista"}</p>
+      </div>
+    </div>
   );
 }

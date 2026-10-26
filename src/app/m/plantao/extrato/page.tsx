@@ -144,7 +144,7 @@ export default async function ExtratoPlantao({ searchParams }: { searchParams: P
       </section>
 
       <Link href="/m/plantao/relatorios" className="flex items-center justify-between rounded-[1.1rem] border border-borda bg-cartao p-4 text-sm font-semibold shadow-cartao">
-        Gráficos e semáforo nos relatórios <ChevronRight size={17} className="text-suave" />
+        Gráficos e Copiloto nos relatórios <ChevronRight size={17} className="text-suave" />
       </Link>
     </div>
   );

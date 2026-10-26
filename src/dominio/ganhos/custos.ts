@@ -45,6 +45,10 @@ export type Criterios = {
   minimoPorHora: Centavos;
   /** Distância máxima até o passageiro. */
   buscaMaximaKm: number;
+  /** Nota mínima do passageiro (0 = não olha a nota). */
+  notaMinima: number;
+  /** Ruas, bairros ou palavras que o motorista evita (embarque ou destino). */
+  evitar: string[];
 };
 
 export const PERFIL_PADRAO: PerfilCusto = {
@@ -61,7 +65,7 @@ export const PERFIL_PADRAO: PerfilCusto = {
   horasPorDia: 10,
 };
 
-export const CRITERIOS_PADRAO: Criterios = { minimoPorKm: 200, minimoPorHora: 4000, buscaMaximaKm: 4 };
+export const CRITERIOS_PADRAO: Criterios = { minimoPorKm: 200, minimoPorHora: 4000, buscaMaximaKm: 4, notaMinima: 0, evitar: [] };
 
 const reais = z.coerce.number().int().min(0).max(100_000_000);
 const esquemaPerfil = z.object({
@@ -77,6 +81,11 @@ const esquemaCriterios = z.object({
   minimoPorKm: reais.catch(CRITERIOS_PADRAO.minimoPorKm),
   minimoPorHora: reais.catch(CRITERIOS_PADRAO.minimoPorHora),
   buscaMaximaKm: z.coerce.number().min(0).max(100).catch(CRITERIOS_PADRAO.buscaMaximaKm),
+  notaMinima: z.coerce.number().min(0).max(5).catch(0),
+  evitar: z
+    .array(z.string())
+    .catch([])
+    .transform((l) => [...new Set(l.map((x) => x.trim().replace(/\s+/g, " ").slice(0, 60)).filter((x) => x.length >= 3))].slice(0, 100)),
 });
 
 /** Lê o que veio do banco ou do formulário; o que estiver inválido volta ao padrão. */

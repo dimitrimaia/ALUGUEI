@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Bell, Calculator, Camera, Car, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Users, Wallet } from "lucide-react";
+import { Bell, Calculator, Camera, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Navigation, Users, Wallet } from "lucide-react";
 import { useConta } from "@/components/conta/contexto";
 import { useMenu } from "@/components/menu-app";
 
@@ -17,10 +17,9 @@ export function RegistrarMenuMotorista() {
       {
         titulo: "Trabalho",
         itens: [
-          { href: "/m/plantao", rotulo: "Plantão", icone: Gauge, tambem: ["/m/plantao/ganho", "/m/plantao/despesa", "/m/plantao/custos"] },
+          { href: "/m/plantao", rotulo: "Plantão", icone: Gauge, tambem: ["/m/plantao/ganho", "/m/plantao/despesa", "/m/plantao/custos", "/m/plantao/extrato", "/m/plantao/relatorios"] },
+          { href: "/m/plantao/semaforo", rotulo: "Copiloto", icone: Navigation },
           { href: "/m/plantao/calculadora", rotulo: "Calculadora", icone: Calculator },
-          { href: "/m/plantao/semaforo", rotulo: "Semáforo de corridas", icone: Gauge },
-          { href: "/m/plantao/relatorios", rotulo: "Relatórios", icone: BarChart3 },
           { href: "/m/caronas", rotulo: "Caronas", icone: Users },
           { href: "/m/clientes", rotulo: "Meus clientes", icone: Link2 },
         ],
@@ -28,7 +27,6 @@ export function RegistrarMenuMotorista() {
       {
         titulo: "Meu aluguel",
         itens: [
-          { href: "/m/carros", rotulo: "Meus carros", icone: Car, tambem: ["/m/carro"] },
           { href: "/m/checkin", rotulo: "Check-in semanal", icone: Camera },
           { href: "/m/extrato", rotulo: "Pagamentos", icone: Wallet, tambem: ["/m/pagar"] },
           { href: "/m/meu-contrato", rotulo: "Contrato", icone: FileText, tambem: ["/m/contrato"] },

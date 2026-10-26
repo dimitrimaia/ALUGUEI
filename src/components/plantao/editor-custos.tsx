@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Plus, Save, Trash2 } from "lucide-react";
+import { Lock, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Aviso, Botao, Cartao, Selo } from "@/components/ui";
@@ -110,18 +110,21 @@ export function EditorCustos({ inicial, criteriosIniciais, metaInicial, aluguelS
       <Cartao className="flex flex-col gap-3">
         <div>
           <h2 className="font-bold">Sua régua de corrida boa</h2>
-          <p className="text-xs text-suave">O semáforo fica verde quando a oferta passa dos dois mínimos e o passageiro está perto.</p>
+          <p className="text-xs text-suave">O Copiloto fica verde quando a oferta passa dos dois mínimos e o passageiro está perto.</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Rotulo texto="Mínimo por km"><EntradaReais rotulo="Mínimo por km" valor={c.minimoPorKm} aoMudar={(v) => setC({ ...c, minimoPorKm: v ?? 0 })} /></Rotulo>
           <Rotulo texto="Mínimo por hora"><EntradaReais rotulo="Mínimo por hora" valor={c.minimoPorHora} aoMudar={(v) => setC({ ...c, minimoPorHora: v ?? 0 })} /></Rotulo>
         </div>
         <Rotulo texto="Passageiro a no máximo" dica="Mais longe que isso, a corrida fica amarela ou vermelha."><EntradaNumero rotulo="Distância máxima até o passageiro" valor={c.buscaMaximaKm} sufixo="km" aoMudar={(v) => setC({ ...c, buscaMaximaKm: v ?? 0 })} /></Rotulo>
+        <Rotulo texto="Nota mínima do passageiro" dica="Abaixo disso o Copiloto avisa (amarelo). Deixe 0 para não olhar a nota."><EntradaNumero rotulo="Nota mínima do passageiro" valor={c.notaMinima} sufixo="★" aoMudar={(v) => setC({ ...c, notaMinima: Math.min(5, v ?? 0) })} /></Rotulo>
         <Rotulo texto="Meta de ganho por dia" dica="Aparece no plantão, com quanto falta e em quantas horas chega."><EntradaReais rotulo="Meta diária" valor={meta} aoMudar={setMeta} placeholder="Ex.: 300" /></Rotulo>
       </Cartao>
 
+      <LugaresEvitar lista={c.evitar} aoMudar={(evitar) => setC({ ...c, evitar })} />
+
       {estado.erro && <Aviso tom="perigo">{estado.erro}</Aviso>}
-      {estado.ok && <Aviso tom="ok">Custos salvos. O lucro e o semáforo já usam os valores novos.</Aviso>}
+      {estado.ok && <Aviso tom="ok">Custos salvos. O lucro e o Copiloto já usam os valores novos.</Aviso>}
       <Botao
         tamanho="lg"
         icone={Save}
@@ -138,5 +141,40 @@ export function EditorCustos({ inicial, criteriosIniciais, metaInicial, aluguelS
         {salvando ? "Salvando…" : "Salvar custos"}
       </Botao>
     </div>
+  );
+}
+
+/** Ruas, bairros ou palavras que o motorista evita: o Copiloto deixa a oferta vermelha quando o endereço bate. */
+function LugaresEvitar({ lista, aoMudar }: { lista: string[]; aoMudar: (l: string[]) => void }) {
+  const [novo, setNovo] = useState("");
+  const adicionar = () => {
+    const t = novo.trim().replace(/\s+/g, " ");
+    if (t.length < 3 || lista.some((x) => x.toLowerCase() === t.toLowerCase())) return setNovo("");
+    aoMudar([...lista, t]);
+    setNovo("");
+  };
+  return (
+    <Cartao className="flex flex-col gap-3">
+      <div>
+        <h2 className="flex items-center gap-2 font-bold"><MapPinOff size={18} className="text-perigo" /> Lugares a evitar</h2>
+        <p className="text-xs text-suave">Rua, bairro ou palavra. Quando o embarque ou o destino da oferta tiver isso, o Copiloto avisa em vermelho. Na bolha, o botão “Evitar este lugar” também adiciona aqui.</p>
+      </div>
+      <div className="flex gap-2">
+        <input value={novo} onChange={(e) => setNovo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), adicionar())} placeholder="Ex.: Morro do Papagaio" maxLength={60} className="h-11 min-w-0 flex-1 rounded-xl border border-borda bg-cartao px-3 text-sm outline-none focus:border-marca" />
+        <Botao type="button" variante="secundario" icone={Plus} onClick={adicionar}>Adicionar</Botao>
+      </div>
+      {lista.length ? (
+        <div className="flex flex-wrap gap-2">
+          {lista.map((l) => (
+            <span key={l} className="inline-flex h-9 items-center gap-1 rounded-full bg-perigo-suave pr-1 pl-3 text-sm font-semibold text-perigo">
+              {l}
+              <button type="button" aria-label={`Tirar ${l}`} onClick={() => aoMudar(lista.filter((x) => x !== l))} className="grid size-7 place-items-center rounded-full hover:bg-black/5"><X size={14} /></button>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-suave">Nenhum lugar ainda.</p>
+      )}
+    </Cartao>
   );
 }

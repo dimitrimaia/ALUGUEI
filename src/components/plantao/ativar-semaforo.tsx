@@ -27,7 +27,7 @@ function Termo({ aoAceitar }: { aoAceitar: () => void }) {
       </ul>
       <label className="flex items-start gap-3 rounded-xl bg-cartao-2 p-3 text-sm font-medium">
         <input type="checkbox" checked={marcado} onChange={(e) => setMarcado(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--marca)]" />
-        Li e entendi. Quero usar o semáforo de corridas.
+        Li e entendi. Quero usar o Copiloto.
       </label>
       <Botao tamanho="lg" disabled={!marcado} onClick={aoAceitar} className="w-full">Continuar</Botao>
     </Cartao>
@@ -51,7 +51,7 @@ const PASSOS: Passo[] = [
     porque: "Liga a leitura da oferta na tela, sem você digitar nada. Opcional: sem ela, a bolha funciona com digitação rápida.",
     tutorial: [
       "Na tela de Acessibilidade, toque em \"Apps instalados\" (ou \"Serviços baixados\").",
-      "Toque em \"Aluguei · Semáforo de corridas\".",
+      "Toque em \"Aluguei · Copiloto\".",
       "Ligue a chave \"Usar\" e toque em \"Permitir\" no aviso do Android.",
       "Pronto: o Aluguei volta sozinho para cá.",
     ],
@@ -196,7 +196,7 @@ export function AtivarSemaforo() {
       {!atual && (
         <Cartao className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold">Semáforo {estado.ligado ? "ligado" : "pronto"}</h2>
+            <h2 className="font-bold">Copiloto {estado.ligado ? "ligado" : "pronto"}</h2>
             <Selo tom={estado.ligado ? "ok" : "neutro"}>{estado.acessibilidade ? "Leitura automática" : "Digitação rápida"}</Selo>
           </div>
           <p className="text-sm text-suave">
@@ -222,7 +222,7 @@ export function AtivarSemaforo() {
               }}
               className="w-full"
             >
-              Ligar o semáforo
+              Ligar o Copiloto
             </Botao>
           )}
           {!estado.sobreposicao && <Aviso>A permissão "Mostrar sobre outros apps" está desligada. Sem ela a bolha não aparece.</Aviso>}
@@ -239,7 +239,7 @@ function ComoFunciona() {
       <h2 className="mb-3 font-bold">Como funciona</h2>
       <ol className="flex flex-col gap-3">
         {[
-          { icone: Play, titulo: "Ligue o semáforo e abra a Uber ou a 99", texto: "Uma bolha pequena fica no canto da tela. Arraste para onde quiser." },
+          { icone: Play, titulo: "Ligue o Copiloto e abra o inDrive, a Uber ou a 99", texto: "Uma bolha pequena fica no canto da tela. Arraste para onde quiser." },
           { icone: Zap, titulo: "A oferta toca, a bolha responde", texto: "Verde: vale a pena. Amarelo: avalie. Vermelho: não paga. Com R$/km, R$/hora, lucro e a distância até o passageiro." },
           { icone: Hand, titulo: "Sem leitura automática? Toque na bolha", texto: "Digite o valor e os km da oferta e veja o resultado na hora." },
         ].map(({ icone: Icone, titulo, texto }) => (

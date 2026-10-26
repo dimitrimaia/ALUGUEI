@@ -90,7 +90,7 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
             <Botao variante="secundario" icone={ThumbsDown} disabled={salvando} onClick={() => salvar("recusei")}>Recusei</Botao>
             <Botao variante="secundario" icone={ThumbsUp} disabled={salvando} onClick={() => salvar("aceitei")}>Aceitei</Botao>
           </div>
-          {salvo && <Aviso tom="ok">{salvo} Ela entra no histórico do semáforo.</Aviso>}
+          {salvo && <Aviso tom="ok">{salvo} Ela entra no histórico do Copiloto.</Aviso>}
         </>
       ) : (
         <p className="text-center text-sm text-suave">Digite o valor e os km da oferta para ver se vale a pena.</p>

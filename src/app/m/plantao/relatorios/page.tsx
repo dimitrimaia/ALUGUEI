@@ -86,7 +86,7 @@ export default async function Relatorios({ searchParams }: { searchParams: Promi
 
       {!!dados.corridas.length && (
         <Cartao>
-          <h2 className="text-sm font-bold">Semáforo</h2>
+          <h2 className="text-sm font-bold">Copiloto</h2>
           <dl className="mt-1 divide-y divide-borda">
             <DadoRotulado rotulo="Ofertas avaliadas">{dados.corridas.length}</DadoRotulado>
             <DadoRotulado rotulo="Verdes · amarelas · vermelhas">{["verde", "amarelo", "vermelho"].map((s) => dados.corridas.filter((c) => c.sinal === s).length).join(" · ")}</DadoRotulado>

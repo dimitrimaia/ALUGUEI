@@ -23,7 +23,7 @@ const SLIDES: Slide[] = [
   },
   {
     titulo: "Saiba na hora se a corrida paga",
-    texto: "A oferta toca e o semáforo responde: verde, amarelo ou vermelho, com R$/km, R$/hora e lucro.",
+    texto: "A oferta toca e o Copiloto responde: verde, amarelo ou vermelho, com R$/km, R$/hora e lucro.",
     arte: (
       <Moldura>
         <div className="rounded-2xl bg-[#16a34a] p-3">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contribuicaoMaxima, validarContribuicao } from "./carona";
 import { avaliarCorrida } from "./corrida";
-import { aluguelMensal, CRITERIOS_PADRAO, normalizarPerfil, PERFIL_PADRAO, type PerfilCusto, taxas } from "./custos";
+import { aluguelMensal, CRITERIOS_PADRAO, normalizarCriterios, normalizarPerfil, PERFIL_PADRAO, type PerfilCusto, taxas } from "./custos";
 import { lerOferta } from "./oferta";
 import { distanciaReta, estimarParticular, paraSlug, rotaEstimada, TABELA_PADRAO } from "./particular";
 import { progressoMeta, resumir } from "./plantao";
@@ -34,6 +34,10 @@ describe("taxas", () => {
     expect(normalizarPerfil(null)).toEqual(PERFIL_PADRAO);
     expect(normalizarPerfil({ ...perfil, consumo: "-3", combustivel: "agua" }).consumo).toBe(PERFIL_PADRAO.consumo);
     expect(normalizarPerfil({ ...perfil, consumo: "9.5" }).consumo).toBe(9.5);
+  });
+  it("critérios antigos ganham nota mínima e lista de lugares a evitar, sem repetir", () => {
+    expect(normalizarCriterios({ minimoPorKm: 250 })).toMatchObject({ minimoPorKm: 250, notaMinima: 0, evitar: [] });
+    expect(normalizarCriterios({ evitar: [" Morro  do Papagaio ", "Morro do Papagaio", "ab"] }).evitar).toEqual(["Morro do Papagaio"]);
   });
 });
 
