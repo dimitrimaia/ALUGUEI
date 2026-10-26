@@ -23,7 +23,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
+      # O runner do GitHub já traz o Android SDK (ANDROID_HOME); o Gradle baixa o que faltar.
       - run: pnpm install --frozen-lockfile
       - run: npx cap sync android
       - name: Testes e APK
