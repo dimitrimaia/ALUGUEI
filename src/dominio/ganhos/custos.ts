@@ -37,18 +37,45 @@ export type PerfilCusto = {
   horasPorDia: number;
 };
 
-/** Critérios do semáforo: o que o próprio motorista considera uma boa corrida. */
+/** Faixa de horário com mínimos próprios (ex.: madrugada, pico). Horas "HH:MM", pode virar a meia-noite. */
+export type FaixaHorario = { nome: string; de: string; ate: string; minimoPorKm: Centavos; minimoPorHora: Centavos; bomPorKm: Centavos; bomPorHora: Centavos };
+
+/**
+ * Régua do Copiloto: o que o próprio motorista considera uma boa corrida.
+ * Cada métrica tem duas linhas: abaixo do mínimo é ruim (vermelho), a partir
+ * do "bom" é boa (verde) e no meio é para avaliar (amarelo). Com o "bom" em 0,
+ * vale a régua simples: o mínimo é o verde e até 15% abaixo dele é amarelo.
+ */
 export type Criterios = {
-  /** Mínimo por km rodado (contando o caminho até o passageiro). */
   minimoPorKm: Centavos;
-  /** Mínimo por hora (contando o tempo até o passageiro). */
   minimoPorHora: Centavos;
-  /** Distância máxima até o passageiro. */
+  /** Verde a partir de (0 = régua simples). */
+  bomPorKm: Centavos;
+  bomPorHora: Centavos;
+  /** Distância e tempo máximos até o passageiro (0 = sem limite). */
   buscaMaximaKm: number;
+  buscaMaximaMin: number;
+  /** Viagem longa demais (0 = sem limite). */
+  viagemMaximaKm: number;
+  viagemMaximaMin: number;
+  /** Corrida abaixo deste valor é vermelha (0 = sem). */
+  valorMinimo: Centavos;
+  /** Lucro mínimo em reais e em % do valor (bps). Abaixo: amarelo. */
+  lucroMinimo: Centavos;
+  lucroMinimoBps: number;
   /** Nota mínima do passageiro (0 = não olha a nota). */
   notaMinima: number;
-  /** Ruas, bairros ou palavras que o motorista evita (embarque ou destino). */
+  /** Avisar passageiro com menos de 5 corridas e corrida com parada. */
+  alertaPassageiroNovo: boolean;
+  alertaParadas: boolean;
+  /** Ruas, bairros ou palavras que o motorista evita (embarque ou destino): vermelho. */
   evitar: string[];
+  /** Destinos que interessam (perto de casa, aeroporto): selo positivo. */
+  destinosDesejados: string[];
+  /** Mínimos por horário: na faixa, valem no lugar dos de cima. */
+  porHorario: FaixaHorario[];
+  /** Contar o custo de voltar para a base (casa) no lucro. */
+  contarVolta: boolean;
 };
 
 export const PERFIL_PADRAO: PerfilCusto = {
@@ -65,7 +92,26 @@ export const PERFIL_PADRAO: PerfilCusto = {
   horasPorDia: 10,
 };
 
-export const CRITERIOS_PADRAO: Criterios = { minimoPorKm: 200, minimoPorHora: 4000, buscaMaximaKm: 4, notaMinima: 0, evitar: [] };
+export const CRITERIOS_PADRAO: Criterios = {
+  minimoPorKm: 200,
+  minimoPorHora: 4000,
+  bomPorKm: 0,
+  bomPorHora: 0,
+  buscaMaximaKm: 4,
+  buscaMaximaMin: 0,
+  viagemMaximaKm: 0,
+  viagemMaximaMin: 0,
+  valorMinimo: 0,
+  lucroMinimo: 0,
+  lucroMinimoBps: 0,
+  notaMinima: 0,
+  alertaPassageiroNovo: false,
+  alertaParadas: false,
+  evitar: [],
+  destinosDesejados: [],
+  porHorario: [],
+  contarVolta: false,
+};
 
 const reais = z.coerce.number().int().min(0).max(100_000_000);
 const esquemaPerfil = z.object({
@@ -77,15 +123,33 @@ const esquemaPerfil = z.object({
   diasPorMes: z.coerce.number().int().min(1).max(31).catch(PERFIL_PADRAO.diasPorMes),
   horasPorDia: z.coerce.number().min(1).max(24).catch(PERFIL_PADRAO.horasPorDia),
 });
+const listaPalavras = z
+  .array(z.string())
+  .catch([])
+  .transform((l) => [...new Set(l.map((x) => x.trim().replace(/\s+/g, " ").slice(0, 60)).filter((x) => x.length >= 3))].slice(0, 100));
+const hora = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const esquemaCriterios = z.object({
   minimoPorKm: reais.catch(CRITERIOS_PADRAO.minimoPorKm),
   minimoPorHora: reais.catch(CRITERIOS_PADRAO.minimoPorHora),
+  bomPorKm: reais.catch(0),
+  bomPorHora: reais.catch(0),
   buscaMaximaKm: z.coerce.number().min(0).max(100).catch(CRITERIOS_PADRAO.buscaMaximaKm),
+  buscaMaximaMin: z.coerce.number().int().min(0).max(120).catch(0),
+  viagemMaximaKm: z.coerce.number().min(0).max(2000).catch(0),
+  viagemMaximaMin: z.coerce.number().int().min(0).max(1440).catch(0),
+  valorMinimo: reais.catch(0),
+  lucroMinimo: reais.catch(0),
+  lucroMinimoBps: z.coerce.number().int().min(0).max(9000).catch(0),
   notaMinima: z.coerce.number().min(0).max(5).catch(0),
-  evitar: z
-    .array(z.string())
-    .catch([])
-    .transform((l) => [...new Set(l.map((x) => x.trim().replace(/\s+/g, " ").slice(0, 60)).filter((x) => x.length >= 3))].slice(0, 100)),
+  alertaPassageiroNovo: z.boolean().catch(false),
+  alertaParadas: z.boolean().catch(false),
+  evitar: listaPalavras,
+  destinosDesejados: listaPalavras,
+  porHorario: z
+    .array(z.object({ nome: z.string().trim().min(1).max(30), de: hora, ate: hora, minimoPorKm: reais, minimoPorHora: reais, bomPorKm: reais.catch(0), bomPorHora: reais.catch(0) }))
+    .max(6)
+    .catch([]),
+  contarVolta: z.boolean().catch(false),
 });
 
 /** Lê o que veio do banco ou do formulário; o que estiver inválido volta ao padrão. */
@@ -128,3 +192,27 @@ export function custoDe(t: Taxas, km: number, minutos: number): Centavos {
 
 /** Taxa em centavos (com fração) → centavos para mostrar. */
 export const taxaEmCentavos = (taxa: number): Centavos => arredondar(taxa);
+
+/** "23:30" → minutos do dia. */
+const minutosDoDia = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+
+/**
+ * Régua que vale agora: a faixa de horário que cobre `minutoDoDia` (0..1439)
+ * substitui os mínimos gerais. Faixas que viram a meia-noite (22:00 → 05:00) valem.
+ */
+export function criteriosNoHorario(c: Criterios, minutoDoDia: number): Criterios & { faixa: string | null } {
+  const f = c.porHorario.find((x) => {
+    const de = minutosDoDia(x.de);
+    const ate = minutosDoDia(x.ate);
+    return de <= ate ? minutoDoDia >= de && minutoDoDia < ate : minutoDoDia >= de || minutoDoDia < ate;
+  });
+  return f ? { ...c, minimoPorKm: f.minimoPorKm, minimoPorHora: f.minimoPorHora, bomPorKm: f.bomPorKm, bomPorHora: f.bomPorHora, faixa: f.nome } : { ...c, faixa: null };
+}
+
+/** Comparação sem acento e sem maiúscula: a primeira palavra da lista que aparece no texto. */
+export function bateLista(texto: string | null | undefined, lista: readonly string[]): string | null {
+  if (!texto) return null;
+  const n = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const t = n(texto);
+  return lista.find((l) => t.includes(n(l))) ?? null;
+}
