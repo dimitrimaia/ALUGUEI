@@ -10,28 +10,42 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.text.Editable
 import android.text.InputType
+import android.text.TextUtils
+import android.text.TextWatcher
 import android.text.method.DigitsKeyListener
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
@@ -39,24 +53,30 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import xyz.aluguei.app.MainActivity
 import xyz.aluguei.app.R
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.min
 
 /**
- * Serviço em primeiro plano do plantão: a única peça que trabalha durante a
+ * Serviço em primeiro plano do Copiloto: a única peça que trabalha durante a
  * jornada (a WebView pode estar fechada). Desenha por cima do app de corrida:
- *  - a bolha redonda arrastável (toque = digitação rápida; arrastar até o X = desliga);
- *  - o painel de digitação rápida (valor, km, minutos, km até o passageiro);
- *  - o cartão colorido com o semáforo da corrida, por alguns segundos.
+ *  - a bolha com o símbolo do Aluguei (toque = digitar oferta; segurar = menu;
+ *    arrastar até o X = desliga);
+ *  - o cartão da oferta (sinal, R$/km, R$/h, lucro, contraproposta sugerida);
+ *  - painéis: digitação rápida, régua rápida e resumo do dia.
  *
  * Nunca toca no app de corrida: "Aceitei" e "Recusei" só registram a decisão
- * do motorista na fila local.
+ * do motorista na fila local. Nada roda em loop: tudo reage a eventos.
  */
 class BolhaService : Service() {
 
     companion object {
         const val ACAO_DESLIGAR = "xyz.aluguei.app.plantao.DESLIGAR"
         const val ACAO_SIMULAR = "xyz.aluguei.app.plantao.SIMULAR"
+        const val ACAO_PAUSAR = "xyz.aluguei.app.plantao.PAUSAR"
         const val EXTRA_VALOR = "valor"
         const val EXTRA_KM_CORRIDA = "kmCorrida"
         const val EXTRA_MINUTOS_CORRIDA = "minutosCorrida"
@@ -66,12 +86,17 @@ class BolhaService : Service() {
         private const val CANAL = "plantao"
         private const val ID_NOTIFICACAO = 4021
 
-        private const val FUNDO = 0xEB0B1630.toInt() // #0b1630 com 92% de opacidade
-        private const val VERDE = 0xFF22C55E.toInt()
-        private const val AMARELO = 0xFFF59E0B.toInt()
-        private const val VERMELHO = 0xFFEF4444.toInt()
+        private const val MARCA = 0xFF1F56E8.toInt()
+        private const val VERDE = 0xFF16A34A.toInt()
+        private const val AMARELO = 0xFFD97706.toInt()
+        private const val VERMELHO = 0xFFDC2626.toInt()
+        private const val LENDO = 0xFF22C55E.toInt()
+        private const val PAUSADO = 0xFF9CA3AF.toInt()
         private const val BRANCO = Color.WHITE
-        private const val CINZA = 0xFFB4BED2.toInt()
+
+        /** Cartão de oferta lida no inDrive fica até a oferta sair da tela (com este teto). */
+        private const val CARTAO_INDRIVE_MS = 60_000L
+        private const val JANELA_REPETICAO_MS = 20_000L
 
         /** O serviço rodando agora (mesmo processo), para o leitor e o plugin entregarem ofertas. */
         @Volatile
@@ -82,11 +107,19 @@ class BolhaService : Service() {
             ContextCompat.startForegroundService(ctx, intent ?: Intent(ctx, BolhaService::class.java))
         }
 
-        /** Desliga o plantão (pela tela, pela notificação ou arrastando a bolha até o X). */
+        /** Desliga o Copiloto (pela tela, pela notificação, pelo menu ou arrastando a bolha até o X). */
         fun desligar(ctx: Context) {
             Armazenamento.definirLigado(ctx, false)
             ctx.stopService(Intent(ctx, BolhaService::class.java))
             PlantaoPlugin.emitirEstado(ctx)
+        }
+
+        fun nomeDoApp(app: String?): String = when (app) {
+            "indrive" -> "inDrive"
+            "uber" -> "Uber"
+            "99" -> "99"
+            null -> "Digitada"
+            else -> "Outro app"
         }
     }
 
@@ -94,13 +127,42 @@ class BolhaService : Service() {
     private lateinit var ui: Context
     private val principal = Handler(Looper.getMainLooper())
 
-    private var bolha: View? = null
+    // bolha
+    private var bolha: FrameLayout? = null
     private var bolhaParams: WindowManager.LayoutParams? = null
+    private var pontoStatus: View? = null
     private var alvoX: TextView? = null
+    private var rotuloDiag: TextView? = null
+    private var rotuloParams: WindowManager.LayoutParams? = null
+
+    // janelas avulsas
+    private var menu: View? = null
     private var painel: View? = null
+    private var flutuante: View? = null
+    private var aoFecharFlutuante: (() -> Unit)? = null
+
+    // cartão
     private var cartao: View? = null
-    private var cartaoCorridaId: String? = null
+    private var cartaoParams: WindowManager.LayoutParams? = null
+    private var cartaoApp: String = "outra"
+    private var cartaoOrigem: String = "digitada"
+    private var cartaoCorrida: CorridaAvaliada? = null
+    private var cartaoOferta: OfertaDetalhada? = null
     private val fecharCartaoNoTempo = Runnable { fecharCartao() }
+
+    // estado da leitura
+    /** Última oferta aberta lida (para a contraproposta do inDrive). */
+    private var ofertaAberta: OfertaDetalhada? = null
+    private var ofertaAbertaId: String? = null
+    private var chaveAberta: String? = null
+    /** Chave da oferta que o motorista recusou enquanto ela está aberta. */
+    private var recusada: String? = null
+    private var ultimaChave: String? = null
+    private var ultimaEm = 0L
+
+    // notificação
+    private var ultimaOferta: OfertaDetalhada? = null
+    private var ultimaAvaliacao: Avaliacao? = null
 
     /** O Android recusou o primeiro plano ou falta a sobreposição: o serviço só espera para parar. */
     private var semCondicoes = false
@@ -133,7 +195,14 @@ class BolhaService : Service() {
             stopSelf()
             return
         }
-        mostrarBolha()
+        try {
+            mostrarBolha()
+            if (Armazenamento.diagnostico(this)) mostrarRotuloDiag()
+        } catch (e: RuntimeException) {
+            semCondicoes = true
+            Armazenamento.definirLigado(this, false)
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -143,6 +212,7 @@ class BolhaService : Service() {
                 desligar(this)
                 return START_NOT_STICKY
             }
+            ACAO_PAUSAR -> alternarPausa()
             ACAO_SIMULAR -> {
                 val oferta = Oferta(
                     valor = intent.getLongExtra(EXTRA_VALOR, 0),
@@ -154,7 +224,7 @@ class BolhaService : Service() {
                 if (oferta.valor > 0 && oferta.kmCorrida > 0) receberOferta(oferta, "digitada", null)
             }
         }
-        // Reiniciado pelo sistema (intent nulo) com o plantão desligado: não volta.
+        // Reiniciado pelo sistema (intent nulo) com o Copiloto desligado: não volta.
         if (!Armazenamento.ligado(this)) {
             stopSelf()
             return START_NOT_STICKY
@@ -164,8 +234,8 @@ class BolhaService : Service() {
 
     override fun onDestroy() {
         principal.removeCallbacksAndMessages(null)
-        listOf(cartao, painel, alvoX, bolha).forEach { remover(it) }
-        cartao = null; painel = null; alvoX = null; bolha = null
+        listOf(cartao, painel, flutuante, menu, rotuloDiag, alvoX, bolha).forEach { remover(it) }
+        cartao = null; painel = null; flutuante = null; menu = null; rotuloDiag = null; alvoX = null; bolha = null
         instancia = null
         super.onDestroy()
     }
@@ -183,8 +253,22 @@ class BolhaService : Service() {
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(canal)
     }
 
+    private val imutavel: Int get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+
+    private fun intentNavegar(codigo: Int, endereco: String): PendingIntent =
+        PendingIntent.getActivity(
+            this, codigo,
+            Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(endereco))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            imutavel or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+    private fun emojiDoSinal(s: Sinal) = when (s) {
+        Sinal.VERDE -> "🟢"
+        Sinal.AMARELO -> "🟡"
+        Sinal.VERMELHO -> "🔴"
+    }
+
     private fun notificacao(): Notification {
-        val imutavel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
         val abrir = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
@@ -195,10 +279,27 @@ class BolhaService : Service() {
             Intent(this, BolhaService::class.java).setAction(ACAO_DESLIGAR),
             imutavel or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val texto = if (Permissoes.acessibilidade(this)) getString(R.string.plantao_notificacao_lendo) else getString(R.string.plantao_notificacao_digitar)
-        return NotificationCompat.Builder(this, CANAL)
-            .setSmallIcon(R.drawable.ic_plantao)
-            .setContentTitle(getString(R.string.plantao_notificacao_titulo))
+        val pausar = PendingIntent.getService(
+            this, 2,
+            Intent(this, BolhaService::class.java).setAction(ACAO_PAUSAR),
+            imutavel or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val pausado = Armazenamento.pausado(this)
+        val o = ultimaOferta
+        val a = ultimaAvaliacao
+        val titulo = if (pausado) "Copiloto pausado" else getString(R.string.plantao_notificacao_titulo)
+        val texto: String
+        var detalhe: String? = null
+        if (o != null && a != null) {
+            val partes = listOfNotNull(o.nome, nomeDoApp(if (o.app == "outra") null else o.app), Copiloto.reais(o.suaOferta ?: o.valor), "${emojiDoSinal(a.sinal)} ${Formato.brl(a.porKm)}/km")
+            texto = partes.joinToString(" · ")
+            detalhe = o.destino?.let { "$texto\n→ $it" }
+        } else {
+            texto = if (Permissoes.acessibilidade(this)) getString(R.string.plantao_notificacao_lendo) else getString(R.string.plantao_notificacao_digitar)
+        }
+        val b = NotificationCompat.Builder(this, CANAL)
+            .setSmallIcon(R.drawable.ic_copiloto_simbolo)
+            .setContentTitle(titulo)
             .setContentText(texto)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -206,8 +307,27 @@ class BolhaService : Service() {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(abrir)
-            .addAction(0, getString(R.string.plantao_desligar), desligar)
-            .build()
+        if (detalhe != null) b.setStyle(NotificationCompat.BigTextStyle().bigText(detalhe))
+        b.addAction(0, if (pausado) "Retomar" else "Pausar", pausar)
+        // O Android mostra até 3 ações: com endereços, Embarque e Destino (Abrir = tocar na notificação).
+        val embarque = o?.embarque
+        val destino = o?.destino
+        if (embarque != null || destino != null) {
+            embarque?.let { b.addAction(0, "Embarque", intentNavegar(10, it)) }
+            destino?.let { b.addAction(0, "Destino", intentNavegar(11, it)) }
+        } else {
+            b.addAction(0, "Abrir", abrir)
+            b.addAction(0, getString(R.string.plantao_desligar), desligar)
+        }
+        return b.build()
+    }
+
+    private fun atualizarNotificacao() {
+        try {
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(ID_NOTIFICACAO, notificacao())
+        } catch (e: RuntimeException) {
+            // sem permissão de notificação: o Copiloto segue funcionando
+        }
     }
 
     // ------------------------------------------------------------------ utilidades de tela
@@ -223,6 +343,11 @@ class BolhaService : Service() {
         return Pair(m.widthPixels, m.heightPixels)
     }
 
+    private fun alturaBarraStatus(): Int {
+        val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else dp(24)
+    }
+
     @Suppress("DEPRECATION")
     private val tipoJanela: Int
         get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
@@ -233,14 +358,46 @@ class BolhaService : Service() {
         PixelFormat.TRANSLUCENT,
     )
 
+    private fun adicionar(v: View, p: WindowManager.LayoutParams): Boolean = try {
+        wm.addView(v, p)
+        true
+    } catch (e: RuntimeException) {
+        false
+    }
+
     private fun remover(v: View?) {
         if (v == null) return
         try {
-            wm.removeView(v)
-        } catch (e: IllegalArgumentException) {
+            wm.removeViewImmediate(v)
+        } catch (e: RuntimeException) {
             // já tinha saído da tela
         }
     }
+
+    private fun atualizar(v: View, p: WindowManager.LayoutParams) {
+        try {
+            wm.updateViewLayout(v, p)
+        } catch (e: RuntimeException) {
+            // a view saiu da tela no meio do movimento
+        }
+    }
+
+    /** Cores do tema escolhido (claro, escuro ou seguindo o sistema). */
+    private data class Paleta(val escuro: Boolean, val fundo: Int, val texto: Int, val secundario: Int, val borda: Int, val superficie: Int, val destaque: Int)
+
+    private fun temaEscuro(): Boolean = when (Armazenamento.tema(this)) {
+        "claro" -> false
+        "escuro" -> true
+        else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun paleta(): Paleta = if (temaEscuro()) {
+        Paleta(true, 0xF2111827.toInt(), BRANCO, 0xFFB4BED2.toInt(), 0x26FFFFFF, 0x1AFFFFFF, 0xFF8FB0FF.toInt())
+    } else {
+        Paleta(false, BRANCO, 0xFF0B1630.toInt(), 0xFF5B6478.toInt(), 0x1F0B1630, 0x0F0B1630, MARCA)
+    }
+
+    private fun comAlfa(cor: Int, alfa: Int): Int = (cor and 0x00FFFFFF) or (alfa shl 24)
 
     private fun fundoArredondado(cor: Int, raioDp: Number, borda: Int? = null): GradientDrawable = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
@@ -249,7 +406,13 @@ class BolhaService : Service() {
         if (borda != null) setStroke(dp(1), borda)
     }
 
-    private fun texto(t: String, sp: Float, cor: Int = BRANCO, negrito: Boolean = false): TextView = TextView(ui).apply {
+    private fun circulo(cor: Int, borda: Int? = null, larguraBorda: Int = 2): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(cor)
+        if (borda != null) setStroke(dp(larguraBorda), borda)
+    }
+
+    private fun texto(t: String, sp: Float, cor: Int, negrito: Boolean = false): TextView = TextView(ui).apply {
         text = t
         setTextColor(cor)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
@@ -263,29 +426,81 @@ class BolhaService : Service() {
         Sinal.VERMELHO -> VERMELHO
     }
 
+    private fun seloDoSinal(s: Sinal) = when (s) {
+        Sinal.VERDE -> "Vale a pena"
+        Sinal.AMARELO -> "Avalie"
+        Sinal.VERMELHO -> "Não compensa"
+    }
+
+    private fun linha(vararg blocos: View, espaco: Int = 10): LinearLayout = LinearLayout(ui).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        blocos.forEachIndexed { i, b ->
+            addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { if (i > 0) marginStart = dp(espaco) })
+        }
+    }
+
+    private fun botao(t: String, cor: Int, cheio: Boolean, corTexto: Int = BRANCO, acao: () -> Unit): TextView =
+        texto(t, 14f, if (cheio) corTexto else cor, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(9), dp(12), dp(9))
+            background = if (cheio) fundoArredondado(cor, 12) else fundoArredondado(Color.TRANSPARENT, 12, comAlfa(cor, 0x66))
+            isClickable = true
+            setOnClickListener { acao() }
+        }
+
+    private fun margem(topo: Int) = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(topo) }
+
+    /** Ícone redondo do app da oferta (desenho simples, não é o logo). */
+    private fun iconeDoApp(app: String?): TextView {
+        val (fundo, cor, rotulo, sp) = when (app) {
+            "indrive" -> Quad(0xFFC1F11D.toInt(), 0xFF0B1630.toInt(), "iD", 11f)
+            "uber" -> Quad(0xFF000000.toInt(), BRANCO, "Uber", 7.5f)
+            "99" -> Quad(0xFFFFD400.toInt(), 0xFF0B1630.toInt(), "99", 11f)
+            else -> Quad(MARCA, BRANCO, "✎", 12f)
+        }
+        return texto(rotulo, sp, cor, true).apply {
+            gravity = Gravity.CENTER
+            background = circulo(fundo, comAlfa(BRANCO, 0x40), 1)
+        }
+    }
+
+    private data class Quad(val a: Int, val b: Int, val c: String, val d: Float)
+
     // ------------------------------------------------------------------ bolha
+
+    private val tamanhoBolha get() = dp(52)
+    private val janelaBolha get() = dp(62)
 
     @SuppressLint("ClickableViewAccessibility")
     private fun mostrarBolha() {
-        val tamanho = dp(56)
-        val v = FrameLayout(ui).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(FUNDO)
-                setStroke(dp(2), VERDE)
-            }
-            contentDescription = getString(R.string.plantao_bolha_descricao)
+        val circuloView = FrameLayout(ui).apply {
+            background = circulo(MARCA, BRANCO, 2)
+            elevation = dp(6).toFloat()
             addView(
-                texto("R$", 18f, BRANCO, true).apply { gravity = Gravity.CENTER },
-                FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+                ImageView(ui).apply {
+                    setImageResource(R.drawable.ic_copiloto_simbolo)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                },
+                FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER),
             )
+        }
+        val ponto = View(ui).apply {
+            background = circulo(if (Armazenamento.pausado(this@BolhaService)) PAUSADO else LENDO, BRANCO, 2)
+            elevation = dp(7).toFloat()
+        }
+        val v = FrameLayout(ui).apply {
+            contentDescription = getString(R.string.plantao_bolha_descricao)
+            clipChildren = false
+            addView(circuloView, FrameLayout.LayoutParams(tamanhoBolha, tamanhoBolha, Gravity.CENTER))
+            addView(ponto, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.TOP or Gravity.END).apply { topMargin = dp(4); marginEnd = dp(4) })
         }
         val (largura, altura) = tela()
         val salva = Armazenamento.posicaoBolha(this)
-        val p = parametros(tamanho, tamanho, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
+        val p = parametros(janelaBolha, janelaBolha, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (salva?.first ?: (largura - tamanho)).coerceIn(0, largura - tamanho)
-            y = (salva?.second ?: (altura / 3)).coerceIn(0, altura - tamanho)
+            x = (salva?.first ?: (largura - janelaBolha)).coerceIn(0, largura - janelaBolha)
+            y = (salva?.second ?: (altura / 3)).coerceIn(0, altura - janelaBolha)
         }
 
         var inicioX = 0
@@ -293,19 +508,28 @@ class BolhaService : Service() {
         var toqueX = 0f
         var toqueY = 0f
         var arrastando = false
-        val limiar = dp(8)
+        var segurou = false
+        val limiar = ViewConfiguration.get(ui).scaledTouchSlop.coerceAtLeast(dp(8))
+        val segurar = Runnable {
+            segurou = true
+            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            abrirMenu()
+        }
 
         v.setOnTouchListener { view, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    inicioX = p.x; inicioY = p.y; toqueX = e.rawX; toqueY = e.rawY; arrastando = false
+                    inicioX = p.x; inicioY = p.y; toqueX = e.rawX; toqueY = e.rawY; arrastando = false; segurou = false
+                    principal.postDelayed(segurar, ViewConfiguration.getLongPressTimeout().toLong())
+                    circuloView.animate().scaleX(0.92f).scaleY(0.92f).setDuration(90).start()
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - toqueX
                     val dy = e.rawY - toqueY
-                    if (!arrastando && hypot(dx, dy) > limiar) {
+                    if (!arrastando && !segurou && hypot(dx, dy) > limiar) {
                         arrastando = true
+                        principal.removeCallbacks(segurar)
                         mostrarAlvoX()
                     }
                     if (arrastando) {
@@ -313,19 +537,20 @@ class BolhaService : Service() {
                         p.y = inicioY + dy.toInt()
                         atualizar(view, p)
                         destacarAlvoX(sobreAlvoX(p))
+                        posicionarRotuloDiag()
                     }
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (!arrastando) {
-                        if (e.actionMasked == MotionEvent.ACTION_UP) {
-                            view.performClick()
-                            abrirPainel()
-                        }
-                    } else {
+                    principal.removeCallbacks(segurar)
+                    circuloView.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                    if (arrastando) {
                         val noX = sobreAlvoX(p)
                         esconderAlvoX()
                         if (noX) desligar(this) else encostarNaBorda(view, p)
+                    } else if (!segurou && e.actionMasked == MotionEvent.ACTION_UP) {
+                        view.performClick()
+                        if (menu != null) fecharMenu() else abrirPainel()
                     }
                     arrastando = false
                     true
@@ -333,34 +558,34 @@ class BolhaService : Service() {
                 else -> false
             }
         }
-        wm.addView(v, p)
+        if (!adicionar(v, p)) throw IllegalStateException("sem janela")
         bolha = v
         bolhaParams = p
+        pontoStatus = ponto
     }
 
-    private fun atualizar(v: View, p: WindowManager.LayoutParams) {
-        try {
-            wm.updateViewLayout(v, p)
-        } catch (e: IllegalArgumentException) {
-            // a view saiu da tela no meio do movimento
-        }
+    private fun atualizarPonto() {
+        pontoStatus?.background = circulo(if (Armazenamento.pausado(this)) PAUSADO else LENDO, BRANCO, 2)
     }
 
     /** Ao soltar, a bolha encosta na borda mais próxima e a posição fica salva. */
     private fun encostarNaBorda(v: View, p: WindowManager.LayoutParams) {
         val (largura, altura) = tela()
-        val tamanho = v.width.takeIf { it > 0 } ?: dp(56)
+        val tamanho = janelaBolha
         val destino = if (p.x + tamanho / 2 < largura / 2) 0 else largura - tamanho
         p.y = p.y.coerceIn(0, altura - tamanho)
         ValueAnimator.ofInt(p.x, destino).apply {
             duration = 180
+            interpolator = DecelerateInterpolator()
             addUpdateListener {
+                if (bolha == null) return@addUpdateListener
                 p.x = it.animatedValue as Int
                 atualizar(v, p)
             }
             start()
         }
         Armazenamento.salvarPosicaoBolha(this, destino, p.y)
+        principal.postDelayed({ posicionarRotuloDiag() }, 200)
     }
 
     private fun mostrarAlvoX() {
@@ -368,11 +593,7 @@ class BolhaService : Service() {
         val tamanho = dp(64)
         val v = texto("✕", 26f, BRANCO, true).apply {
             gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(FUNDO)
-                setStroke(dp(2), VERMELHO)
-            }
+            background = circulo(0xE60B1630.toInt(), VERMELHO)
             contentDescription = getString(R.string.plantao_desligar)
         }
         val p = parametros(
@@ -382,8 +603,7 @@ class BolhaService : Service() {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             y = dp(48)
         }
-        wm.addView(v, p)
-        alvoX = v
+        if (adicionar(v, p)) alvoX = v
     }
 
     private fun destacarAlvoX(sobre: Boolean) {
@@ -391,7 +611,7 @@ class BolhaService : Service() {
         val escala = if (sobre) 1.25f else 1f
         v.scaleX = escala
         v.scaleY = escala
-        (v.background as? GradientDrawable)?.setColor(if (sobre) VERMELHO else FUNDO)
+        (v.background as? GradientDrawable)?.setColor(if (sobre) VERMELHO else 0xE60B1630.toInt())
     }
 
     private fun esconderAlvoX() {
@@ -402,7 +622,7 @@ class BolhaService : Service() {
     /** O centro da bolha está em cima do X do rodapé? */
     private fun sobreAlvoX(p: WindowManager.LayoutParams): Boolean {
         val (largura, altura) = tela()
-        val metade = dp(28)
+        val metade = janelaBolha / 2
         val cx = p.x + metade
         val cy = p.y + metade
         val xx = largura / 2
@@ -410,80 +630,436 @@ class BolhaService : Service() {
         return hypot((cx - xx).toFloat(), (cy - xy).toFloat()) < dp(64)
     }
 
+    // ------------------------------------------------------------------ diagnóstico
+
+    private fun mostrarRotuloDiag() {
+        if (rotuloDiag != null) return
+        val v = texto(if (Armazenamento.pausado(this)) "pausado" else "esperando uma tela…", 11f, BRANCO, true).apply {
+            background = fundoArredondado(0xE60B1630.toInt(), 8)
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            maxLines = 2
+            maxWidth = dp(220)
+        }
+        val p = parametros(
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+        )
+        rotuloParams = p
+        posicionarRotuloDiag(p)
+        if (adicionar(v, p)) rotuloDiag = v
+    }
+
+    private fun posicionarRotuloDiag(p: WindowManager.LayoutParams? = rotuloParams) {
+        val bp = bolhaParams ?: return
+        val r = p ?: return
+        val (largura, _) = tela()
+        if (bp.x + janelaBolha / 2 < largura / 2) {
+            r.gravity = Gravity.TOP or Gravity.START
+            r.x = bp.x + dp(4)
+        } else {
+            r.gravity = Gravity.TOP or Gravity.END
+            r.x = (largura - bp.x - janelaBolha + dp(4)).coerceAtLeast(0)
+        }
+        r.y = bp.y + janelaBolha
+        rotuloDiag?.let { atualizar(it, r) }
+    }
+
+    private fun esconderRotuloDiag() {
+        remover(rotuloDiag)
+        rotuloDiag = null
+    }
+
+    private fun diagnostico(app: String, tela: TelaLida) {
+        val v = rotuloDiag ?: return
+        val hora = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
+        v.text = "${nomeDoApp(app)}: ${tela.rotulo()} · $hora"
+    }
+
+    // ------------------------------------------------------------------ menu em leque
+
+    private data class ItemMenu(val icone: String, val rotulo: String, val acao: () -> Unit)
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun abrirMenu() {
+        if (menu != null) return
+        fecharFlutuante()
+        val pal = paleta()
+        val pausado = Armazenamento.pausado(this)
+        val escuro = temaEscuro()
+        val diag = Armazenamento.diagnostico(this)
+        val itens = listOf(
+            ItemMenu(if (pausado) "▶" else "❚❚", if (pausado) "Retomar" else "Pausar") { alternarPausa() },
+            ItemMenu("✎", "Digitar oferta") { abrirPainel() },
+            ItemMenu("◐", if (escuro) "Tema claro" else "Tema escuro") {
+                Armazenamento.definirTema(this, if (escuro) "claro" else "escuro")
+                redesenharCartao()
+            },
+            ItemMenu("±", "Régua rápida") { abrirRegua() },
+            ItemMenu("Σ", "Resumo do dia") { abrirResumo() },
+            ItemMenu("ⓘ", if (diag) "Diagnóstico: ligado" else "Diagnóstico") {
+                Armazenamento.definirDiagnostico(this, !diag)
+                if (!diag) mostrarRotuloDiag() else esconderRotuloDiag()
+            },
+            ItemMenu("↗", "Abrir o Aluguei") { Permissoes.trazerAppParaFrente(this) },
+            ItemMenu("✕", "Desligar") { desligar(this) },
+        )
+
+        val raiz = FrameLayout(ui).apply {
+            setBackgroundColor(0x59000000)
+            alpha = 0f
+            isClickable = true
+            setOnTouchListener { _, e ->
+                if (e.actionMasked == MotionEvent.ACTION_UP) fecharMenu()
+                true
+            }
+        }
+        val p = parametros(
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+        )
+        if (!adicionar(raiz, p)) return
+        menu = raiz
+        raiz.animate().alpha(1f).setDuration(200).start()
+
+        // Posição dos itens só depois do layout (para saber onde a bolha está na tela).
+        raiz.post {
+            if (menu !== raiz) return@post
+            val b = bolha ?: return@post
+            val posBolha = IntArray(2).also { b.getLocationOnScreen(it) }
+            val posRaiz = IntArray(2).also { raiz.getLocationOnScreen(it) }
+            val cx = posBolha[0] - posRaiz[0] + b.width / 2
+            val cy = posBolha[1] - posRaiz[1] + b.height / 2
+            val alturaItem = dp(42)
+            val passo = dp(48)
+            val total = passo * (itens.size - 1) + alturaItem
+            val topo = (cy - total / 2).coerceIn(dp(16), (raiz.height - total - dp(16)).coerceAtLeast(dp(16)))
+            val aEsquerda = cx < raiz.width / 2
+            val meio = (itens.size - 1) / 2f
+            itens.forEachIndexed { i, item ->
+                val rel = (i - meio) / meio // -1..1
+                val afastamento = dp(44) + (dp(46) * (1 - rel * rel)).toInt()
+                val chip = LinearLayout(ui).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = fundoArredondado(if (pal.escuro) 0xF51F2937.toInt() else BRANCO, 21, pal.borda)
+                    elevation = dp(4).toFloat()
+                    setPadding(dp(6), 0, dp(14), 0)
+                    addView(
+                        texto(item.icone, 13f, BRANCO, true).apply {
+                            gravity = Gravity.CENTER
+                            background = circulo(if (item.rotulo == "Desligar") VERMELHO else MARCA)
+                        },
+                        LinearLayout.LayoutParams(dp(30), dp(30)),
+                    )
+                    addView(texto(item.rotulo, 14f, pal.texto, true), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
+                    isClickable = true
+                    setOnClickListener {
+                        fecharMenu()
+                        item.acao()
+                    }
+                    alpha = 0f
+                    scaleX = 0.6f
+                    scaleY = 0.6f
+                }
+                val lp = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, alturaItem).apply {
+                    topMargin = topo + passo * i
+                    if (aEsquerda) {
+                        gravity = Gravity.TOP or Gravity.START
+                        leftMargin = (cx + afastamento - dp(30)).coerceAtLeast(dp(8))
+                    } else {
+                        gravity = Gravity.TOP or Gravity.END
+                        rightMargin = (raiz.width - cx + afastamento - dp(30)).coerceAtLeast(dp(8))
+                    }
+                }
+                raiz.addView(chip, lp)
+                chip.post {
+                    chip.pivotX = if (aEsquerda) 0f else chip.width.toFloat()
+                    chip.pivotY = chip.height / 2f
+                    chip.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(i * 15L).setDuration(200).setInterpolator(DecelerateInterpolator()).start()
+                }
+            }
+        }
+    }
+
+    private fun fecharMenu() {
+        val v = menu ?: return
+        menu = null
+        v.animate().alpha(0f).setDuration(150).withEndAction { remover(v) }.start()
+    }
+
+    private fun alternarPausa() {
+        val pausar = !Armazenamento.pausado(this)
+        Armazenamento.definirPausado(this, pausar)
+        atualizarPonto()
+        if (pausar) {
+            fecharCartao()
+            limparLeitura()
+            rotuloDiag?.text = "pausado"
+        } else {
+            rotuloDiag?.text = "esperando uma tela…"
+        }
+        atualizarNotificacao()
+        PlantaoPlugin.emitirEstado(this)
+    }
+
+    private fun limparLeitura() {
+        ofertaAberta = null
+        ofertaAbertaId = null
+        chaveAberta = null
+        recusada = null
+    }
+
+    // ------------------------------------------------------------------ painéis flutuantes (régua, resumo)
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun mostrarFlutuante(conteudo: View, aoFechar: (() -> Unit)? = null) {
+        fecharFlutuante()
+        val pal = paleta()
+        val raiz = FrameLayout(ui).apply {
+            background = fundoArredondado(pal.fundo, 20, pal.borda)
+            elevation = dp(8).toFloat()
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            addView(conteudo)
+            setOnTouchListener { _, e ->
+                if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+                    fecharFlutuante(); true
+                } else {
+                    false
+                }
+            }
+            alpha = 0f
+            translationY = -dp(16).toFloat()
+        }
+        val (largura, _) = tela()
+        val p = parametros(
+            min(largura - dp(24), dp(380)),
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = alturaBarraStatus() + dp(56)
+        }
+        if (!adicionar(raiz, p)) return
+        flutuante = raiz
+        aoFecharFlutuante = aoFechar
+        raiz.animate().alpha(1f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
+    }
+
+    private fun fecharFlutuante() {
+        val v = flutuante ?: return
+        flutuante = null
+        val f = aoFecharFlutuante
+        aoFecharFlutuante = null
+        f?.invoke()
+        v.animate().alpha(0f).translationY(-dp(12).toFloat()).setDuration(180).withEndAction { remover(v) }.start()
+    }
+
+    private fun cabecalho(titulo: String, pal: Paleta, fechar: () -> Unit): LinearLayout = LinearLayout(ui).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(texto(titulo, 17f, pal.texto, true), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(
+            texto("✕", 18f, pal.secundario, true).apply {
+                gravity = Gravity.CENTER
+                contentDescription = getString(R.string.plantao_fechar)
+                isClickable = true
+                setOnClickListener { fechar() }
+            },
+            LinearLayout.LayoutParams(dp(36), dp(36)),
+        )
+    }
+
+    private fun abrirRegua() {
+        val pal = paleta()
+        val c = Armazenamento.criterios(this)
+        var porKm = c.minimoPorKm
+        var porHora = c.minimoPorHora
+        var mudou = false
+
+        fun ajuste(rotulo: String, valor: () -> String, menos: () -> Unit, mais: () -> Unit): LinearLayout {
+            val numero = texto(valor(), 22f, pal.texto, true)
+            fun redondo(t: String, acao: () -> Unit) = texto(t, 22f, BRANCO, true).apply {
+                gravity = Gravity.CENTER
+                background = circulo(MARCA)
+                isClickable = true
+                setOnClickListener {
+                    acao()
+                    mudou = true
+                    numero.text = valor()
+                    Armazenamento.salvarRegua(this@BolhaService, porKm, porHora)
+                }
+            }
+            return LinearLayout(ui).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(
+                    LinearLayout(ui).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(texto(rotulo, 12f, pal.secundario))
+                        addView(numero, margem(4))
+                    },
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+                )
+                addView(redondo("−", menos), LinearLayout.LayoutParams(dp(44), dp(44)))
+                addView(redondo("+", mais), LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(10) })
+            }
+        }
+
+        val conteudo = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(cabecalho("Régua rápida", pal) { fecharFlutuante() })
+            addView(texto("O que é uma corrida boa para você agora.", 12f, pal.secundario), margem(2))
+            addView(ajuste("Mínimo por km", { Formato.brl(porKm) }, { porKm = (porKm - 10).coerceAtLeast(0) }, { porKm = (porKm + 10).coerceAtMost(100_000) }), margem(14))
+            addView(ajuste("Mínimo por hora", { Copiloto.reais(porHora) }, { porHora = (porHora - 500).coerceAtLeast(0) }, { porHora = (porHora + 500).coerceAtMost(10_000_000) }), margem(12))
+            addView(botao("Pronto", MARCA, true) { fecharFlutuante() }, margem(16))
+        }
+        mostrarFlutuante(conteudo) {
+            if (mudou) {
+                PlantaoPlugin.emitirRegua(porKm, porHora)
+                redesenharCartao()
+            }
+        }
+    }
+
+    private fun abrirResumo() {
+        val pal = paleta()
+        val r = Armazenamento.resumoHoje(this)
+        fun item(rotulo: String, valor: String) = LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(texto(rotulo, 14f, pal.secundario), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(texto(valor, 16f, pal.texto, true))
+        }
+        val conteudo = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(cabecalho("Resumo de hoje", pal) { fecharFlutuante() })
+            addView(item("Ofertas avaliadas", r.ofertas.toString()), margem(12))
+            addView(item("Aceitas", r.aceitas.toString()), margem(10))
+            addView(item("Ganho (aceitas)", Formato.brl(r.ganho)), margem(10))
+            addView(item("Lucro estimado", Formato.brl(r.lucro)), margem(10))
+            addView(texto("Conta só o que você marcou como \"Aceitei\" no cartão.", 11f, pal.secundario), margem(12))
+        }
+        mostrarFlutuante(conteudo)
+    }
+
     // ------------------------------------------------------------------ painel de digitação rápida
 
-    private fun campo(rotulo: String, dica: String, ultimo: Boolean): Pair<LinearLayout, EditText> {
+    private fun campo(rotulo: String, dica: String, pal: Paleta, ultimo: Boolean): Pair<LinearLayout, EditText> {
         val edit = EditText(ui).apply {
-            setTextColor(BRANCO)
-            setHintTextColor(CINZA)
+            setTextColor(pal.texto)
+            setHintTextColor(comAlfa(pal.secundario, 0x99))
             hint = dica
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            typeface = Typeface.DEFAULT_BOLD
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             keyListener = DigitsKeyListener.getInstance("0123456789,.")
-            imeOptions = if (ultimo) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
-            background = fundoArredondado(0x1FFFFFFF, 10, 0x40FFFFFF)
-            setPadding(dp(10), dp(8), dp(10), dp(8))
+            imeOptions = (if (ultimo) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT) or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+            background = fundoArredondado(pal.superficie, 12, pal.borda)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
         }
         val bloco = LinearLayout(ui).apply {
             orientation = LinearLayout.VERTICAL
-            addView(texto(rotulo, 12f, CINZA))
-            addView(edit, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+            addView(texto(rotulo, 12f, pal.secundario))
+            addView(edit, margem(4))
         }
         return Pair(bloco, edit)
     }
 
-    private fun linha(vararg blocos: View): LinearLayout = LinearLayout(ui).apply {
-        orientation = LinearLayout.HORIZONTAL
-        blocos.forEachIndexed { i, b ->
-            addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { if (i > 0) marginStart = dp(10) })
+    private fun tecladoVisivel(raiz: View): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return raiz.rootWindowInsets?.isVisible(WindowInsets.Type.ime()) ?: false
         }
+        return raiz.findFocus() is EditText
     }
 
-    private fun botao(t: String, cor: Int, cheio: Boolean, acao: () -> Unit): TextView = texto(t, 15f, if (cheio) Color.parseColor("#0b1630") else BRANCO, true).apply {
-        gravity = Gravity.CENTER
-        setPadding(dp(14), dp(10), dp(14), dp(10))
-        background = if (cheio) fundoArredondado(cor, 10) else fundoArredondado(Color.TRANSPARENT, 10, cor)
-        isClickable = true
-        setOnClickListener { acao() }
-    }
-
+    @SuppressLint("ClickableViewAccessibility")
     private fun abrirPainel() {
         if (painel != null) return
-        fecharCartao()
-        val (cValor, eValor) = campo(getString(R.string.plantao_campo_valor), "18,40", false)
-        val (cKm, eKm) = campo(getString(R.string.plantao_campo_km), "7,4", false)
-        val (cMin, eMin) = campo(getString(R.string.plantao_campo_minutos), getString(R.string.plantao_opcional), false)
-        val (cBusca, eBusca) = campo(getString(R.string.plantao_campo_busca), getString(R.string.plantao_opcional), true)
-        val erro = texto("", 13f, VERMELHO).apply { visibility = View.GONE }
+        fecharMenu()
+        fecharFlutuante()
+        fecharCartao(animado = false)
+        val pal = paleta()
+        val (cValor, eValor) = campo("Valor (R$)", "18,40", pal, false)
+        val (cKm, eKm) = campo("Km da corrida", "7,4", pal, false)
+        val (cMin, eMin) = campo("Min da corrida", "opcional", pal, false)
+        val (cBusca, eBusca) = campo("Km até o passageiro", "opcional", pal, true)
 
-        val calcular = {
-            val valor = Formato.lerReais(eValor.text.toString())
-            val km = Formato.lerNumero(eKm.text.toString())
-            if (valor == null || km == null || km <= 0) {
-                erro.text = getString(R.string.plantao_erro_digitacao)
-                erro.visibility = View.VISIBLE
-            } else {
-                val oferta = Oferta(
-                    valor = valor,
-                    kmCorrida = km,
-                    minutosCorrida = Formato.lerNumero(eMin.text.toString())?.takeIf { it > 0 },
-                    kmBusca = Formato.lerNumero(eBusca.text.toString()),
-                    minutosBusca = null,
-                )
-                fecharPainel()
-                receberOferta(oferta, "digitada", null)
-            }
+        val selo = texto("", 12f, BRANCO, true).apply {
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+            visibility = View.GONE
         }
-        eBusca.setOnEditorActionListener { _, acao, _ ->
-            if (acao == EditorInfo.IME_ACTION_DONE) {
-                calcular(); true
-            } else {
-                false
-            }
+        val numeros = texto("Digite o valor e os km", 15f, pal.secundario, true)
+        val detalhe = texto("", 12f, pal.secundario).apply { visibility = View.GONE }
+        val resultado = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            background = fundoArredondado(pal.superficie, 14)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            addView(selo, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(numeros, margem(6))
+            addView(detalhe, margem(4))
         }
 
-        // Raiz que fecha o painel com o botão Voltar (a janela é focável enquanto aberta).
+        fun ofertaDigitada(): OfertaDetalhada? {
+            val valor = Formato.lerReais(eValor.text.toString()) ?: return null
+            val km = Formato.lerNumero(eKm.text.toString())?.takeIf { it > 0 } ?: return null
+            return OfertaDetalhada(
+                app = "outra",
+                valor = valor,
+                kmCorrida = km,
+                minutosCorrida = Formato.lerNumero(eMin.text.toString())?.takeIf { it > 0 },
+                kmBusca = Formato.lerNumero(eBusca.text.toString()),
+            )
+        }
+
+        fun recalcular() {
+            val o = ofertaDigitada()
+            if (o == null) {
+                selo.visibility = View.GONE
+                detalhe.visibility = View.GONE
+                numeros.text = "Digite o valor e os km"
+                numeros.setTextColor(pal.secundario)
+                return
+            }
+            val a = Copiloto.avaliar(o, taxas(Armazenamento.perfil(this)), Armazenamento.criterios(this), emptyList()).avaliacao
+            val cor = corDoSinal(a.sinal)
+            selo.text = seloDoSinal(a.sinal)
+            selo.background = fundoArredondado(cor, 99)
+            selo.visibility = View.VISIBLE
+            numeros.text = "${Formato.brl(a.porKm)}/km · ${Copiloto.reais(jsRound(a.porHora / 100.0) * 100)}/h · lucro ${Formato.brl(a.lucro)}"
+            numeros.setTextColor(pal.texto)
+            val tempo = if (a.tempoEstimado) "~${a.minutosTotal} min" else "${a.minutosTotal} min"
+            detalhe.text = (listOf("${Formato.km(a.kmTotal)} km no total", tempo) + listOfNotNull(a.motivos.firstOrNull())).joinToString(" · ")
+            detalhe.visibility = View.VISIBLE
+        }
+
+        val vigia = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) = recalcular()
+        }
+        listOf(eValor, eKm, eMin, eBusca).forEach { it.addTextChangedListener(vigia) }
+
+        fun somar(edit: EditText, soma: Double, reais: Boolean) {
+            val atual = if (reais) (Formato.lerReais(edit.text.toString()) ?: 0L) / 100.0 else Formato.lerNumero(edit.text.toString()) ?: 0.0
+            val novo = atual + soma
+            val texto = if (reais) {
+                val c = jsRound(novo * 100)
+                if (c % 100 == 0L) (c / 100).toString() else Formato.brl(c).removePrefix("R$ ").replace(".", "")
+            } else {
+                Formato.km(novo)
+            }
+            edit.setText(texto)
+            edit.setSelection(edit.text.length)
+        }
+
+        fun registrar(decisao: String) {
+            val o = ofertaDigitada() ?: return
+            fecharPainel()
+            val corrida = registrarOferta(o, "digitada", mostrar = false)
+            decidir(corrida, decisao, o)
+        }
+
+        // Raiz que fecha o painel com o botão Voltar e com toque fora (se o teclado não estiver aberto).
         val raiz = object : LinearLayout(ui) {
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                 if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
@@ -495,163 +1071,526 @@ class BolhaService : Service() {
         }
         raiz.apply {
             orientation = LinearLayout.VERTICAL
-            background = fundoArredondado(FUNDO, 18)
-            setPadding(dp(16), dp(14), dp(16), dp(16))
+            background = fundoArredondado(pal.fundo, 20, pal.borda)
+            elevation = dp(8).toFloat()
+            setPadding(dp(16), dp(12), dp(16), dp(16))
+            isFocusableInTouchMode = true
+            descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+            addView(cabecalho("Digitar oferta", pal) { fecharPainel() })
+            addView(linha(cValor, cKm), margem(8))
+            addView(linha(cMin, cBusca), margem(10))
             addView(
                 linha(
-                    texto(getString(R.string.plantao_painel_titulo), 17f, BRANCO, true),
-                    texto("✕", 20f, CINZA, true).apply {
-                        gravity = Gravity.END
-                        contentDescription = getString(R.string.plantao_fechar)
-                        isClickable = true
-                        setOnClickListener { fecharPainel() }
-                    },
+                    botao("+R$ 5", MARCA, false) { somar(eValor, 5.0, true) },
+                    botao("+1 km", MARCA, false) { somar(eKm, 1.0, false) },
                 ),
+                margem(10),
             )
-            val espaco = { LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) } }
-            addView(linha(cValor, cKm), espaco())
-            addView(linha(cMin, cBusca), espaco())
-            addView(erro, espaco())
-            addView(botao(getString(R.string.plantao_ver_resultado), VERDE, true) { calcular() }, espaco())
+            addView(resultado, margem(12))
+            addView(
+                linha(
+                    botao(getString(R.string.plantao_recusei), pal.secundario, false) { registrar(CorridaAvaliada.RECUSEI) },
+                    botao(getString(R.string.plantao_aceitei), MARCA, true) { registrar(CorridaAvaliada.ACEITEI) },
+                ),
+                margem(12),
+            )
+            setOnTouchListener { v, e ->
+                if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+                    if (!tecladoVisivel(v)) fecharPainel()
+                    true
+                } else {
+                    false
+                }
+            }
+            alpha = 0f
+            translationY = -dp(16).toFloat()
+        }
+        eBusca.setOnEditorActionListener { v, acao, _ ->
+            if (acao == EditorInfo.IME_ACTION_DONE) {
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(v.windowToken, 0)
+                true
+            } else {
+                false
+            }
         }
 
         val (largura, _) = tela()
         val p = parametros(
-            min(largura - dp(24), dp(420)),
+            min(largura - dp(16), dp(420)),
             WindowManager.LayoutParams.WRAP_CONTENT,
-            // Focável (para o teclado), mas deixa os toques fora do painel irem para o app de baixo.
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            // Focável (para o teclado, só quando tocar num campo); toques fora vão para o app de baixo.
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dp(24)
-            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
+            y = alturaBarraStatus() + dp(8)
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
         }
-        wm.addView(raiz, p)
+        if (!adicionar(raiz, p)) return
         painel = raiz
-        eValor.requestFocus()
-        principal.postDelayed({
-            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(eValor, InputMethodManager.SHOW_IMPLICIT)
-        }, 150)
+        raiz.requestFocus() // o foco fica no painel, não no campo: o teclado não abre sozinho
+        raiz.animate().alpha(1f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
     }
 
     private fun fecharPainel() {
         val v = painel ?: return
-        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(v.windowToken, 0)
-        remover(v)
         painel = null
+        try {
+            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(v.windowToken, 0)
+        } catch (e: RuntimeException) {
+            // janela já fechando
+        }
+        v.animate().alpha(0f).translationY(-dp(12).toFloat()).setDuration(180).withEndAction { remover(v) }.start()
     }
 
-    // ------------------------------------------------------------------ oferta e cartão
+    // ------------------------------------------------------------------ telas lidas
+
+    /** O leitor entendeu uma tela do app de corrida. Chamar na thread principal. */
+    fun receberTela(app: String, tela: TelaLida) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            principal.post { receberTela(app, tela) }
+            return
+        }
+        if (Armazenamento.pausado(this)) return
+        diagnostico(app, tela)
+        when (tela) {
+            is TelaLida.ComOferta -> tratarOferta(tela.oferta)
+            is TelaLida.Contraproposta -> tratarContraproposta(app, tela.valor)
+            TelaLida.Lista, TelaLida.Fim -> {
+                limparLeitura()
+                if (cartaoOrigem == "leitura" && cartaoApp == app) fecharCartao()
+            }
+            TelaLida.Nada -> Unit
+        }
+    }
+
+    private fun tratarOferta(o: OfertaDetalhada) {
+        val chave = o.chave()
+        if (chave == recusada) return
+        recusada = null
+        if (o.app == "indrive") {
+            // Mesma oferta ainda aberta (o inDrive redesenha a tela o tempo todo): só guarda os detalhes novos.
+            if (chave == chaveAberta) {
+                ofertaAberta = o.copy(suaOferta = ofertaAberta?.suaOferta)
+                return
+            }
+        } else {
+            val agora = SystemClock.elapsedRealtime()
+            if (chave == ultimaChave && agora - ultimaEm < JANELA_REPETICAO_MS) return
+            ultimaEm = agora
+        }
+        ultimaChave = chave
+        chaveAberta = chave
+        ofertaAberta = o
+        val corrida = registrarOferta(o, "leitura", mostrar = true)
+        ofertaAbertaId = corrida.id
+    }
+
+    private fun tratarContraproposta(app: String, valor: Long) {
+        val base = ofertaAberta ?: return
+        if (base.app != app || base.suaOferta == valor) return
+        val o = base.copy(suaOferta = valor)
+        ofertaAberta = o
+        val id = ofertaAbertaId
+        if (id != null) Armazenamento.atualizarSuaOferta(this, id, valor)
+        val r = avaliar(o)
+        val corrida = (cartaoCorrida?.takeIf { it.id == id } ?: Armazenamento.corridas(this).firstOrNull { it.id == id })?.copy(suaOferta = valor)
+            ?: CorridaAvaliada.nova(o, r.avaliacao, "leitura", app)
+        mostrarCartao(o, r, corrida, "leitura")
+        ultimaOferta = o
+        ultimaAvaliacao = r.avaliacao
+        atualizarNotificacao()
+    }
+
+    private fun avaliar(o: OfertaDetalhada): Copiloto.Resultado =
+        Copiloto.avaliar(o, taxas(Armazenamento.perfil(this)), Armazenamento.criterios(this), Armazenamento.lugaresEvitar(this))
 
     /**
-     * Uma oferta chegou (do leitor de tela ou digitada): avalia, guarda na fila
-     * local, mostra o cartão e avisa a WebView (se estiver aberta).
-     * Chamar na thread principal.
+     * Uma oferta chegou (do plugin "simular" ou digitada): avalia, guarda na fila,
+     * mostra o cartão e avisa a WebView (se estiver aberta).
      */
     fun receberOferta(oferta: Oferta, origem: String, app: String?) {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             principal.post { receberOferta(oferta, origem, app) }
             return
         }
-        val avaliacao = avaliarCorrida(oferta, taxas(Armazenamento.perfil(this)), Armazenamento.criterios(this))
-        val corrida = CorridaAvaliada.nova(oferta, avaliacao, origem, app)
-        Armazenamento.adicionar(this, corrida)
-        mostrarCartao(oferta, avaliacao, corrida)
-        PlantaoPlugin.emitirOferta(corrida, avaliacao)
+        registrarOferta(OfertaDetalhada.de(oferta, app ?: "outra"), origem, mostrar = true)
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private fun mostrarCartao(o: Oferta, a: Avaliacao, corrida: CorridaAvaliada) {
-        fecharCartao()
-        val cor = corDoSinal(a.sinal)
-        val titulo = when (a.sinal) {
-            Sinal.VERDE -> getString(R.string.plantao_sinal_verde)
-            Sinal.AMARELO -> getString(R.string.plantao_sinal_amarelo)
-            Sinal.VERMELHO -> getString(R.string.plantao_sinal_vermelho)
+    private fun registrarOferta(o: OfertaDetalhada, origem: String, mostrar: Boolean): CorridaAvaliada {
+        val r = avaliar(o)
+        val app = if (origem == "digitada" && o.app == "outra") null else o.app
+        val corrida = CorridaAvaliada.nova(o, r.avaliacao, origem, app)
+        Armazenamento.adicionar(this, corrida)
+        Armazenamento.registrarOfertaNoResumo(this)
+        if (mostrar) {
+            mostrarCartao(o, r, corrida, origem)
+            vibrar(r.avaliacao.sinal)
         }
-        val busca = o.kmBusca?.let { getString(R.string.plantao_a_km_do_passageiro, Formato.km(it)) } ?: getString(R.string.plantao_busca_desconhecida)
-        val tempo = if (a.tempoEstimado) " · ~${a.minutosTotal} min" else " · ${a.minutosTotal} min"
+        ultimaOferta = o
+        ultimaAvaliacao = r.avaliacao
+        atualizarNotificacao()
+        PlantaoPlugin.emitirOferta(corrida, r.avaliacao)
+        return corrida
+    }
 
-        val cabecalho = linha(
-            texto(titulo, 15f, Color.parseColor("#0b1630"), true),
-            texto(Formato.brl(o.valor), 17f, Color.parseColor("#0b1630"), true).apply { gravity = Gravity.END },
-        ).apply {
-            background = fundoArredondado(cor, 12)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+    private fun vibrar(s: Sinal) {
+        if (!Armazenamento.vibrar(this)) return
+        val padrao = when (s) {
+            Sinal.VERDE -> longArrayOf(0, 45)
+            Sinal.VERMELHO -> longArrayOf(0, 45, 110, 45)
+            Sinal.AMARELO -> return
         }
-        fun metrica(valor: String, rotulo: String) = LinearLayout(ui).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(texto(valor, 22f, BRANCO, true))
-            addView(texto(rotulo, 12f, CINZA).apply { setPadding(0, dp(2), 0, 0) })
-        }
-        val lucroCor = if (a.lucro > 0) BRANCO else VERMELHO
-        val raiz = LinearLayout(ui).apply {
-            orientation = LinearLayout.VERTICAL
-            background = fundoArredondado(FUNDO, 16, cor)
-            setPadding(dp(10), dp(10), dp(10), dp(12))
-            val m = { topo: Int -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(topo) } }
-            addView(cabecalho)
-            addView(
-                linha(
-                    metrica(Formato.brl(a.porKm), getString(R.string.plantao_por_km)),
-                    metrica(Formato.brl(a.porHora), getString(R.string.plantao_por_hora)),
-                ).apply { setPadding(dp(4), 0, dp(4), 0) },
-                m(10),
-            )
-            addView(
-                texto(getString(R.string.plantao_lucro_estimado, Formato.brl(a.lucro)), 15f, lucroCor, true).apply { setPadding(dp(4), 0, dp(4), 0) },
-                m(10),
-            )
-            addView(
-                texto(getString(R.string.plantao_km_total, Formato.km(a.kmTotal)) + " · " + busca + tempo, 13f, CINZA).apply { setPadding(dp(4), 0, dp(4), 0) },
-                m(6),
-            )
-            a.motivos.firstOrNull()?.let {
-                addView(texto(it, 13f, cor).apply { setPadding(dp(4), 0, dp(4), 0) }, m(4))
+        try {
+            val v: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
             }
-            addView(
-                linha(
-                    botao(getString(R.string.plantao_recusei), CINZA, false) { decidir(corrida.id, CorridaAvaliada.RECUSEI) },
-                    botao(getString(R.string.plantao_aceitei), cor, true) { decidir(corrida.id, CorridaAvaliada.ACEITEI) },
-                ),
-                m(12),
-            )
-            // Toque fora do cartão: fecha (a corrida fica como "sem resposta").
-            setOnTouchListener { _, e ->
-                if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) {
-                    fecharCartao(); true
-                } else {
-                    false
+            if (v == null || !v.hasVibrator()) return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(VibrationEffect.createWaveform(padrao, -1))
+            } else {
+                @Suppress("DEPRECATION")
+                v.vibrate(padrao, -1)
+            }
+        } catch (e: RuntimeException) {
+            // sem vibração neste aparelho
+        }
+    }
+
+    // ------------------------------------------------------------------ cartão
+
+    /** Redesenha o cartão aberto (tema ou régua mudou). */
+    private fun redesenharCartao() {
+        val o = cartaoOferta ?: return
+        val c = cartaoCorrida ?: return
+        if (cartao == null) return
+        mostrarCartao(o, avaliar(o), c, cartaoOrigem, animar = false)
+    }
+
+    /** Cartão que dá para arrastar na vertical (muda a posição) e para o lado (fecha). */
+    @SuppressLint("ViewConstructor")
+    private inner class CartaoLayout(ctx: Context, private val app: String) : FrameLayout(ctx) {
+        private val folga = ViewConfiguration.get(ctx).scaledTouchSlop
+        private var x0 = 0f
+        private var y0 = 0f
+        private var yJanela0 = 0
+        private var modo = 0 // 0 nada, 1 vertical, 2 horizontal
+
+        override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> inicio(e)
+                MotionEvent.ACTION_MOVE -> if (decidirModo(e)) return true
+            }
+            return false
+        }
+
+        private fun inicio(e: MotionEvent) {
+            x0 = e.rawX
+            y0 = e.rawY
+            yJanela0 = cartaoParams?.y ?: 0
+            modo = 0
+        }
+
+        private fun decidirModo(e: MotionEvent): Boolean {
+            if (modo != 0) return true
+            val dx = e.rawX - x0
+            val dy = e.rawY - y0
+            if (abs(dx) < folga && abs(dy) < folga) return false
+            modo = if (abs(dx) > abs(dy)) 2 else 1
+            return true
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        override fun onTouchEvent(e: MotionEvent): Boolean {
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> inicio(e)
+                MotionEvent.ACTION_MOVE -> {
+                    if (!decidirModo(e)) return true
+                    val dx = e.rawX - x0
+                    val dy = e.rawY - y0
+                    if (modo == 1) {
+                        val p = cartaoParams ?: return true
+                        val (_, altura) = tela()
+                        p.y = (yJanela0 + dy.toInt()).coerceIn(0, (altura - height).coerceAtLeast(0))
+                        atualizar(this, p)
+                    } else if (modo == 2) {
+                        translationX = dx
+                        alpha = (1f - abs(dx) / width.coerceAtLeast(1)).coerceIn(0.2f, 1f)
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (modo == 1) {
+                        cartaoParams?.let { Armazenamento.salvarCartaoY(this@BolhaService, app, it.y) }
+                    } else if (modo == 2) {
+                        val dx = e.rawX - x0
+                        if (abs(dx) > width * 0.3f) {
+                            fecharCartaoDeLado(dx > 0)
+                        } else {
+                            animate().translationX(0f).alpha(1f).setDuration(150).start()
+                        }
+                    }
+                    modo = 0
                 }
             }
+            return true
+        }
+    }
+
+    private fun mostrarCartao(o: OfertaDetalhada, r: Copiloto.Resultado, corrida: CorridaAvaliada, origem: String, animar: Boolean = true) {
+        principal.removeCallbacks(fecharCartaoNoTempo)
+        cartao?.let { remover(it) }
+        cartao = null
+        val pal = paleta()
+        val a = r.avaliacao
+        val cor = corDoSinal(a.sinal)
+        val chaveApp = if (origem == "digitada" && o.app == "outra") "digitada" else o.app
+
+        // Linha 1: ícone do app, passageiro e selo do sinal.
+        val nota = o.nota?.let { "★" + String.format(Locale.forLanguageTag("pt-BR"), "%.2f", it) }
+        val passageiro = listOfNotNull(
+            listOfNotNull(o.nome, nota, o.corridasPassageiro?.let { "($it)" }).joinToString(" ").takeIf { it.isNotEmpty() } ?: nomeDoApp(if (chaveApp == "digitada") null else o.app),
+            o.pagamento,
+        ).joinToString(" · ")
+        val selo = texto(seloDoSinal(a.sinal), 11f, BRANCO, true).apply {
+            background = fundoArredondado(cor, 99)
+            setPadding(dp(9), dp(4), dp(9), dp(4))
+        }
+        val fechar = texto("✕", 15f, pal.secundario, true).apply {
+            gravity = Gravity.CENTER
+            contentDescription = getString(R.string.plantao_fechar)
+            isClickable = true
+            setOnClickListener {
+                marcarDispensada()
+                fecharCartao()
+            }
+        }
+        val topo = LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(iconeDoApp(if (chaveApp == "digitada") null else o.app), LinearLayout.LayoutParams(dp(26), dp(26)))
+            addView(
+                texto(passageiro, 13f, pal.texto, true).apply {
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
+                },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(8); marginEnd = dp(6) },
+            )
+            addView(selo)
+            addView(fechar, LinearLayout.LayoutParams(dp(30), dp(26)))
         }
 
-        val (largura, _) = tela()
+        // Números grandes (contam de 0 até o valor).
+        fun metrica(rotulo: String): Pair<LinearLayout, TextView> {
+            val n = texto("", 21f, pal.texto, true).apply { maxLines = 1 }
+            val bloco = LinearLayout(ui).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(n)
+                addView(texto(rotulo, 11f, pal.secundario).apply { setPadding(0, dp(2), 0, 0) })
+            }
+            return Pair(bloco, n)
+        }
+        val (bKm, nKm) = metrica("por km")
+        val (bHora, nHora) = metrica("por hora")
+        val (bLucro, nLucro) = metrica("lucro")
+        if (a.lucro <= 0) nLucro.setTextColor(VERMELHO)
+        fun preencher(f: Float) {
+            nKm.text = Formato.brl(jsRound(a.porKm * f.toDouble()))
+            nHora.text = Copiloto.reais(jsRound(a.porHora * f / 100.0) * 100)
+            nLucro.text = Copiloto.reais(jsRound(a.lucro * f / 100.0) * 100)
+        }
+        preencher(if (animar) 0f else 1f)
+
+        val tempo = if (a.tempoEstimado) "~${a.minutosTotal} min" else "${a.minutosTotal} min"
+        val busca = o.kmBusca?.let { "a ${Formato.km(it)} km do passageiro" }
+        val valorMostrado = o.suaOferta ?: o.valor
+        val detalhe = listOfNotNull(
+            Copiloto.reais(valorMostrado),
+            (if (o.kmCorridaEstimado) "≈" else "") + "${Formato.km(a.kmTotal)} km no total",
+            busca,
+            tempo,
+        ).joinToString(" · ")
+
+        val conteudo = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(8), dp(10))
+            addView(topo)
+            if (o.suaOferta != null) {
+                addView(texto("Sua oferta: ${Copiloto.reais(o.suaOferta)}", 14f, pal.destaque, true), margem(6))
+            }
+            addView(linha(bKm, bHora, bLucro, espaco = 6), margem(8))
+            addView(texto(detalhe, 12f, pal.secundario).apply { maxLines = 2 }, margem(6))
+            o.destino?.let { d ->
+                addView(
+                    texto("→ $d", 12f, pal.texto).apply {
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                    },
+                    margem(3),
+                )
+            }
+            if (a.sinal != Sinal.VERDE) {
+                a.motivos.firstOrNull { it != Copiloto.MOTIVO_RISCO }?.let { addView(texto(it, 12f, cor, true), margem(4)) }
+            }
+            if (r.risco) addView(faixaRisco(o, pal), margem(6))
+            if (o.app == "indrive" && origem == "leitura" && o.suaOferta == null && r.lugarEvitado == null) {
+                Copiloto.sugerir(o, taxas(Armazenamento.perfil(this@BolhaService)), Armazenamento.criterios(this@BolhaService), a.sinal)?.let {
+                    addView(caixaSugestao(it, pal), margem(8))
+                }
+            }
+            addView(
+                linha(
+                    botao(getString(R.string.plantao_recusei), pal.secundario, false) { decidir(corrida, CorridaAvaliada.RECUSEI, o) },
+                    botao(getString(R.string.plantao_aceitei), cor, true) { decidir(corrida, CorridaAvaliada.ACEITEI, o) },
+                    espaco = 8,
+                ),
+                margem(8),
+            )
+        }
+
+        val raiz = CartaoLayout(ui, chaveApp).apply {
+            background = fundoArredondado(pal.fundo, 20, pal.borda)
+            clipToOutline = true
+            elevation = dp(8).toFloat()
+            addView(
+                LinearLayout(ui).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    addView(View(ui).apply { setBackgroundColor(cor) }, LinearLayout.LayoutParams(dp(5), ViewGroup.LayoutParams.MATCH_PARENT))
+                    addView(conteudo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                },
+                FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+            )
+        }
+
+        val (largura, altura) = tela()
+        val yPadrao = alturaBarraStatus() + dp(6)
         val p = parametros(
-            min(largura - dp(24), dp(420)),
+            min(largura - dp(16), dp(420)),
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dp(32)
+            y = (Armazenamento.cartaoY(this@BolhaService, chaveApp) ?: yPadrao).coerceIn(0, (altura - dp(160)).coerceAtLeast(0))
         }
-        wm.addView(raiz, p)
+        if (!adicionar(raiz, p)) return
         cartao = raiz
-        cartaoCorridaId = corrida.id
-        principal.postDelayed(fecharCartaoNoTempo, Armazenamento.segundosCartao(this) * 1000L)
+        cartaoParams = p
+        cartaoApp = o.app
+        cartaoOrigem = origem
+        cartaoCorrida = corrida
+        cartaoOferta = o
+
+        if (animar) {
+            raiz.alpha = 0f
+            raiz.translationY = -dp(24).toFloat()
+            raiz.animate().alpha(1f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
+            ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 300
+                interpolator = DecelerateInterpolator()
+                addUpdateListener { preencher(it.animatedValue as Float) }
+                start()
+            }
+        }
+        val tempoNaTela = if (o.app == "indrive" && origem == "leitura") CARTAO_INDRIVE_MS else Armazenamento.segundosCartao(this) * 1000L
+        principal.postDelayed(fecharCartaoNoTempo, tempoNaTela)
+    }
+
+    private fun faixaRisco(o: OfertaDetalhada, pal: Paleta): LinearLayout {
+        val lugar = Copiloto.enderecoDoRisco(o)?.let { Copiloto.lugarDoEndereco(it) }
+        return LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = fundoArredondado(comAlfa(AMARELO, 0x26), 10)
+            setPadding(dp(10), dp(6), dp(6), dp(6))
+            addView(texto("⚠ Área de risco", 13f, if (pal.escuro) 0xFFFBBF24.toInt() else AMARELO, true), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (lugar != null) {
+                val jaEvita = Armazenamento.lugaresEvitar(this@BolhaService).any { Textos.semAcento(it) == Textos.semAcento(lugar) }
+                addView(
+                    texto(if (jaEvita) "Você já evita" else "Evitar este lugar", 12f, BRANCO, true).apply {
+                        background = fundoArredondado(if (jaEvita) PAUSADO else AMARELO, 99)
+                        setPadding(dp(10), dp(5), dp(10), dp(5))
+                        contentDescription = "Evitar $lugar"
+                        if (!jaEvita) {
+                            isClickable = true
+                            setOnClickListener {
+                                Armazenamento.adicionarLugar(this@BolhaService, lugar)
+                                text = "Evitando: ${lugar.take(18)}"
+                                isClickable = false
+                                background = fundoArredondado(PAUSADO, 99)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+
+    private fun caixaSugestao(s: Copiloto.Sugestao, pal: Paleta): LinearLayout {
+        val cor = when (s) {
+            Copiloto.Sugestao.PodeAceitar -> VERDE
+            is Copiloto.Sugestao.NemODobro -> VERMELHO
+            else -> pal.destaque
+        }
+        return LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            background = fundoArredondado(comAlfa(cor, 0x1F), 12)
+            setPadding(dp(10), dp(7), dp(10), dp(7))
+            addView(texto(Copiloto.textoSugestao(s), 15f, cor, true))
+            val mini = when (s) {
+                is Copiloto.Sugestao.Atalho -> Copiloto.textoComValor(s.valor, s.avaliacao)
+                is Copiloto.Sugestao.Lapis -> Copiloto.textoComValor(s.valor, s.avaliacao)
+                else -> null
+            }
+            mini?.let { addView(texto(it, 11f, pal.secundario), margem(3)) }
+        }
     }
 
     /** "Aceitei"/"Recusei": só registra. Nunca toca no app de corrida. */
-    private fun decidir(id: String, decisao: String) {
-        Armazenamento.atualizarDecisao(this, id, decisao)
-        PlantaoPlugin.emitirDecisao(id, decisao)
-        fecharCartao()
+    private fun decidir(corrida: CorridaAvaliada, decisao: String, o: OfertaDetalhada) {
+        val antes = Armazenamento.corridas(this).firstOrNull { it.id == corrida.id }?.decisao
+        Armazenamento.atualizarDecisao(this, corrida.id, decisao)
+        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) {
+            val r = avaliar(o)
+            Armazenamento.registrarAceiteNoResumo(this, o.suaOferta ?: o.valor, r.avaliacao.lucro)
+        }
+        if (decisao == CorridaAvaliada.RECUSEI && corrida.origem == "leitura") {
+            // Não deixa a mesma oferta reaparecer enquanto ela estiver aberta.
+            recusada = (ofertaAberta?.takeIf { it.app == o.app } ?: o).chaveOriginal()
+        }
+        PlantaoPlugin.emitirDecisao(corrida.id, decisao)
+        if (cartaoCorrida?.id == corrida.id) fecharCartao()
     }
 
-    private fun fecharCartao() {
+    private fun fecharCartao(animado: Boolean = true) {
         principal.removeCallbacks(fecharCartaoNoTempo)
-        remover(cartao)
+        val v = cartao ?: return
         cartao = null
-        cartaoCorridaId = null
+        cartaoCorrida = null
+        cartaoOferta = null
+        cartaoOrigem = "digitada"
+        if (animado && v.isAttachedToWindow) {
+            v.animate().alpha(0f).translationY(-dp(16).toFloat()).setDuration(180).withEndAction { remover(v) }.start()
+        } else {
+            remover(v)
+        }
+    }
+
+    /** Fechar o cartão de uma oferta lida (✕ ou arrastar para o lado): ela não volta enquanto estiver aberta. */
+    private fun marcarDispensada() {
+        val o = cartaoOferta ?: return
+        if (cartaoOrigem == "leitura") recusada = (ofertaAberta?.takeIf { it.app == o.app } ?: o).chaveOriginal()
+    }
+
+    private fun fecharCartaoDeLado(direita: Boolean) {
+        marcarDispensada()
+        principal.removeCallbacks(fecharCartaoNoTempo)
+        val v = cartao ?: return
+        cartao = null
+        cartaoCorrida = null
+        cartaoOferta = null
+        cartaoOrigem = "digitada"
+        val alvo = (if (direita) 1 else -1) * v.width.toFloat()
+        v.animate().translationX(alvo).alpha(0f).setDuration(180).withEndAction { remover(v) }.start()
     }
 }

@@ -12,12 +12,15 @@ import java.util.UUID
 import kotlin.math.floor
 
 /**
- * Armazenamento local do plantão (SharedPreferences, só neste aparelho):
+ * Armazenamento local do Copiloto (SharedPreferences, só neste aparelho):
  *  - perfil de custo e critérios (recebidos do app web por Plantao.configurar);
- *  - plantão ligado/desligado e posição da bolha;
+ *  - ligado/pausado, tema, vibração, posição da bolha e do cartão;
+ *  - lugares a evitar adicionados pela bolha e régua alterada pela bolha (pendentes para o app web);
+ *  - resumo do dia (contadores);
  *  - fila de corridas avaliadas, para o app web enviar ao servidor depois.
  *
- * Não guarda texto da tela dos apps de corrida; só os números lidos.
+ * Não guarda a tela inteira dos apps de corrida; só os números e os dados da
+ * oferta que o cartão mostra (nome, nota, pagamento, destino).
  */
 object Armazenamento {
     private const val ARQUIVO = "plantao"
@@ -29,6 +32,20 @@ object Armazenamento {
     private const val BOLHA_Y = "bolhaY"
     private const val PEDIDO_ACESSIBILIDADE = "pedidoAcessibilidadeEm"
     private const val FILA = "fila"
+    private const val TEMA = "tema"
+    private const val VIBRAR = "vibrar"
+    private const val PAUSADO = "pausado"
+    private const val DIAGNOSTICO = "diagnostico"
+    private const val LUGARES = "lugaresAdicionados"
+    private const val REGUA_PENDENTE = "reguaPendente"
+    private const val CARTAO_Y = "cartaoY_"
+    private const val RESUMO_DIA = "resumoDia"
+    private const val RESUMO_OFERTAS = "resumoOfertas"
+    private const val RESUMO_ACEITAS = "resumoAceitas"
+    private const val RESUMO_GANHO = "resumoGanho"
+    private const val RESUMO_LUCRO = "resumoLucro"
+
+    val TEMAS = setOf("claro", "escuro", "auto")
 
     /** Limite da fila: se o app web passar muito tempo sem enviar, descarta as mais antigas. */
     private const val MAXIMO_FILA = 500
@@ -38,12 +55,121 @@ object Armazenamento {
 
     // ---------- configuração ----------
 
-    fun salvarConfiguracao(ctx: Context, perfil: JSONObject?, criterios: JSONObject?, segundosCartao: Int?) {
+    fun salvarConfiguracao(
+        ctx: Context,
+        perfil: JSONObject?,
+        criterios: JSONObject?,
+        segundosCartao: Int?,
+        tema: String? = null,
+        vibrar: Boolean? = null,
+    ) {
         val e = prefs(ctx).edit()
         if (perfil != null) e.putString(PERFIL, perfil.toString())
-        if (criterios != null) e.putString(CRITERIOS, criterios.toString())
+        if (criterios != null) {
+            // Régua mudada na bolha e ainda não salva na conta: os dois mínimos dela valem.
+            val pendente = reguaPendente(ctx)
+            val c = JSONObject(criterios.toString())
+            if (pendente != null) {
+                c.put("minimoPorKm", pendente.first)
+                c.put("minimoPorHora", pendente.second)
+            }
+            e.putString(CRITERIOS, c.toString())
+        }
         if (segundosCartao != null) e.putInt(SEGUNDOS_CARTAO, segundosCartao.coerceIn(4, 120))
+        if (tema != null && tema in TEMAS) e.putString(TEMA, tema)
+        if (vibrar != null) e.putBoolean(VIBRAR, vibrar)
         e.apply()
+    }
+
+    fun tema(ctx: Context): String = prefs(ctx).getString(TEMA, "auto")?.takeIf { it in TEMAS } ?: "auto"
+
+    fun definirTema(ctx: Context, tema: String) {
+        if (tema in TEMAS) prefs(ctx).edit().putString(TEMA, tema).apply()
+    }
+
+    fun vibrar(ctx: Context): Boolean = prefs(ctx).getBoolean(VIBRAR, true)
+
+    // ---------- régua rápida (mudada pela bolha) ----------
+
+    /** Muda os mínimos localmente e deixa a régua pendente até o app web salvar na conta. */
+    fun salvarRegua(ctx: Context, minimoPorKm: Long, minimoPorHora: Long) {
+        val atual = prefs(ctx).getString(CRITERIOS, null)?.let { runCatching { JSONObject(it) }.getOrNull() } ?: JSONObject().apply {
+            val c = CRITERIOS_PADRAO
+            put("minimoPorKm", c.minimoPorKm)
+            put("minimoPorHora", c.minimoPorHora)
+            put("buscaMaximaKm", c.buscaMaximaKm)
+        }
+        atual.put("minimoPorKm", minimoPorKm)
+        atual.put("minimoPorHora", minimoPorHora)
+        val pendente = JSONObject().put("minimoPorKm", minimoPorKm).put("minimoPorHora", minimoPorHora)
+        prefs(ctx).edit().putString(CRITERIOS, atual.toString()).putString(REGUA_PENDENTE, pendente.toString()).apply()
+    }
+
+    /** (minimoPorKm, minimoPorHora) em centavos, ou null. */
+    fun reguaPendente(ctx: Context): Pair<Long, Long>? {
+        val o = prefs(ctx).getString(REGUA_PENDENTE, null)?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return null
+        if (!o.has("minimoPorKm") || !o.has("minimoPorHora")) return null
+        return Pair(o.optLong("minimoPorKm"), o.optLong("minimoPorHora"))
+    }
+
+    fun limparReguaPendente(ctx: Context) = prefs(ctx).edit().remove(REGUA_PENDENTE).apply()
+
+    // ---------- lugares a evitar ----------
+
+    fun lugaresAdicionados(ctx: Context): List<String> {
+        val arr = prefs(ctx).getString(LUGARES, null)?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+    }
+
+    fun adicionarLugar(ctx: Context, lugar: String) {
+        val lista = Copiloto.normalizarEvitar(lugaresAdicionados(ctx) + lugar)
+        prefs(ctx).edit().putString(LUGARES, JSONArray(lista).toString()).apply()
+    }
+
+    fun limparLugaresAdicionados(ctx: Context) = prefs(ctx).edit().remove(LUGARES).apply()
+
+    /** Lista do app web (criterios.evitar) mais as adicionadas na bolha. */
+    fun lugaresEvitar(ctx: Context): List<String> = Copiloto.normalizarEvitar(criterios(ctx).evitar + lugaresAdicionados(ctx))
+
+    // ---------- resumo do dia ----------
+
+    data class Resumo(val ofertas: Int, val aceitas: Int, val ganho: Long, val lucro: Long)
+
+    private fun hoje(): String {
+        val f = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        f.timeZone = TimeZone.getTimeZone("America/Sao_Paulo")
+        return f.format(Date())
+    }
+
+    @Synchronized
+    private fun resumoDoDia(p: SharedPreferences): SharedPreferences.Editor? {
+        val dia = hoje()
+        if (p.getString(RESUMO_DIA, null) == dia) return null
+        return p.edit().putString(RESUMO_DIA, dia).putInt(RESUMO_OFERTAS, 0).putInt(RESUMO_ACEITAS, 0).putLong(RESUMO_GANHO, 0).putLong(RESUMO_LUCRO, 0)
+    }
+
+    @Synchronized
+    fun registrarOfertaNoResumo(ctx: Context) {
+        val p = prefs(ctx)
+        resumoDoDia(p)?.commit()
+        p.edit().putInt(RESUMO_OFERTAS, p.getInt(RESUMO_OFERTAS, 0) + 1).apply()
+    }
+
+    @Synchronized
+    fun registrarAceiteNoResumo(ctx: Context, valor: Long, lucro: Long) {
+        val p = prefs(ctx)
+        resumoDoDia(p)?.commit()
+        p.edit()
+            .putInt(RESUMO_ACEITAS, p.getInt(RESUMO_ACEITAS, 0) + 1)
+            .putLong(RESUMO_GANHO, p.getLong(RESUMO_GANHO, 0) + valor)
+            .putLong(RESUMO_LUCRO, p.getLong(RESUMO_LUCRO, 0) + lucro)
+            .apply()
+    }
+
+    fun resumoHoje(ctx: Context): Resumo {
+        val p = prefs(ctx)
+        if (p.getString(RESUMO_DIA, null) != hoje()) return Resumo(0, 0, 0, 0)
+        return Resumo(p.getInt(RESUMO_OFERTAS, 0), p.getInt(RESUMO_ACEITAS, 0), p.getLong(RESUMO_GANHO, 0), p.getLong(RESUMO_LUCRO, 0))
     }
 
     fun perfil(ctx: Context): PerfilCusto = perfilDeJson(prefs(ctx).getString(PERFIL, null)?.let { runCatching { JSONObject(it) }.getOrNull() })
@@ -59,6 +185,20 @@ object Armazenamento {
     fun ligado(ctx: Context): Boolean = prefs(ctx).getBoolean(LIGADO, false)
 
     fun definirLigado(ctx: Context, ligado: Boolean) = prefs(ctx).edit().putBoolean(LIGADO, ligado).apply()
+
+    /** Pausado: a bolha fica, mas o leitor não lê nada. */
+    fun pausado(ctx: Context): Boolean = prefs(ctx).getBoolean(PAUSADO, false)
+
+    fun definirPausado(ctx: Context, pausado: Boolean) = prefs(ctx).edit().putBoolean(PAUSADO, pausado).apply()
+
+    fun diagnostico(ctx: Context): Boolean = prefs(ctx).getBoolean(DIAGNOSTICO, false)
+
+    fun definirDiagnostico(ctx: Context, ligado: Boolean) = prefs(ctx).edit().putBoolean(DIAGNOSTICO, ligado).apply()
+
+    /** Posição vertical do cartão para cada app (o motorista arrasta e fica lembrado). */
+    fun cartaoY(ctx: Context, app: String): Int? = prefs(ctx).let { p -> if (p.contains(CARTAO_Y + app)) p.getInt(CARTAO_Y + app, 0) else null }
+
+    fun salvarCartaoY(ctx: Context, app: String, y: Int) = prefs(ctx).edit().putInt(CARTAO_Y + app, y).apply()
 
     fun posicaoBolha(ctx: Context): Pair<Int, Int>? {
         val p = prefs(ctx)
@@ -92,6 +232,13 @@ object Armazenamento {
 
     @Synchronized
     fun adicionar(ctx: Context, c: CorridaAvaliada) = gravar(ctx, corridas(ctx) + c)
+
+    @Synchronized
+    fun atualizarSuaOferta(ctx: Context, id: String, suaOferta: Long) {
+        var mudou = false
+        val nova = corridas(ctx).map { if (it.id == id) it.copy(suaOferta = suaOferta).also { mudou = true } else it }
+        if (mudou) gravar(ctx, nova)
+    }
 
     @Synchronized
     fun atualizarDecisao(ctx: Context, id: String, decisao: String): CorridaAvaliada? {
@@ -169,6 +316,10 @@ object Armazenamento {
             minimoPorKm = num(o, "minimoPorKm", 0.0, 100_000_000.0, true)?.toLong() ?: c.minimoPorKm,
             minimoPorHora = num(o, "minimoPorHora", 0.0, 100_000_000.0, true)?.toLong() ?: c.minimoPorHora,
             buscaMaximaKm = num(o, "buscaMaximaKm", 0.0, 100.0) ?: c.buscaMaximaKm,
+            notaMinima = num(o, "notaMinima", 0.0, 5.0) ?: 0.0,
+            evitar = o.optJSONArray("evitar")?.let { arr ->
+                Copiloto.normalizarEvitar((0 until arr.length()).mapNotNull { i -> arr.opt(i) as? String })
+            } ?: emptyList(),
         )
     }
 
@@ -203,6 +354,16 @@ data class CorridaAvaliada(
     val porKm: Long,
     val porHora: Long,
     val lucro: Long,
+    val nome: String? = null,
+    val nota: Double? = null,
+    /** PIX | Dinheiro | Cartão */
+    val pagamento: String? = null,
+    /** Endereço de destino como o app mostrou. */
+    val destino: String? = null,
+    /** O app avisou que a região é perigosa. */
+    val risco: Boolean = false,
+    /** inDrive: tarifa que o motorista ofereceu (centavos). */
+    val suaOferta: Long? = null,
 ) {
     fun paraJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -219,6 +380,12 @@ data class CorridaAvaliada(
         put("porKm", porKm)
         put("porHora", porHora)
         put("lucro", lucro)
+        put("nome", nome ?: JSONObject.NULL)
+        put("nota", nota ?: JSONObject.NULL)
+        put("pagamento", pagamento ?: JSONObject.NULL)
+        put("destino", destino ?: JSONObject.NULL)
+        put("risco", risco)
+        put("suaOferta", suaOferta ?: JSONObject.NULL)
     }
 
     companion object {
@@ -228,7 +395,7 @@ data class CorridaAvaliada(
 
         private fun JSONObject.duploOuNulo(chave: String): Double? = if (isNull(chave)) null else optDouble(chave, Double.NaN).takeUnless { it.isNaN() }
 
-        fun nova(o: Oferta, a: Avaliacao, origem: String, app: String?) = CorridaAvaliada(
+        fun nova(o: OfertaDetalhada, a: Avaliacao, origem: String, app: String?) = CorridaAvaliada(
             id = UUID.randomUUID().toString(),
             valor = o.valor,
             kmCorrida = o.kmCorrida,
@@ -243,6 +410,12 @@ data class CorridaAvaliada(
             porKm = a.porKm,
             porHora = a.porHora,
             lucro = a.lucro,
+            nome = o.nome?.take(60),
+            nota = o.nota,
+            pagamento = o.pagamento,
+            destino = o.destino?.take(160),
+            risco = o.risco,
+            suaOferta = o.suaOferta,
         )
 
         fun deJson(o: JSONObject): CorridaAvaliada? = runCatching {
@@ -261,6 +434,12 @@ data class CorridaAvaliada(
                 porKm = o.optLong("porKm"),
                 porHora = o.optLong("porHora"),
                 lucro = o.optLong("lucro"),
+                nome = if (o.isNull("nome")) null else o.optString("nome").takeIf { it.isNotEmpty() },
+                nota = if (o.isNull("nota")) null else o.duploOuNulo("nota"),
+                pagamento = if (o.isNull("pagamento")) null else o.optString("pagamento").takeIf { it.isNotEmpty() },
+                destino = if (o.isNull("destino")) null else o.optString("destino").takeIf { it.isNotEmpty() },
+                risco = o.optBoolean("risco", false),
+                suaOferta = if (o.isNull("suaOferta") || !o.has("suaOferta")) null else o.optLong("suaOferta"),
             )
         }.getOrNull()
     }

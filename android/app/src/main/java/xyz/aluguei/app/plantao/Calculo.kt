@@ -37,7 +37,7 @@ data class PerfilCusto(
     val horasPorDia: Double,
 )
 
-/** Critérios do semáforo: o que o próprio motorista considera uma boa corrida. */
+/** Critérios do semáforo (o Copiloto): o que o próprio motorista considera uma boa corrida. */
 data class Criterios(
     /** Mínimo por km rodado (contando o caminho até o passageiro), em centavos. */
     val minimoPorKm: Long,
@@ -45,6 +45,10 @@ data class Criterios(
     val minimoPorHora: Long,
     /** Distância máxima até o passageiro, em km. */
     val buscaMaximaKm: Double,
+    /** Nota mínima do passageiro (0 = não olha a nota). Usada pelo Copiloto, não por avaliarCorrida. */
+    val notaMinima: Double = 0.0,
+    /** Ruas, bairros ou palavras que o motorista evita. Usado pelo Copiloto, não por avaliarCorrida. */
+    val evitar: List<String> = emptyList(),
 )
 
 /** Mesmo PERFIL_PADRAO de custos.ts. */

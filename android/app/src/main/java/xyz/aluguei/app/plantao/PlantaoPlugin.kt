@@ -19,7 +19,7 @@ import com.getcapacitor.annotation.PermissionCallback
 import org.json.JSONObject
 
 /**
- * Plugin "Plantao": a ponte entre a tela web do Aluguei e as peças nativas
+ * Plugin "Plantao" (o Copiloto): a ponte entre a tela web do Aluguei e as peças nativas
  * (BolhaService, LeitorCorridasService, Armazenamento). A interface para o
  * JavaScript está descrita em docs/app-nativo.md.
  */
@@ -59,6 +59,11 @@ class PlantaoPlugin : Plugin() {
             ativo?.emitir("permissao", JSObject().put("tipo", tipo).put("concedida", concedida), true)
         }
 
+        /** O motorista mudou a régua rápida na bolha (centavos). Também fica em reguaPendente(). */
+        fun emitirRegua(minimoPorKm: Long, minimoPorHora: Long) {
+            ativo?.emitir("regua", JSObject().put("minimoPorKm", minimoPorKm).put("minimoPorHora", minimoPorHora), true)
+        }
+
         fun emitirEstado(ctx: Context) {
             val p = ativo ?: return
             p.emitir("estado", p.estadoAtual(ctx))
@@ -95,6 +100,9 @@ class PlantaoPlugin : Plugin() {
         put("ligado", Armazenamento.ligado(c) && BolhaService.instancia != null)
         put("configurado", Armazenamento.configurado(c))
         put("corridasPendentes", Armazenamento.corridas(c).size)
+        put("pausado", Armazenamento.pausado(c))
+        put("tema", Armazenamento.tema(c))
+        put("vibrar", Armazenamento.vibrar(c))
     }
 
     // ------------------------------------------------------------------ estado e configuração
@@ -109,8 +117,36 @@ class PlantaoPlugin : Plugin() {
         val perfil: JSONObject? = call.getObject("perfil")
         val criterios: JSONObject? = call.getObject("criterios")
         val segundos = call.getInt("segundosCartao")
-        Armazenamento.salvarConfiguracao(ctx, perfil, criterios, segundos)
+        val tema = call.getString("tema")?.takeIf { it in Armazenamento.TEMAS }
+        val vibrar = call.getBoolean("vibrar")
+        Armazenamento.salvarConfiguracao(ctx, perfil, criterios, segundos, tema, vibrar)
         call.resolve(estadoAtual(ctx))
+    }
+
+    /** Lugares a evitar que o motorista adicionou pelo cartão ("Evitar este lugar"). */
+    @PluginMethod
+    fun lugaresAdicionados(call: PluginCall) {
+        call.resolve(JSObject().put("lugares", JSArray(Armazenamento.lugaresAdicionados(ctx))))
+    }
+
+    @PluginMethod
+    fun limparLugaresAdicionados(call: PluginCall) {
+        Armazenamento.limparLugaresAdicionados(ctx)
+        call.resolve(JSObject().put("lugares", JSArray()))
+    }
+
+    /** Régua mudada na bolha e ainda não salva na conta (centavos), ou null. */
+    @PluginMethod
+    fun reguaPendente(call: PluginCall) {
+        val r = Armazenamento.reguaPendente(ctx)
+        val regua: Any = if (r == null) JSONObject.NULL else JSObject().put("minimoPorKm", r.first).put("minimoPorHora", r.second)
+        call.resolve(JSObject().put("regua", regua))
+    }
+
+    @PluginMethod
+    fun limparReguaPendente(call: PluginCall) {
+        Armazenamento.limparReguaPendente(ctx)
+        call.resolve(JSObject().put("regua", JSONObject.NULL))
     }
 
     // ------------------------------------------------------------------ permissões (com volta automática)
@@ -196,12 +232,14 @@ class PlantaoPlugin : Plugin() {
             call.reject("Falta a permissão de aparecer por cima de outros apps.", "SEM_SOBREPOSICAO")
             return
         }
+        // Ligar de novo começa lendo (pausa só vale enquanto a bolha está na tela).
+        if (BolhaService.instancia == null) Armazenamento.definirPausado(ctx, false)
         Armazenamento.definirLigado(ctx, true)
         try {
             BolhaService.iniciar(ctx)
         } catch (e: RuntimeException) {
             Armazenamento.definirLigado(ctx, false)
-            call.reject("O Android não deixou ligar o plantão agora. Abra o Aluguei e tente de novo.", "NAO_INICIOU", e)
+            call.reject("O Android não deixou ligar o Copiloto agora. Abra o Aluguei e tente de novo.", "NAO_INICIOU", e)
             return
         }
         call.resolve(estadoAtual(ctx).put("ligado", true))
@@ -249,7 +287,7 @@ class PlantaoPlugin : Plugin() {
                 BolhaService.iniciar(ctx, intent)
             } catch (e: RuntimeException) {
                 Armazenamento.definirLigado(ctx, false)
-                call.reject("O Android não deixou ligar o plantão agora.", "NAO_INICIOU", e)
+                call.reject("O Android não deixou ligar o Copiloto agora.", "NAO_INICIOU", e)
                 return
             }
         }

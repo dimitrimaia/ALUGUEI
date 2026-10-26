@@ -1,0 +1,158 @@
+package xyz.aluguei.app.plantao
+
+/**
+ * Regras do Copiloto que vão além do cálculo da corrida (Calculo.kt, espelho do
+ * TypeScript): lugares a evitar, nota do passageiro, aviso de risco e a
+ * sugestão de contraproposta do inDrive.
+ *
+ * Puro (sem Android): testado em CopilotoTest.kt.
+ */
+object Copiloto {
+
+    const val MOTIVO_NOTA = "Nota baixa"
+    const val MOTIVO_RISCO = "Área de risco"
+    const val PREFIXO_EVITADO = "Lugar que você evita: "
+
+    /** Resultado final do cartão: o cálculo mais os avisos do Copiloto. */
+    data class Resultado(
+        val avaliacao: Avaliacao,
+        /** Palavra da lista de lugares a evitar que bateu com algum endereço. */
+        val lugarEvitado: String?,
+        val notaBaixa: Boolean,
+        val risco: Boolean,
+    )
+
+    /**
+     * Avalia a oferta: [avaliarCorrida] + lugares a evitar (vermelho), nota
+     * abaixo da mínima (no mínimo amarelo) e aviso de risco do app (no mínimo amarelo).
+     */
+    fun avaliar(o: OfertaDetalhada, t: Taxas, c: Criterios, evitar: List<String>): Resultado {
+        val base = avaliarCorrida(o.copy(valor = o.suaOferta ?: o.valor).paraOferta(), t, c)
+        val lugar = lugarEvitado(o.enderecos, evitar)
+        val notaBaixa = c.notaMinima > 0 && o.nota != null && o.nota < c.notaMinima
+        val motivos = base.motivos.toMutableList()
+        var sinal = base.sinal
+        if (lugar != null) {
+            motivos.add(0, PREFIXO_EVITADO + lugar)
+            sinal = Sinal.VERMELHO
+        }
+        if (notaBaixa) {
+            motivos.add(MOTIVO_NOTA)
+            if (sinal == Sinal.VERDE) sinal = Sinal.AMARELO
+        }
+        if (o.risco) {
+            motivos.add(MOTIVO_RISCO)
+            if (sinal == Sinal.VERDE) sinal = Sinal.AMARELO
+        }
+        return Resultado(base.copy(sinal = sinal, motivos = motivos), lugar, notaBaixa, o.risco)
+    }
+
+    /** Primeira palavra da lista que aparece em algum endereço (sem acento nem maiúscula). */
+    fun lugarEvitado(enderecos: List<String>, evitar: List<String>): String? {
+        if (enderecos.isEmpty() || evitar.isEmpty()) return null
+        val ends = enderecos.map { Textos.semAcento(it) }
+        return evitar.firstOrNull { e ->
+            val p = Textos.semAcento(e)
+            p.length >= 3 && ends.any { p in it }
+        }
+    }
+
+    private val PARENTESES = Regex("\\(([^()]+)\\)")
+    private val NUMERO_RUA = Regex("^(.*?\\p{L}.*?)[\\s,]+(?:n[ºo°]?\\s*)?[0-9]+.*$")
+
+    /**
+     * O lugar de um endereço para a lista "evitar": o bairro entre parênteses
+     * ("Rua F, 70 (Vila Nova Esperança, Contagem - MG)" → "Vila Nova Esperança"),
+     * ou a rua sem o número ("Rua dos Otoni 927" → "Rua dos Otoni").
+     */
+    fun lugarDoEndereco(endereco: String): String? {
+        val e = endereco.trim()
+        PARENTESES.find(e)?.let { m ->
+            val bairro = m.groupValues[1].split(',').first().trim()
+            if (bairro.length >= 3) return bairro.take(60)
+        }
+        val antesDaVirgula = e.split(',').first().trim()
+        val rua = NUMERO_RUA.matchEntire(antesDaVirgula)?.groupValues?.get(1)?.trim() ?: antesDaVirgula
+        return rua.takeIf { it.length >= 3 }?.take(60)
+    }
+
+    private val FALA_DO_EMBARQUE = Regex("embarque|partida|origem|buscar|passageiro esta")
+
+    /** Endereço de que o aviso de risco fala: o embarque se o aviso disser, senão o destino. */
+    fun enderecoDoRisco(o: OfertaDetalhada): String? {
+        val aviso = o.avisoRisco?.let { Textos.semAcento(it) } ?: ""
+        return if (FALA_DO_EMBARQUE.containsMatchIn(aviso)) o.embarque ?: o.destino else o.destino ?: o.embarque
+    }
+
+    /** Lista "evitar" normalizada como no TS: sem espaços repetidos, 3 a 60 letras, sem repetidos, até 100. */
+    fun normalizarEvitar(lista: List<String>): List<String> {
+        val vistos = mutableSetOf<String>()
+        val saida = mutableListOf<String>()
+        for (x in lista) {
+            val v = x.trim().replace(Regex("\\s+"), " ").take(60)
+            if (v.length < 3) continue
+            if (vistos.add(Textos.semAcento(v))) saida.add(v)
+            if (saida.size >= 100) break
+        }
+        return saida
+    }
+
+    // ------------------------------------------------------------------ contraproposta (inDrive)
+
+    sealed class Sugestao {
+        /** A oferta já é verde. */
+        object PodeAceitar : Sugestao()
+
+        /** Um atalho do app já deixa verde: "Toque em R$ 23". */
+        data class Atalho(val valor: Long, val avaliacao: Avaliacao) : Sugestao()
+
+        /** Nenhum atalho chega: "Use o lápis: R$ 27". */
+        data class Lapis(val valor: Long, val avaliacao: Avaliacao) : Sugestao()
+
+        /** Nem o dobro fica verde: "Nem o dobro (R$ 116) fica verde". */
+        data class NemODobro(val dobro: Long) : Sugestao()
+    }
+
+    /**
+     * Menor valor em reais inteiros que deixa a avaliação verde, até 2× a oferta;
+     * null se nem o dobro deixa verde (ex.: passageiro longe demais).
+     */
+    fun precoIdeal(o: Oferta, t: Taxas, c: Criterios): Long? {
+        val limite = o.valor * 2
+        var reais = o.valor / 100 + 1
+        var passos = 0
+        while (reais * 100 <= limite && passos < 2000) {
+            if (avaliarCorrida(o.copy(valor = reais * 100), t, c).sinal == Sinal.VERDE) return reais * 100
+            reais++
+            passos++
+        }
+        return null
+    }
+
+    fun sugerir(o: OfertaDetalhada, t: Taxas, c: Criterios, sinalFinal: Sinal): Sugestao? {
+        val base = o.paraOferta()
+        if (sinalFinal == Sinal.VERDE) return Sugestao.PodeAceitar
+        if (avaliarCorrida(base, t, c).sinal == Sinal.VERDE) return null // o problema não é o preço
+        val ideal = precoIdeal(base, t, c) ?: return Sugestao.NemODobro(base.valor * 2)
+        val atalho = o.atalhos.filter { it >= ideal }.minOrNull()
+        return if (atalho != null) {
+            Sugestao.Atalho(atalho, avaliarCorrida(base.copy(valor = atalho), t, c))
+        } else {
+            Sugestao.Lapis(ideal, avaliarCorrida(base.copy(valor = ideal), t, c))
+        }
+    }
+
+    /** "R$ 23" (sem centavos quando redondo). */
+    fun reais(centavos: Long): String = if (centavos < 0) "-" + reais(-centavos) else if (centavos % 100 == 0L) "R$ ${Formato.brl(centavos).removePrefix("R$ ").removeSuffix(",00")}" else Formato.brl(centavos)
+
+    fun textoSugestao(s: Sugestao): String = when (s) {
+        Sugestao.PodeAceitar -> "Pode aceitar"
+        is Sugestao.Atalho -> "Toque em ${reais(s.valor)}"
+        is Sugestao.Lapis -> "Use o lápis: ${reais(s.valor)}"
+        is Sugestao.NemODobro -> "Nem o dobro (${reais(s.dobro)}) fica verde"
+    }
+
+    /** "com R$ 23: R$ 2,10/km · R$ 48/h" */
+    fun textoComValor(valor: Long, a: Avaliacao): String =
+        "com ${reais(valor)}: ${Formato.brl(a.porKm)}/km · ${reais(jsRound(a.porHora / 100.0) * 100)}/h"
+}

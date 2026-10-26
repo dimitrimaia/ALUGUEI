@@ -1,8 +1,8 @@
 # App nativo (Android e iPhone)
 
 O app nativo do Aluguei é uma "casca" feita com [Capacitor](https://capacitorjs.com) mais um
-plugin próprio para Android, o **Plantão**, que mostra o semáforo das corridas por cima da
-Uber, da 99 e da inDrive.
+plugin próprio para Android, o **Copiloto** (plugin `Plantao` no código), que mostra se a
+corrida compensa por cima da Uber, da 99 e da inDrive.
 
 ## Como o app é montado
 
@@ -10,12 +10,15 @@ Uber, da 99 e da inDrive.
 celular
 ├── WebView (Capacitor, modo servidor remoto)
 │     └── carrega https://aluguei.xyz  ← todas as telas vêm do site, como hoje
-└── Plugin "Plantao" (Kotlin, só Android)
-      ├── BolhaService          serviço em primeiro plano: bolha, painel de digitação, cartão colorido
-      ├── LeitorCorridasService serviço de acessibilidade: lê valor/km/min da oferta na tela
+└── Plugin "Plantao" = Copiloto (Kotlin, só Android)
+      ├── BolhaService          serviço em primeiro plano: bolha, menu em leque, cartão, painéis, notificação
+      ├── LeitorCorridasService serviço de acessibilidade: junta os textos da tela (lista, na ordem da tela)
+      ├── LeitorInDrive.kt      telas do inDrive: oferta aberta, lista, contraproposta, fim, área de risco
+      ├── LeitorUber.kt / Leitor99.kt  leitor genérico (LeitorOferta) sem os "R$ x/km"
       ├── LeitorOferta.kt       mesmas regras de src/dominio/ganhos/oferta.ts
       ├── Calculo.kt            mesmas regras de src/dominio/ganhos/custos.ts e corrida.ts
-      ├── Armazenamento.kt      perfil, critérios e fila de corridas (SharedPreferences)
+      ├── Copiloto.kt           lugares a evitar, nota mínima, risco e contraproposta sugerida
+      ├── Armazenamento.kt      perfil, critérios, tema, régua, lugares, resumo do dia e fila (SharedPreferences)
       └── PlantaoPlugin.kt      a ponte com a tela web (métodos e eventos abaixo)
 ```
 
@@ -34,18 +37,42 @@ celular
 
 ## O que o motorista vê
 
-1. Liga o plantão na tela web (ou pela tela de permissões, passo a passo).
-2. Aparece uma bolha redonda "R$" por cima de tudo, e a notificação fixa "Plantão ligado"
-   com o botão **Desligar**.
-3. Chega uma oferta na Uber/99/inDrive → o leitor pega valor, km e minutos → aparece um
-   cartão no topo da tela, verde/amarelo/vermelho, com R$/km, R$/hora, lucro estimado, km
-   total e "a X km do passageiro". Some em 12 s (configurável) ou ao tocar fora.
-4. Botões **Aceitei** / **Recusei** só registram a decisão. **O app nunca toca no app de
-   corrida e nunca aceita nem recusa corrida pelo motorista.**
-5. Sem o leitor (ou num app que ele não lê): toca na bolha → painel de digitação rápida
-   (valor, km, minutos opcional, km até o passageiro opcional) → mesmo cartão.
-6. Arrastar a bolha até o **X** no rodapé desliga o plantão. Ao soltar em outro lugar, ela
-   encosta na borda e a posição fica salva.
+1. Liga o Copiloto na tela web (ou pela tela de permissões, passo a passo).
+2. Aparece a bolha azul com o símbolo do Aluguei (ponto verde = lendo, cinza = pausado) e a
+   notificação fixa "Copiloto ligado", que mostra a última oferta
+   ("Filipe · inDrive · R$ 58 · 🟢 R$ 1,57/km" + destino) com os botões **Pausar** e, quando há
+   endereços, **Embarque** e **Destino** (abrem a navegação). Sem endereços: **Pausar**, **Abrir**
+   e **Desligar** (o Android mostra no máximo 3 botões; tocar na notificação abre o Aluguei).
+3. Chega uma oferta → o cartão desliza do topo (abaixo da barra de status, compacto para não
+   cobrir o "Aceitar" nem os atalhos do inDrive): faixa e selo do sinal (verde "Vale a pena",
+   âmbar "Avalie", vermelho "Não compensa"), ícone do app, "Filipe ★4,71 (38) · PIX", números
+   grandes (R$/km, R$/h, lucro), "37,4 km no total · a 1,0 km do passageiro · 70 min" e o destino.
+   Vibra 1 vez no verde e 2 no vermelho (dá para desligar com `configurar({ vibrar: false })`).
+   Arrastar na vertical muda a posição (lembrada por app); arrastar para o lado fecha.
+4. **inDrive:** o cartão só aparece com a oferta aberta (botão "Aceitar por R$ X"); na lista de
+   pedidos ele some. A linha de destaque sugere a contraproposta: "Toque em R$ 23" (menor atalho
+   que deixa verde), "Use o lápis: R$ 27" ou "Nem o dobro (R$ X) fica verde"; se já é verde,
+   "Pode aceitar". Enviada a contraproposta ("Oferecendo sua tarifa R$ 22"), o cartão recalcula
+   com "Sua oferta: R$ 22". Expirou / já aceita / procurando → o cartão some.
+5. **Área de risco** (aviso do inDrive): faixa "⚠ Área de risco" e botão "Evitar este lugar", que
+   guarda o bairro (ou a rua) na lista local de lugares a evitar. Endereço com um lugar da lista
+   (`criterios.evitar` + os da bolha) → cartão vermelho "Lugar que você evita: X". Nota abaixo de
+   `criterios.notaMinima` → no mínimo amarelo, "Nota baixa".
+6. **Aceitei** / **Recusei** só registram a decisão. "Recusei" (ou fechar) não deixa a mesma
+   oferta reaparecer enquanto ela estiver aberta. **O app nunca toca no app de corrida e nunca
+   aceita, recusa ou oferece tarifa pelo motorista** (sem performAction, sem gestos).
+7. **Toque na bolha** → digitação rápida (o teclado só abre ao tocar no campo; toque fora fecha):
+   valor, km, minutos e km até o passageiro, atalhos "+R$ 5" e "+1 km", resultado ao vivo.
+8. **Segurar a bolha** → menu em leque: Pausar/Retomar, Digitar oferta, Tema claro/escuro, Régua
+   rápida (+/− nos mínimos por km e por hora; emite `regua` e fica pendente para o app salvar),
+   Resumo do dia, Diagnóstico (rótulo junto da bolha com o último app/tela lida: "oferta lida",
+   "lista", "sem oferta"…), Abrir o Aluguei, Desligar.
+9. Arrastar a bolha até o **X** no rodapé desliga. Ao soltar em outro lugar, ela encosta na borda
+   e a posição fica salva.
+
+**Desempenho:** o leitor junta os eventos e lê no máximo a cada 700 ms, com limite de nós
+(500), profundidade (30), textos (250) e caracteres (6000). Desligado ou pausado, não lê nada.
+Bolha e cartão não têm nenhum laço: só reagem a eventos.
 
 ## Como gerar o APK e o AAB
 
@@ -126,7 +153,7 @@ Também dá para abrir no Android Studio: `npx cap open android`.
    ligue o leitor em Acessibilidade. Instalado pela Play Store isso não acontece.
 
 **Conferir o leitor no celular:** com o plantão ligado, abra o app de corrida e use
-`adb logcat | grep -i plantao` para ver erros. Para testar o cartão sem corrida de verdade,
+`adb logcat | grep -i plantao` para ver erros, ou ligue o **Diagnóstico** no menu da bolha. Para testar o cartão sem corrida de verdade,
 use o método `simular` (abaixo) ou o painel de digitação da bolha.
 
 ### Conferir o nome do pacote dos apps de corrida
@@ -150,9 +177,10 @@ também `Pacotes.plataforma()`.
 |---|---|---|
 | `INTERNET` | Carregar o site aluguei.xyz | automática |
 | `SYSTEM_ALERT_WINDOW` (aparecer sobre outros apps) | Desenhar a bolha, o painel e o cartão por cima do app de corrida | tela "Aparecer sobre outros apps" (`pedirSobreposicao`) |
-| Serviço de acessibilidade (`BIND_ACCESSIBILITY_SERVICE`) | Ler valor, km e minutos da oferta na tela da Uber/99/inDrive | Configurações > Acessibilidade > "Aluguei: leitor de corridas" (`pedirAcessibilidade`). Opcional: sem ele, só digitação |
+| Serviço de acessibilidade (`BIND_ACCESSIBILITY_SERVICE`) | Ler a oferta na tela da Uber/99/inDrive (valor, km, minutos, passageiro, pagamento, endereços) | Configurações > Acessibilidade > "Aluguei · Copiloto" (`pedirAcessibilidade`). Opcional: sem ele, só digitação |
+| `VIBRATE` | Vibração curta quando o cartão aparece | automática |
 | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Manter o plantão vivo durante a jornada, com a notificação fixa | automática |
-| `POST_NOTIFICATIONS` | Mostrar "Plantão ligado" com o botão Desligar (Android 13+ pergunta) | caixa do sistema, ou tela de notificações do app (`pedirNotificacoes`) |
+| `POST_NOTIFICATIONS` | Mostrar "Copiloto ligado" com a última oferta e os botões (Android 13+ pergunta) | caixa do sistema, ou tela de notificações do app (`pedirNotificacoes`) |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Pedir para o Android não matar o plantão no meio da jornada | caixa do sistema (`pedirSemOtimizacaoBateria`). Veja o alerta da Play Store abaixo |
 
 **Volta automática:** depois de abrir a tela de configurações, o plugin confere a cada
@@ -182,12 +210,13 @@ volta não acontecer, o evento fica guardado e chega quando o motorista voltar p
    - **aviso em destaque dentro do app, antes de abrir a tela de acessibilidade**, com
      botão de aceitar e de recusar. O aviso precisa estar no app (não só na loja). Texto sugerido
      para a tela web mostrar antes de chamar `pedirAcessibilidade()`:
-     > **O Aluguei vai ler a tela dos apps de corrida.** Com o plantão ligado, o Aluguei usa
+     > **O Aluguei vai ler a tela dos apps de corrida.** Com o Copiloto ligado, o Aluguei usa
      > o serviço de acessibilidade do Android para ler, na tela da Uber, da 99 e da inDrive,
-     > apenas o valor, a distância e o tempo das ofertas de corrida, e mostrar na bolha se a
-     > corrida compensa. O Aluguei não guarda nem envia o texto da tela, não lê outros apps e
-     > nunca toca, aceita ou recusa corridas por você. Os números das corridas avaliadas ficam
-     > no seu histórico do Aluguei. Você pode desligar quando quiser.
+     > apenas as ofertas de corrida (valor, distâncias, tempos e, quando aparecem, nome e nota
+     > do passageiro, forma de pagamento e endereços), e mostrar num cartão se a corrida
+     > compensa. O Aluguei não guarda nem envia a tela, não lê outros apps e nunca toca, aceita,
+     > recusa ou oferece tarifa por você. Os dados das ofertas avaliadas (números, nome, nota,
+     > pagamento e destino) ficam no seu histórico do Aluguei. Você pode desligar quando quiser.
      > [Concordo e quero ligar] [Agora não]
    - **vídeo de demonstração** (link do YouTube, pode ser não listado) mostrando: o aviso em
      destaque, o motorista concordando, a ativação em Configurações > Acessibilidade, uma oferta
@@ -225,7 +254,7 @@ volta não acontecer, o evento fica guardado e chega quando o motorista voltar p
 ## Limitações (honestas)
 
 - **As telas da Uber/99/inDrive mudam sem aviso.** Quando mudarem, o leitor pode parar de
-  achar os números ou ler errado. A digitação rápida continua funcionando. Ajuste
+  achar os números ou ler errado (ligue o Diagnóstico no menu da bolha para ver o que está lendo). A digitação rápida continua funcionando. No inDrive, ajuste `LeitorInDrive.kt` e `LeitorInDriveTest.kt`; na Uber/99, ajuste
   `oferta.ts`, `LeitorOferta.kt` e os testes juntos.
 - **Termos de uso:** os termos da Uber/99/inDrive podem proibir apps que leem a tela deles.
   O Aluguei só lê e mostra; não aceita corridas nem automatiza nada, o que reduz o risco, mas
@@ -249,18 +278,35 @@ import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
 
 export type TipoPermissao = "sobreposicao" | "acessibilidade" | "notificacoes" | "bateria";
 
+export type Tema = "claro" | "escuro" | "auto";
+
 export type EstadoPlantao = {
   android: true;
   sobreposicao: boolean;
   acessibilidade: boolean;
   notificacoes: boolean;
   semOtimizacaoBateria: boolean;
-  /** Plantão ligado e serviço rodando. */
+  /** Copiloto ligado e serviço rodando. */
   ligado: boolean;
   /** Já recebeu perfil por configurar(). */
   configurado: boolean;
   corridasPendentes: number;
+  /** Pausado pelo menu da bolha ou pela notificação (bolha na tela, leitor parado). */
+  pausado: boolean;
+  tema: Tema;
+  vibrar: boolean;
 };
+
+/** Critérios do app mais os do Copiloto (ver custos.ts). */
+export type CriteriosCopiloto = Criterios & {
+  /** Nota mínima do passageiro (0 = desligado). Abaixo → amarelo "Nota baixa". */
+  notaMinima?: number;
+  /** Ruas, bairros ou palavras que o motorista evita (sem acento/maiúscula). Bateu → vermelho. */
+  evitar?: string[];
+};
+
+/** Régua mudada pela bolha, em centavos. */
+export type Regua = { minimoPorKm: number; minimoPorHora: number };
 
 /** Resposta de pedir*(): concedida = já tinha; aberto = abriu a tela de configurações. */
 export type PedidoPermissao = { tipo: TipoPermissao; concedida: boolean; aberto: boolean };
@@ -285,11 +331,17 @@ export type CorridaNativa = {
   app: "uber" | "99" | "indrive" | "outra" | null; // null quando digitada
   momento: string;            // ISO 8601 em UTC, ex. "2026-10-26T23:10:05.123Z"
   porKm: number; porHora: number; lucro: number;   // centavos (o servidor pode recalcular)
+  nome: string | null;        // passageiro, quando o app mostra (inDrive)
+  nota: number | null;        // nota do passageiro
+  pagamento: "PIX" | "Dinheiro" | "Cartão" | null;
+  destino: string | null;     // endereço de destino como o app mostrou
+  risco: boolean;             // o app avisou que a região é perigosa
+  suaOferta: number | null;   // inDrive: contraproposta do motorista (centavos)
 };
 
 export interface PlantaoPlugin {
   estado(): Promise<EstadoPlantao>;
-  configurar(o: { perfil?: PerfilCusto; criterios?: Criterios; segundosCartao?: number }): Promise<EstadoPlantao>;
+  configurar(o: { perfil?: PerfilCusto; criterios?: CriteriosCopiloto; segundosCartao?: number; tema?: Tema; vibrar?: boolean }): Promise<EstadoPlantao>;
   pedirSobreposicao(): Promise<PedidoPermissao>;
   pedirAcessibilidade(): Promise<PedidoPermissao>;
   pedirNotificacoes(): Promise<PedidoPermissao>;
@@ -302,11 +354,18 @@ export interface PlantaoPlugin {
   corridasPendentes(): Promise<{ corridas: CorridaNativa[] }>;
   /** Tira da fila as enviadas: momento <= ate e/ou os ids. */
   confirmarEnvio(o: { ate?: string; ids?: string[] }): Promise<{ corridasPendentes: number }>;
+  /** Lugares que o motorista adicionou pelo botão "Evitar este lugar" do cartão. */
+  lugaresAdicionados(): Promise<{ lugares: string[] }>;
+  limparLugaresAdicionados(): Promise<{ lugares: [] }>;
+  /** Régua mudada no menu da bolha e ainda não salva na conta. */
+  reguaPendente(): Promise<{ regua: Regua | null }>;
+  limparReguaPendente(): Promise<{ regua: null }>;
 
   addListener(e: "oferta", f: (c: CorridaNativa & Omit<AvaliacaoNativa, "sinal" | "porKm" | "porHora" | "lucro">) => void): Promise<PluginListenerHandle>;
   addListener(e: "decisao", f: (d: { id: string; decisao: "aceitei" | "recusei" }) => void): Promise<PluginListenerHandle>;
   addListener(e: "permissao", f: (p: { tipo: TipoPermissao; concedida: true }) => void): Promise<PluginListenerHandle>;
   addListener(e: "estado", f: (s: EstadoPlantao) => void): Promise<PluginListenerHandle>;
+  addListener(e: "regua", f: (r: Regua) => void): Promise<PluginListenerHandle>;
 }
 
 export const Plantao = registerPlugin<PlantaoPlugin>("Plantao");
@@ -314,7 +373,17 @@ export const temPlantaoNativo = () => Capacitor.getPlatform() === "android" && C
 ```
 
 Observações:
-- `segundosCartao` aceita de 4 a 120 (padrão 12).
+- `segundosCartao` aceita de 4 a 120 (padrão 12). No inDrive (leitura) o cartão fica enquanto a
+  oferta estiver aberta (até 60 s) e some quando a tela vira lista ou a oferta acaba.
+- `tema`: "claro" | "escuro" | "auto" (padrão "auto", segue o modo escuro do sistema); o menu da
+  bolha também troca. `vibrar` padrão true.
+- `criterios.evitar` é normalizada como no TS (espaços, 3 a 60 letras, sem repetidos, até 100);
+  `criterios.notaMinima` de 0 a 5. A lista usada no cartão é `evitar` + `lugaresAdicionados()`.
+- **Régua pendente:** mexer na régua rápida da bolha salva os mínimos no aparelho, emite `regua`
+  e deixa `reguaPendente()` preenchida. Enquanto houver pendente, `configurar({ criterios })` não
+  sobrescreve `minimoPorKm`/`minimoPorHora`. Fluxo: `reguaPendente()` → salvar na conta →
+  `limparReguaPendente()` → `configurar` de novo.
+- O evento `regua` também é guardado até a tela ouvir.
 - `configurar` aceita só uma parte (ex.: só `criterios`); o que não vier fica como estava.
   Campo inválido volta ao padrão daquele campo, como `normalizarPerfil`/`normalizarCriterios`.
 - O evento `permissao` é guardado até a tela ouvir (se a WebView ainda estiver voltando).
@@ -341,7 +410,7 @@ O GitHub compila o app na nuvem (`.github/workflows/android.yml`):
    **Configurações** → ligue **Permitir desta fonte** → volte e **Instalar**.
 3. Se aparecer o Play Protect, toque em **Instalar mesmo assim** (é normal para
    app fora da loja).
-4. Abra o Aluguei, entre na conta e vá em **Plantão → Semáforo**.
+4. Abra o Aluguei, entre na conta e vá em **Plantão → Copiloto**.
 5. **Leitura automática no Android 13 ou mais novo:** app instalado fora da loja
    tem a acessibilidade bloqueada ("configuração restrita"). Libere em
    Configurações → Apps → Aluguei → **⋮** (canto de cima) → **Permitir

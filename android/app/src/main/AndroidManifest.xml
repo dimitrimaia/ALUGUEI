@@ -38,8 +38,8 @@
         </service>
 
         <!--
-            Leitor de corridas: serviço de acessibilidade que só lê valor, distância e
-            tempo das ofertas da Uber, 99 e inDrive. Não executa ações nos outros apps.
+            Copiloto (leitor de corridas): serviço de acessibilidade que só lê as ofertas
+            da Uber, 99 e inDrive. Não executa ações nem gestos nos outros apps.
             Só o sistema pode ligá-lo (BIND_ACCESSIBILITY_SERVICE).
         -->
         <service
@@ -74,9 +74,11 @@
     <!-- Manter o plantão ligado em primeiro plano, com a notificação fixa. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- Mostrar a notificação "Plantão ligado" (Android 13+ pede ao usuário). -->
+    <!-- Mostrar a notificação "Copiloto ligado" (Android 13+ pede ao usuário). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Pedir para o Android não suspender o plantão durante a jornada. -->
+    <!-- Vibração curta quando o cartão aparece (verde 1 pulso, vermelho 2); dá para desligar. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Pedir para o Android não suspender o Copiloto durante a jornada. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
 </manifest>
