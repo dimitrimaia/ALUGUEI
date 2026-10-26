@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Home, MessageCircle, Search } from "lucide-react";
+import { Car, Gauge, Home, MessageCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { BarraInferior } from "@/components/app/barras";
 import { useConta } from "@/components/conta/contexto";
@@ -14,8 +14,8 @@ export function AbasMotorista() {
     <BarraInferior
       abas={[
         { href: "/m", rotulo: "Início", icone: Home, ativo: (c) => c === "/m" },
-        { href: "/m/buscar", rotulo: "Buscar", icone: Search, ativo: (c) => c.startsWith("/m/buscar") },
-        { href: "/m/carros", rotulo: "Meus carros", icone: Car, ativo: (c) => /^\/m\/(carros?|contrato|vistoria|extrato|pagar)(\/|$)/.test(c) },
+        { href: "/m/plantao", rotulo: "Plantão", icone: Gauge, ativo: (c) => /^\/m\/(plantao|caronas|clientes)(\/|$)/.test(c) },
+        { href: "/m/carros", rotulo: "Carros", icone: Car, ativo: (c) => /^\/m\/(carros?|buscar|contrato|vistoria|extrato|pagar)(\/|$)/.test(c) },
         { href: "/m/conversas", rotulo: "Conversas", icone: MessageCircle, ativo: (c) => c.startsWith("/m/conversas"), contador: naoLidas },
       ]}
     />

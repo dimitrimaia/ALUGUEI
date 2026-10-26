@@ -6,3 +6,4 @@ export * from "./financeiro";
 export * from "./evidencias";
 export * from "./comunicacao";
 export * from "./marketplace";
+export * from "./motorista-pro";

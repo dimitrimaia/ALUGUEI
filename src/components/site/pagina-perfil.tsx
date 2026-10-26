@@ -3,6 +3,7 @@ import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import type { Route } from "next";
 import type { ReactNode } from "react";
 import { BotaoLink } from "@/components/ui";
+import { MockupSemaforo } from "./mockups";
 
 type Item = { icone: LucideIcon; titulo: string; texto: string };
 
@@ -16,6 +17,8 @@ export interface ConteudoPerfil {
   mockup: ReactNode;
   destaques: [Item, Item, Item, Item];
   passos: { titulo: string; itens: [Item, Item, Item, Item] };
+  /** Seção "Tudo em um": as ferramentas de trabalho do motorista. */
+  tudoEmUm: { titulo: string; texto: string; gatilhos: [string, string, string]; itens: [Item, Item, Item, Item, Item, Item]; cta: { rotulo: string; href: string } };
   beneficios: { titulo: string; texto: string; itens: [string, string, string, string] };
   recursos: { titulo: string; itens: (Item & { breve?: boolean })[] };
   seguranca: { titulo: string; texto: string; itens: [Item, Item, Item, Item] };
@@ -93,6 +96,36 @@ export function PaginaPerfil({ c }: { c: ConteudoPerfil }) {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* Tudo em um */}
+      <section id="tudo-em-um" className="fundo-navy scroll-mt-20 overflow-hidden">
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+          <div>
+            <Titulo selo="Tudo em um" titulo={c.tudoEmUm.titulo} claro />
+            <p className="mt-4 max-w-xl text-white/75">{c.tudoEmUm.texto}</p>
+            <ul className="mt-6 flex flex-col gap-2.5">
+              {c.tudoEmUm.gatilhos.map((t) => (
+                <li key={t} className="flex items-center gap-3 text-[0.95rem] font-semibold"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#22c55e] text-[#052e16]"><Check size={14} strokeWidth={3} /></span>{t}</li>
+              ))}
+            </ul>
+            <BotaoLink href={c.tudoEmUm.cta.href as Route} tamanho="lg" variante="claro" className="mt-8">{c.tudoEmUm.cta.rotulo} <ArrowRight size={18} /></BotaoLink>
+          </div>
+          <MockupSemaforo />
+        </div>
+        <div className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {c.tudoEmUm.itens.map(({ icone: Icone, titulo, texto }) => (
+              <div key={titulo} className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-5 ring-1 ring-white/10">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/10 text-[#7dd3fc]"><Icone size={20} /></span>
+                <div>
+                  <p className="font-bold">{titulo}</p>
+                  <p className="mt-1 text-sm text-white/65">{texto}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* O que muda */}

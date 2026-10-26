@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone da notificação do plantão: um velocímetro simples (branco, o sistema pinta). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,4C6.48,4 2,8.48 2,14c0,1.85 0.5,3.58 1.38,5.07L4.24,20.5h15.52l0.86,-1.43C21.5,17.58 22,15.85 22,14 22,8.48 17.52,4 12,4zM18.6,18.5H5.4C4.83,17.4 4.5,16.23 4.5,15c0,-4.14 3.36,-7.5 7.5,-7.5s7.5,3.36 7.5,7.5c0,1.23 -0.33,2.4 -0.9,3.5zM13.41,15.41C12.63,16.19 11.37,16.19 10.59,15.41 9.81,14.63 9.81,13.37 10.59,12.59L16,9 13.41,15.41z" />
+</vector>

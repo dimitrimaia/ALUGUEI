@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Camera, Car, LifeBuoy, ClipboardCheck, FileText, MessageCircle, Search, Wallet } from "lucide-react";
+import { BarChart3, Bell, Calculator, Camera, Car, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Users, Wallet } from "lucide-react";
 import { useConta } from "@/components/conta/contexto";
 import { useMenu } from "@/components/menu-app";
 
@@ -14,6 +14,17 @@ export function RegistrarMenuMotorista() {
     conta: "/m/conta",
     perfil,
     secoes: [
+      {
+        titulo: "Trabalho",
+        itens: [
+          { href: "/m/plantao", rotulo: "Plantão", icone: Gauge, tambem: ["/m/plantao/ganho", "/m/plantao/despesa", "/m/plantao/custos"] },
+          { href: "/m/plantao/calculadora", rotulo: "Calculadora", icone: Calculator },
+          { href: "/m/plantao/semaforo", rotulo: "Semáforo de corridas", icone: Gauge },
+          { href: "/m/plantao/relatorios", rotulo: "Relatórios", icone: BarChart3 },
+          { href: "/m/caronas", rotulo: "Caronas", icone: Users },
+          { href: "/m/clientes", rotulo: "Meus clientes", icone: Link2 },
+        ],
+      },
       {
         titulo: "Meu aluguel",
         itens: [

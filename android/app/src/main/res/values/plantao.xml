@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Apps de corrida que o leitor acompanha: a lista fica SÓ AQUI.
+        Usada por xml/leitor_corridas.xml (filtro do Android) e por Pacotes.kt.
+        Como conferir o pacote no celular: docs/app-nativo.md.
+    -->
+    <string name="pacotes_corridas" translatable="false">com.ubercab.driver,com.app99.driver,sinet.startup.inDriver</string>
+
+    <!-- Leitor de corridas (Configurações > Acessibilidade) -->
+    <string name="leitor_nome">Aluguei: leitor de corridas</string>
+    <string name="leitor_descricao">Este serviço NÃO é um recurso de acessibilidade. Ele lê na tela apenas o valor, a distância e o tempo das ofertas de corrida da Uber, da 99 e da inDrive, para o Aluguei mostrar na bolha se a corrida compensa (lucro, R$ por km e R$ por hora) pelos custos do seu carro. Só funciona com o plantão ligado. O Aluguei não guarda o texto da tela, não envia o conteúdo da tela para ninguém e nunca toca, aceita ou recusa corridas por você: quem decide é sempre você. Você pode desligar quando quiser aqui ou no Aluguei.</string>
+
+    <!-- Notificação fixa -->
+    <string name="plantao_canal">Plantão</string>
+    <string name="plantao_canal_descricao">Aviso fixo enquanto o plantão (a bolha do Aluguei) estiver ligado.</string>
+    <string name="plantao_notificacao_titulo">Plantão ligado</string>
+    <string name="plantao_notificacao_lendo">Lendo as ofertas da Uber, 99 e inDrive. Toque na bolha para digitar uma corrida.</string>
+    <string name="plantao_notificacao_digitar">Toque na bolha para calcular uma corrida.</string>
+    <string name="plantao_desligar">Desligar</string>
+
+    <!-- Bolha e painel -->
+    <string name="plantao_bolha_descricao">Plantão do Aluguei: toque para calcular uma corrida, arraste até o X para desligar</string>
+    <string name="plantao_painel_titulo">Calcular corrida</string>
+    <string name="plantao_fechar">Fechar</string>
+    <string name="plantao_campo_valor">Valor (R$)</string>
+    <string name="plantao_campo_km">Km da corrida</string>
+    <string name="plantao_campo_minutos">Minutos da corrida</string>
+    <string name="plantao_campo_busca">Km até o passageiro</string>
+    <string name="plantao_opcional">opcional</string>
+    <string name="plantao_ver_resultado">Ver resultado</string>
+    <string name="plantao_erro_digitacao">Preencha o valor e os km da corrida.</string>
+
+    <!-- Cartão -->
+    <string name="plantao_sinal_verde">Boa corrida</string>
+    <string name="plantao_sinal_amarelo">Avalie</string>
+    <string name="plantao_sinal_vermelho">Não compensa</string>
+    <string name="plantao_por_km">por km</string>
+    <string name="plantao_por_hora">por hora</string>
+    <string name="plantao_lucro_estimado">Lucro estimado %1$s</string>
+    <string name="plantao_km_total">%1$s km no total</string>
+    <string name="plantao_a_km_do_passageiro">a %1$s km do passageiro</string>
+    <string name="plantao_busca_desconhecida">distância do passageiro não informada</string>
+    <string name="plantao_aceitei">Aceitei</string>
+    <string name="plantao_recusei">Recusei</string>
+</resources>

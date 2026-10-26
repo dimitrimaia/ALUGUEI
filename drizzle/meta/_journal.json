@@ -57,6 +57,13 @@
       "when": 1792603028533,
       "tag": "0007_low_baron_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793001778699,
+      "tag": "0008_groovy_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,12 @@ export type Database = {
         Update: { id?: string; organizacao_id?: string; contrato_id?: string | null; tipo?: string; proposta?: Json; motivo?: string; status?: string; decidido_por?: string | null; decidido_em?: string | null; criado_em?: string };
         Relationships: [];
       };
+      agendamentos_particulares: {
+        Row: { id: string; motorista_id: string; nome: string; whatsapp: string; origem: string; destino: string; quando: string; categoria: string; metros: number | null; minutos: number | null; valor_estimado_centavos: number; status: string; criado_em: string };
+        Insert: { id?: string; motorista_id: string; nome: string; whatsapp: string; origem: string; destino: string; quando: string; categoria: string; metros?: number | null; minutos?: number | null; valor_estimado_centavos: number; status?: string; criado_em?: string };
+        Update: { id?: string; motorista_id?: string; nome?: string; whatsapp?: string; origem?: string; destino?: string; quando?: string; categoria?: string; metros?: number | null; minutos?: number | null; valor_estimado_centavos?: number; status?: string; criado_em?: string };
+        Relationships: [];
+      };
       anuncios: {
         Row: { id: string; organizacao_id: string; veiculo_id: string; status: "ativo" | "pausado"; cidade: string; uf: string; cidade_busca: string; aluguel_semanal_centavos: number; caucao_centavos: number; franquia_km_mensal: number; prazo_minimo_meses: number; descricao: string | null; fotos: Json; criado_em: string; atualizado_em: string };
         Insert: { id?: string; organizacao_id: string; veiculo_id: string; status?: "ativo" | "pausado"; cidade: string; uf: string; cidade_busca: string; aluguel_semanal_centavos: number; caucao_centavos: number; franquia_km_mensal: number; prazo_minimo_meses: number; descricao?: string | null; fotos?: Json; criado_em?: string; atualizado_em?: string };
@@ -26,6 +32,12 @@ export type Database = {
         Row: { id: string; organizacao_id: string | null; usuario_id: string | null; acao: string; entidade: string; entidade_id: string | null; antes: Json | null; depois: Json | null; ip: string | null; criado_em: string };
         Insert: { id?: string; organizacao_id?: string | null; usuario_id?: string | null; acao: string; entidade: string; entidade_id?: string | null; antes?: Json | null; depois?: Json | null; ip?: string | null; criado_em?: string };
         Update: { id?: string; organizacao_id?: string | null; usuario_id?: string | null; acao?: string; entidade?: string; entidade_id?: string | null; antes?: Json | null; depois?: Json | null; ip?: string | null; criado_em?: string };
+        Relationships: [];
+      };
+      caronas: {
+        Row: { id: string; motorista_id: string; origem_cidade: string; origem_uf: string; origem_ponto: string | null; destino_cidade: string; destino_uf: string; destino_ponto: string | null; partida: string; vagas: number; km: number; pedagios_centavos: number; contribuicao_centavos: number; contribuicao_maxima_centavos: number; carro: string | null; regras: Json; observacoes: string | null; status: string; criado_em: string };
+        Insert: { id?: string; motorista_id: string; origem_cidade: string; origem_uf: string; origem_ponto?: string | null; destino_cidade: string; destino_uf: string; destino_ponto?: string | null; partida: string; vagas: number; km: number; pedagios_centavos?: number; contribuicao_centavos: number; contribuicao_maxima_centavos: number; carro?: string | null; regras?: Json; observacoes?: string | null; status?: string; criado_em?: string };
+        Update: { id?: string; motorista_id?: string; origem_cidade?: string; origem_uf?: string; origem_ponto?: string | null; destino_cidade?: string; destino_uf?: string; destino_ponto?: string | null; partida?: string; vagas?: number; km?: number; pedagios_centavos?: number; contribuicao_centavos?: number; contribuicao_maxima_centavos?: number; carro?: string | null; regras?: Json; observacoes?: string | null; status?: string; criado_em?: string };
         Relationships: [];
       };
       checkins: {
@@ -70,10 +82,28 @@ export type Database = {
         Update: { id?: string; organizacao_id?: string; anuncio_id?: string; usuario_id?: string; nome_motorista?: string; telefone_motorista?: string; locatario_id?: string | null; ultima_mensagem_em?: string; lida_locador_em?: string | null; lida_motorista_em?: string | null; criado_em?: string };
         Relationships: [];
       };
+      corridas_avaliadas: {
+        Row: { id: string; usuario_id: string; jornada_id: string | null; app: string | null; valor_centavos: number; metros_corrida: number; minutos_corrida: number | null; metros_busca: number | null; minutos_busca: number | null; sinal: string; decisao: string | null; origem: string; ocorrida_em: string; chave: string; criado_em: string };
+        Insert: { id?: string; usuario_id: string; jornada_id?: string | null; app?: string | null; valor_centavos: number; metros_corrida: number; minutos_corrida?: number | null; metros_busca?: number | null; minutos_busca?: number | null; sinal: string; decisao?: string | null; origem: string; ocorrida_em: string; chave: string; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; jornada_id?: string | null; app?: string | null; valor_centavos?: number; metros_corrida?: number; minutos_corrida?: number | null; metros_busca?: number | null; minutos_busca?: number | null; sinal?: string; decisao?: string | null; origem?: string; ocorrida_em?: string; chave?: string; criado_em?: string };
+        Relationships: [];
+      };
+      despesas_motorista: {
+        Row: { id: string; usuario_id: string; dia: string; categoria: string; valor_centavos: number; quantidade_mil: number | null; km_odometro: number | null; descricao: string | null; criado_em: string };
+        Insert: { id?: string; usuario_id: string; dia: string; categoria: string; valor_centavos: number; quantidade_mil?: number | null; km_odometro?: number | null; descricao?: string | null; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; dia?: string; categoria?: string; valor_centavos?: number; quantidade_mil?: number | null; km_odometro?: number | null; descricao?: string | null; criado_em?: string };
+        Relationships: [];
+      };
       evidencias: {
         Row: { id: string; organizacao_id: string; contrato_id: string | null; veiculo_id: string | null; locatario_id: string | null; tipo: string; finalidade: string; caminho_storage: string; sha256: string; tamanho_bytes: number; mime: string; recebido_em: string; capturado_em_dispositivo: string | null; latitude: number | null; longitude: number | null; precisao_metros: number | null; ip: string | null; dispositivo: string | null; enviado_por: string; metadados: Json | null };
         Insert: { id?: string; organizacao_id: string; contrato_id?: string | null; veiculo_id?: string | null; locatario_id?: string | null; tipo: string; finalidade: string; caminho_storage: string; sha256: string; tamanho_bytes: number; mime: string; recebido_em?: string; capturado_em_dispositivo?: string | null; latitude?: number | null; longitude?: number | null; precisao_metros?: number | null; ip?: string | null; dispositivo?: string | null; enviado_por: string; metadados?: Json | null };
         Update: { id?: string; organizacao_id?: string; contrato_id?: string | null; veiculo_id?: string | null; locatario_id?: string | null; tipo?: string; finalidade?: string; caminho_storage?: string; sha256?: string; tamanho_bytes?: number; mime?: string; recebido_em?: string; capturado_em_dispositivo?: string | null; latitude?: number | null; longitude?: number | null; precisao_metros?: number | null; ip?: string | null; dispositivo?: string | null; enviado_por?: string; metadados?: Json | null };
+        Relationships: [];
+      };
+      ganhos: {
+        Row: { id: string; usuario_id: string; jornada_id: string | null; dia: string; plataforma: string; valor_centavos: number; corridas: number; criado_em: string };
+        Insert: { id?: string; usuario_id: string; jornada_id?: string | null; dia: string; plataforma: string; valor_centavos: number; corridas?: number; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; jornada_id?: string | null; dia?: string; plataforma?: string; valor_centavos?: number; corridas?: number; criado_em?: string };
         Relationships: [];
       };
       inscricoes_push: {
@@ -86,6 +116,12 @@ export type Database = {
         Row: { id: string; organizacao_id: string; veiculo_id: string; item: string; a_cada_km: number | null; a_cada_dias: number | null; ultima_execucao_km: number | null; ultima_execucao_em: string | null };
         Insert: { id?: string; organizacao_id: string; veiculo_id: string; item: string; a_cada_km?: number | null; a_cada_dias?: number | null; ultima_execucao_km?: number | null; ultima_execucao_em?: string | null };
         Update: { id?: string; organizacao_id?: string; veiculo_id?: string; item?: string; a_cada_km?: number | null; a_cada_dias?: number | null; ultima_execucao_km?: number | null; ultima_execucao_em?: string | null };
+        Relationships: [];
+      };
+      jornadas: {
+        Row: { id: string; usuario_id: string; inicio: string; fim: string | null; km_inicial: number | null; km_final: number | null; meta_centavos: number; criado_em: string };
+        Insert: { id?: string; usuario_id: string; inicio?: string; fim?: string | null; km_inicial?: number | null; km_final?: number | null; meta_centavos?: number; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; inicio?: string; fim?: string | null; km_inicial?: number | null; km_final?: number | null; meta_centavos?: number; criado_em?: string };
         Relationships: [];
       };
       lancamentos: {
@@ -152,6 +188,24 @@ export type Database = {
         Row: { id: string; nome: string; documento: string; cidade: string; uf: string; subconta_pagamento_id: string | null; modo_assistido: boolean; mensalidade_por_carro_centavos: number; chave_pix_direto: string | null; criado_em: string };
         Insert: { id?: string; nome: string; documento: string; cidade: string; uf: string; subconta_pagamento_id?: string | null; modo_assistido?: boolean; mensalidade_por_carro_centavos?: number; chave_pix_direto?: string | null; criado_em?: string };
         Update: { id?: string; nome?: string; documento?: string; cidade?: string; uf?: string; subconta_pagamento_id?: string | null; modo_assistido?: boolean; mensalidade_por_carro_centavos?: number; chave_pix_direto?: string | null; criado_em?: string };
+        Relationships: [];
+      };
+      perfis_custo: {
+        Row: { usuario_id: string; perfil: Json; criterios: Json; meta_diaria_centavos: number; atualizado_em: string };
+        Insert: { usuario_id: string; perfil: Json; criterios: Json; meta_diaria_centavos?: number; atualizado_em?: string };
+        Update: { usuario_id?: string; perfil?: Json; criterios?: Json; meta_diaria_centavos?: number; atualizado_em?: string };
+        Relationships: [];
+      };
+      perfis_particular: {
+        Row: { usuario_id: string; slug: string; nome: string; cidade: string; whatsapp: string; apresentacao: string | null; tabelas: Json; ativo: boolean; atualizado_em: string };
+        Insert: { usuario_id: string; slug: string; nome: string; cidade: string; whatsapp: string; apresentacao?: string | null; tabelas: Json; ativo?: boolean; atualizado_em?: string };
+        Update: { usuario_id?: string; slug?: string; nome?: string; cidade?: string; whatsapp?: string; apresentacao?: string | null; tabelas?: Json; ativo?: boolean; atualizado_em?: string };
+        Relationships: [];
+      };
+      reservas_carona: {
+        Row: { id: string; carona_id: string; passageiro_id: string; lugares: number; mensagem: string | null; status: string; decidido_em: string | null; criado_em: string };
+        Insert: { id?: string; carona_id: string; passageiro_id: string; lugares?: number; mensagem?: string | null; status?: string; decidido_em?: string | null; criado_em?: string };
+        Update: { id?: string; carona_id?: string; passageiro_id?: string; lugares?: number; mensagem?: string | null; status?: string; decidido_em?: string | null; criado_em?: string };
         Relationships: [];
       };
       veiculos: {

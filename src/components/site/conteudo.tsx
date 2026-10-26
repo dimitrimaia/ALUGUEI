@@ -1,4 +1,4 @@
-import { Camera, Megaphone, Search, Car, ClipboardCheck, Eye, FileSignature, FileText, Gauge, Landmark, Lock, MessageCircle, QrCode, Receipt, ShieldCheck, Smartphone, UserCheck, Wallet } from "lucide-react";
+import { BarChart3, Calculator, Camera, Megaphone, Search, Car, ClipboardCheck, Eye, FileSignature, FileText, Gauge, Landmark, Link2, Lock, MessageCircle, QrCode, Receipt, ShieldCheck, Smartphone, Target, UserCheck, Users, Wallet } from "lucide-react";
 import { MockupLocador, MockupMotorista } from "./mockups";
 import type { ConteudoPerfil } from "./pagina-perfil";
 
@@ -25,6 +25,20 @@ export const LOCADOR: ConteudoPerfil = {
       { icone: Wallet, titulo: "Receba toda semana", texto: "O Pix é gerado antes do vencimento e a baixa é automática. Atrasos aparecem no painel." },
     ],
   },
+  tudoEmUm: {
+    titulo: "Seu motorista ganha um app de trabalho completo. Grátis.",
+    texto: "Quem aluga pelo Aluguei usa o mesmo app para saber se a corrida compensa, controlar ganhos e despesas e bater a meta do dia, com o aluguel já descontado. Motorista que sabe quanto lucra planeja melhor e paga em dia.",
+    gatilhos: ["Motorista organizado atrasa menos", "Ele abre o app todo dia, não só para pagar", "Diferencial na hora de anunciar o carro"],
+    itens: [
+      { icone: Gauge, titulo: "Semáforo de corridas", texto: "Bolha sobre a Uber e a 99 com R$/km, R$/hora e lucro (Android)." },
+      { icone: Calculator, titulo: "Calculadora completa", texto: "Corrida, viagem longa e etanol × gasolina." },
+      { icone: Target, titulo: "Plantão e meta", texto: "Horas, meta do dia e lucro por hora em tempo real." },
+      { icone: BarChart3, titulo: "Relatórios", texto: "Ganhos por app, despesas e planilha para o imposto." },
+      { icone: Users, titulo: "Caronas", texto: "Viagens com divisão de custo entre cidades." },
+      { icone: Link2, titulo: "Clientes particulares", texto: "Link próprio com preço na hora e pedido pelo WhatsApp." },
+    ],
+    cta: { rotulo: "Criar conta de locador", href: "/entrar?perfil=locador&novo=1" },
+  },
   beneficios: {
     titulo: "Menos tempo cobrando, mais controle da frota",
     texto: "Tudo o que você fazia no WhatsApp e na planilha passa a acontecer sozinho, com registro.",
@@ -43,7 +57,7 @@ export const LOCADOR: ConteudoPerfil = {
       { icone: ClipboardCheck, titulo: "Vistoria de entrega", texto: "8 fotos guiadas com data, hora e local, checklist de avarias e confirmação do motorista." },
       { icone: Wallet, titulo: "Cobrança no Pix", texto: "Pix antes do vencimento, encargos do contrato no atraso e baixa automática." },
       { icone: Receipt, titulo: "Financeiro", texto: "Recebido, a receber e em atraso, com exportação para planilha." },
-      { icone: Camera, titulo: "Check-in de segunda", texto: "Fotos do painel, óleo, água e vídeo do carro toda semana.", breve: true },
+      { icone: Camera, titulo: "Check-in semanal", texto: "Fotos do painel, óleo, água e vídeo do carro toda semana." },
       { icone: Megaphone, titulo: "Anúncio e chat", texto: "Anuncie o carro na busca de motoristas e negocie pelo chat. Aprovou, ele já faz o cadastro." },
       { icone: Gauge, titulo: "Km e revisões", texto: "Km do mês contra a franquia e alerta da próxima revisão.", breve: true },
     ],
@@ -76,6 +90,7 @@ export const LOCADOR: ConteudoPerfil = {
     { p: "Quanto custa?", r: "R$ 250 por mês para cada carro com contrato ativo, descontados aos poucos de cada Pix de aluguel. Carro parado não paga." },
     { p: "Posso registrar um pagamento em dinheiro?", r: "Sim. No financeiro, use “Recebi por fora”: a cobrança é baixada e fica registrada quem fez." },
     { p: "Como ficam os dados dos motoristas?", r: "Documentos e fotos ficam com acesso restrito ao locador que convidou. O motorista autoriza cada uso no cadastro." },
+    { p: "O que o motorista ganha usando o Aluguei?", r: "Além de pagar e ver o contrato, ele tem grátis o app de trabalho: semáforo de corridas, calculadora, plantão com meta, relatórios, caronas e página para clientes particulares. Os ganhos e gastos dele são só dele: você não vê." },
   ],
   final: {
     titulo: "Comece pelo primeiro carro",
@@ -86,11 +101,11 @@ export const LOCADOR: ConteudoPerfil = {
 
 export const MOTORISTA: ConteudoPerfil = {
   tema: "claro",
-  selo: "Para motoristas de Uber e 99",
+  selo: "Para motoristas de Uber e 99 · tudo em um",
   titulo: <>Seu carro alugado, <span className="text-marca">sem papelada e sem surpresa.</span></>,
   texto: "Cadastro pelo celular, contrato explicado em linguagem simples, pagamento no Pix e um extrato com tudo o que foi cobrado.",
   ctas: [{ rotulo: "Buscar carros", href: "/carros" }, { rotulo: "Já tenho conta", href: "/entrar?perfil=motorista" }],
-  marcas: ["Sem app para baixar", "Chat com o locador", "Grátis para o motorista"],
+  marcas: ["Semáforo de corridas", "Lucro real do dia", "Grátis para o motorista"],
   mockup: <MockupMotorista />,
   destaques: [
     { icone: Smartphone, titulo: "Tudo no celular", texto: "cadastro, contrato e pagamento pelo navegador, sem baixar nada" },
@@ -106,6 +121,20 @@ export const MOTORISTA: ConteudoPerfil = {
       { icone: FileSignature, titulo: "Assine pelo celular", texto: "Antes de assinar, você vê um resumo do contrato em linguagem simples." },
       { icone: ClipboardCheck, titulo: "Retire o carro", texto: "Vocês fazem a vistoria juntos e você confirma as fotos no seu celular." },
     ],
+  },
+  tudoEmUm: {
+    titulo: "Um app só para trabalhar. Não cinco.",
+    texto: "Calculadora de corrida, semáforo por cima da Uber e da 99, controle de ganhos e despesas, caronas e seus clientes particulares. Tudo junto do aluguel do carro, com o custo dele já no cálculo.",
+    gatilhos: ["Saiba em 2 segundos se a corrida paga", "Lucro de verdade, com aluguel e combustível descontados", "Grátis, sem assinatura"],
+    itens: [
+      { icone: Gauge, titulo: "Semáforo de corridas", texto: "A oferta toca e a bolha mostra verde, amarelo ou vermelho, com R$/km, R$/hora e lucro (Android)." },
+      { icone: Calculator, titulo: "Calculadora completa", texto: "Corrida, viagem longa com pedágio e etanol × gasolina pelo consumo do seu carro." },
+      { icone: Target, titulo: "Plantão e meta do dia", texto: "Inicie o plantão e veja horas, lucro por hora e quanto falta para a meta." },
+      { icone: BarChart3, titulo: "Ganhos e despesas", texto: "Uber, 99, inDrive e particular num lugar só, com planilha para o imposto." },
+      { icone: Users, titulo: "Caronas", texto: "Vai pegar estrada? Divida combustível e pedágio com quem vai para o mesmo lugar." },
+      { icone: Link2, titulo: "Seus clientes particulares", texto: "Seu link com preço na hora. O cliente agenda pelo seu WhatsApp, sem taxa." },
+    ],
+    cta: { rotulo: "Começar grátis", href: "/entrar?perfil=motorista&novo=1" },
   },
   beneficios: {
     titulo: "Menos dor de cabeça, mais tempo rodando",
@@ -125,7 +154,7 @@ export const MOTORISTA: ConteudoPerfil = {
       { icone: ClipboardCheck, titulo: "Vistoria no celular", texto: "Você confere as fotos e o checklist antes de confirmar a retirada." },
       { icone: QrCode, titulo: "Pagamento no Pix", texto: "QR Code ou copia e cola, com o botão “Já paguei”." },
       { icone: Receipt, titulo: "Extrato", texto: "Tudo o que foi cobrado e pago, com a origem de cada item." },
-      { icone: Camera, titulo: "Check-in guiado", texto: "Fotos de segunda em menos de um minuto, guiadas pela câmera.", breve: true },
+      { icone: Camera, titulo: "Check-in guiado", texto: "Fotos da semana em menos de um minuto, guiadas pela câmera." },
       { icone: MessageCircle, titulo: "Chat com o locador", texto: "Negocie pelo app, sem expor seu número para todo mundo." },
       { icone: Gauge, titulo: "Km do mês", texto: "Quanto você já rodou contra a franquia do contrato.", breve: true },
     ],
@@ -150,13 +179,14 @@ export const MOTORISTA: ConteudoPerfil = {
     cta: { rotulo: "Entrar como motorista", href: "/entrar?perfil=motorista" },
   },
   duvidas: [
-    { p: "Preciso baixar algum aplicativo?", r: "Não. Tudo funciona no navegador do celular. Se quiser, adicione o Aluguei à tela inicial para abrir como um app." },
+    { p: "Preciso baixar algum aplicativo?", r: "Para quase tudo, não: funciona no navegador do celular, e dá para adicionar à tela inicial. Só o semáforo por cima da Uber e da 99 precisa do app Aluguei para Android, porque o navegador não pode aparecer por cima de outro app." },
     { p: "Como encontro um carro?", r: "Busque pela sua cidade em Buscar carros, toque em “Tenho interesse” e converse com o locador. Quando ele aprovar, você envia a CNH e os documentos pelo próprio chat." },
     { p: "Quais documentos preciso?", r: "CNH com a observação EAR, comprovante de endereço e um print do seu perfil no Uber ou 99." },
     { p: "Como pago o aluguel?", r: "Pelo Pix, com QR Code ou código copia e cola. A confirmação chega em segundos e fica no seu extrato." },
     { p: "E se eu atrasar?", r: "O Pix aplica a multa e os juros previstos no contrato, e eles aparecem separados no extrato." },
     { p: "E se o carro tiver um risco que não fui eu?", r: "Na retirada, a vistoria registra fotos com data, hora e local. Você confere e só confirma se estiver tudo certo." },
     { p: "Meus documentos ficam seguros?", r: "Só o locador que te convidou vê seus documentos, e você autoriza cada uso no cadastro." },
+    { p: "Preciso alugar carro para usar a calculadora e o semáforo?", r: "Não. Plantão, calculadora, relatórios, caronas e clientes particulares são grátis para qualquer motorista, com carro próprio ou alugado. Se o carro for do Aluguei, o aluguel já entra sozinho no cálculo do lucro." },
   ],
   final: {
     titulo: "Encontre seu próximo carro",
