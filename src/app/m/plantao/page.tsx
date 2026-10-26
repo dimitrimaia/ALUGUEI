@@ -46,7 +46,7 @@ export default async function Plantao() {
   return (
     <div className="flex flex-col gap-4">
       <CabecalhoMotorista raiz titulo="Plantão" subtitulo="Seu dia de trabalho, com o lucro de verdade." />
-      <SincronizarPlantao perfil={config.perfil} criterios={config.criterios} />
+      <SincronizarPlantao perfil={config.perfil} criterios={config.criterios} preferencias={config.preferencias} />
 
       <section className="fundo-marca relative -mt-1 overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante">
         <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(80%_80%_at_90%_0%,black,transparent)]" aria-hidden />

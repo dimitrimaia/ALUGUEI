@@ -1,6 +1,7 @@
 "use client";
 
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
+import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 
 /**
  * Ponte com o app Android (Capacitor + plugin "Plantao", em android/.../plantao).
@@ -8,7 +9,7 @@ import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
  * mostra a versão web (digitação) e o convite para o app.
  */
 
-export type EstadoNativo = { android: boolean; sobreposicao: boolean; acessibilidade: boolean; notificacoes: boolean; semOtimizacaoBateria: boolean; ligado: boolean; configurado: boolean; corridasPendentes: number };
+export type EstadoNativo = { localizacao?: boolean; dormindo?: boolean; android: boolean; sobreposicao: boolean; acessibilidade: boolean; notificacoes: boolean; semOtimizacaoBateria: boolean; ligado: boolean; configurado: boolean; corridasPendentes: number };
 export type CorridaNativa = {
   /** UUID gerado no celular: chave de idempotência do envio. */
   id: string;
@@ -28,7 +29,9 @@ type RespostaPermissao = { tipo: string; concedida: boolean; aberto: boolean };
 type Ouvinte = { remove: () => Promise<void> | void };
 type PluginPlantao = {
   estado(): Promise<EstadoNativo>;
-  configurar(o: { perfil: PerfilCusto; criterios: Criterios; segundosCartao?: number; tema?: "claro" | "escuro" | "auto"; vibrar?: boolean }): Promise<EstadoNativo>;
+  configurar(o: { perfil: PerfilCusto; criterios: Criterios; segundosCartao?: number; tema?: "claro" | "escuro" | "auto"; vibrar?: boolean; preferencias?: PreferenciasCopiloto }): Promise<EstadoNativo>;
+  pedirLocalizacao(): Promise<RespostaPermissao>;
+  definirBaseAqui(): Promise<{ lat: number; lon: number }>;
   /** Lugares marcados como "evitar" na bolha, ainda não levados para a conta. */
   lugaresAdicionados(): Promise<{ lugares: string[] }>;
   limparLugaresAdicionados(): Promise<void>;
@@ -45,7 +48,7 @@ type PluginPlantao = {
   simular(o: { valor: number; kmCorrida: number; minutosCorrida?: number; kmBusca?: number; minutosBusca?: number }): Promise<unknown>;
   corridasPendentes(): Promise<{ corridas: CorridaNativa[] }>;
   confirmarEnvio(o: { ate?: string; ids?: string[] }): Promise<{ corridasPendentes: number }>;
-  addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua", cb: (dados: unknown) => void): Promise<Ouvinte>;
+  addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia", cb: (dados: unknown) => void): Promise<Ouvinte>;
 };
 
 type JanelaCapacitor = { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string; Plugins?: { Plantao?: PluginPlantao } } };

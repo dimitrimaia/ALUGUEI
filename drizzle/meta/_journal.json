@@ -64,6 +64,13 @@
       "when": 1793001778699,
       "tag": "0008_groovy_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793043430361,
+      "tag": "0009_sparkling_terrax",
+      "breakpoints": true
     }
   ]
 }

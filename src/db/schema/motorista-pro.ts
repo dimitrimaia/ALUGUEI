@@ -13,6 +13,10 @@ export const perfisCusto = pgTable("perfis_custo", {
   perfil: jsonb("perfil").notNull(),
   criterios: jsonb("criterios").notNull(),
   metaDiariaCentavos: integer("meta_diaria_centavos").notNull().default(0),
+  /** Preferências do Copiloto (cartão, voz, base): src/dominio/ganhos/copiloto.ts. */
+  preferencias: jsonb("preferencias").notNull().default({}),
+  /** Finanças: meta do mês, dias de trabalho, virada do dia (src/dominio/ganhos/financas.ts). */
+  financas: jsonb("financas").notNull().default({}),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -166,4 +170,19 @@ export const agendamentosParticulares = pgTable(
     criadoEm: criadoEm(),
   },
   (t) => [index("agendamentos_particulares_motorista").on(t.motoristaId, t.quando)],
+);
+
+/** Dinheiro guardado para a manutenção do carro (aportes e retiradas). */
+export const reservasManutencao = pgTable(
+  "reservas_manutencao",
+  {
+    id: id(),
+    usuarioId: uuid("usuario_id").notNull(),
+    dia: date("dia").notNull(),
+    /** Positivo: guardou. Negativo: usou. */
+    valorCentavos: integer("valor_centavos").notNull(),
+    descricao: text("descricao"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("reservas_manutencao_usuario").on(t.usuarioId, t.dia)],
 );

@@ -2,15 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { adicionarLugaresEvitar, registrarCorridas, salvarRegua } from "@/lib/acoes-plantao";
+import { adicionarLugaresEvitar, registrarCorridas, salvarPreferenciasCopiloto, salvarRegua } from "@/lib/acoes-plantao";
 import { plantaoNativo } from "@/lib/nativo";
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
+import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 
 /**
  * No app Android: entrega à bolha os custos e critérios atuais e traz para o
  * servidor as corridas que ela avaliou (a fila fica no celular até dar certo).
  */
-export function SincronizarPlantao({ perfil, criterios: daConta }: { perfil: PerfilCusto; criterios: Criterios }) {
+export function SincronizarPlantao({ perfil, criterios: daConta, preferencias }: { perfil: PerfilCusto; criterios: Criterios; preferencias?: PreferenciasCopiloto }) {
   const router = useRouter();
   useEffect(() => {
     const p = plantaoNativo();
@@ -27,7 +28,14 @@ export function SincronizarPlantao({ perfil, criterios: daConta }: { perfil: Per
           await p!.limparReguaPendente().catch(() => null);
         }
         const tema = document.documentElement.dataset.tema;
-        await p!.configurar({ perfil, criterios, tema: tema === "escuro" ? "escuro" : tema === "auto" ? "auto" : "claro" });
+        const temaApp = tema === "escuro" ? "escuro" : tema === "auto" ? "auto" : "claro";
+        await p!.configurar({
+          perfil,
+          criterios,
+          // "app": o cartão segue o tema escolhido no Aluguei.
+          tema: preferencias && preferencias.tema !== "app" ? preferencias.tema : temaApp,
+          ...(preferencias ? { preferencias, segundosCartao: preferencias.segundosCartao, vibrar: preferencias.vibrar } : {}),
+        });
         // Lugares marcados na bolha ("Evitar este lugar") vão para a régua da conta.
         const { lugares } = await p!.lugaresAdicionados().catch(() => ({ lugares: [] as string[] }));
         if (lugares.length) {
@@ -49,13 +57,22 @@ export function SincronizarPlantao({ perfil, criterios: daConta }: { perfil: Per
       const r = d as { minimoPorKm?: number; minimoPorHora?: number };
       salvarRegua(r).catch(() => null);
     });
+    // Base marcada pela bolha ("Definir base aqui") e "não perguntar mais" vão para a conta.
+    const base = p.addListener("base", (d) => {
+      const b = d as { lat?: number; lon?: number };
+      if (preferencias && typeof b.lat === "number" && typeof b.lon === "number") salvarPreferenciasCopiloto({ ...preferencias, base: { nome: "Base marcada no mapa", lat: b.lat, lon: b.lon } }).catch(() => null);
+    });
+    const pref = p.addListener("preferencia", (d) => {
+      const x = d as { perguntarAceite?: boolean };
+      if (preferencias && typeof x.perguntarAceite === "boolean") salvarPreferenciasCopiloto({ ...preferencias, perguntarAceite: x.perguntarAceite }).catch(() => null);
+    });
     const aoVoltar = () => document.visibilityState === "visible" && sincronizar();
     document.addEventListener("visibilitychange", aoVoltar);
     return () => {
       vivo = false;
-      regua.then((o) => o.remove()).catch(() => null);
+      for (const o of [regua, base, pref]) o.then((x) => x.remove()).catch(() => null);
       document.removeEventListener("visibilitychange", aoVoltar);
     };
-  }, [perfil, daConta, router]);
+  }, [perfil, daConta, preferencias, router]);
   return null;
 }

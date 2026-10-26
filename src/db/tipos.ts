@@ -191,9 +191,9 @@ export type Database = {
         Relationships: [];
       };
       perfis_custo: {
-        Row: { usuario_id: string; perfil: Json; criterios: Json; meta_diaria_centavos: number; atualizado_em: string };
-        Insert: { usuario_id: string; perfil: Json; criterios: Json; meta_diaria_centavos?: number; atualizado_em?: string };
-        Update: { usuario_id?: string; perfil?: Json; criterios?: Json; meta_diaria_centavos?: number; atualizado_em?: string };
+        Row: { usuario_id: string; perfil: Json; criterios: Json; meta_diaria_centavos: number; preferencias: Json; financas: Json; atualizado_em: string };
+        Insert: { usuario_id: string; perfil: Json; criterios: Json; meta_diaria_centavos?: number; preferencias?: Json; financas?: Json; atualizado_em?: string };
+        Update: { usuario_id?: string; perfil?: Json; criterios?: Json; meta_diaria_centavos?: number; preferencias?: Json; financas?: Json; atualizado_em?: string };
         Relationships: [];
       };
       perfis_particular: {
@@ -206,6 +206,12 @@ export type Database = {
         Row: { id: string; carona_id: string; passageiro_id: string; lugares: number; mensagem: string | null; status: string; decidido_em: string | null; criado_em: string };
         Insert: { id?: string; carona_id: string; passageiro_id: string; lugares?: number; mensagem?: string | null; status?: string; decidido_em?: string | null; criado_em?: string };
         Update: { id?: string; carona_id?: string; passageiro_id?: string; lugares?: number; mensagem?: string | null; status?: string; decidido_em?: string | null; criado_em?: string };
+        Relationships: [];
+      };
+      reservas_manutencao: {
+        Row: { id: string; usuario_id: string; dia: string; valor_centavos: number; descricao: string | null; criado_em: string };
+        Insert: { id?: string; usuario_id: string; dia: string; valor_centavos: number; descricao?: string | null; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; dia?: string; valor_centavos?: number; descricao?: string | null; criado_em?: string };
         Relationships: [];
       };
       veiculos: {

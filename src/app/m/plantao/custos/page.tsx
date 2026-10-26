@@ -11,7 +11,7 @@ export default async function Custos() {
   return (
     <div>
       <CabecalhoMotorista titulo="Custos do carro" voltar="/m/plantao" />
-      <EditorCustos inicial={c.perfil} criteriosIniciais={c.criterios} metaInicial={c.meta} aluguelSemanal={c.aluguelSemanal} />
+      <EditorCustos inicial={c.perfil} metaInicial={c.meta} aluguelSemanal={c.aluguelSemanal} />
     </div>
   );
 }

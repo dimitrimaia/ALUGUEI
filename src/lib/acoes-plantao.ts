@@ -6,12 +6,21 @@ import { z } from "zod";
 import { data as dataISO, hoje } from "@/dominio/datas/data";
 import { lerReais } from "@/dominio/dinheiro/centavos";
 import { normalizarCriterios, normalizarPerfil } from "@/dominio/ganhos/custos";
+import { normalizarPreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
+import { diaOperacional, normalizarFinancas } from "@/dominio/ganhos/financas";
+import { geocodificar } from "@/integracoes/rotas";
 import { CATEGORIAS_DESPESA, PLATAFORMAS } from "@/dominio/ganhos/plantao";
 import { exigirUsuario } from "./sessao";
 import { supabaseAdmin } from "./supabase/admin";
 import { jornadaAberta } from "./plantao";
 
-export type EstadoForm = { erro?: string; ok?: boolean };
+export type EstadoForm = { erro?: string; ok?: boolean; id?: string; tipo?: "ganho" | "despesa" };
+
+/** Dia de trabalho de agora, com a virada configurada (meia-noite ou 4h). */
+async function diaDeHoje(usuarioId: string) {
+  const { data } = await supabaseAdmin().from("perfis_custo").select("*").eq("usuario_id", usuarioId).maybeSingle();
+  return diaOperacional(normalizarFinancas((data as { financas?: unknown } | null)?.financas).virada);
+}
 
 const km = z.preprocess((v) => (v === "" || v == null ? null : String(v).replace(/\D/g, "")), z.coerce.number().int().min(0).max(5_000_000).nullable());
 const reais = (obrigatorio: boolean) =>
@@ -54,9 +63,10 @@ export async function lancarGanho(_: EstadoForm, form: FormData): Promise<Estado
     .safeParse(Object.fromEntries(form));
   if (!lido.success) return { erro: lido.error.issues[0]?.message ?? "Confira os campos." };
   const aberta = await jornadaAberta(usuario.id);
-  await supabaseAdmin().from("ganhos").insert({ usuario_id: usuario.id, jornada_id: aberta?.id ?? null, dia: dataISO(lido.data.dia), plataforma: lido.data.plataforma, valor_centavos: lido.data.valor!, corridas: lido.data.corridas });
+  const dia = form.get("dia") ? dataISO(lido.data.dia) : await diaDeHoje(usuario.id);
+  const { data } = await supabaseAdmin().from("ganhos").insert({ usuario_id: usuario.id, jornada_id: aberta?.id ?? null, dia, plataforma: lido.data.plataforma, valor_centavos: lido.data.valor!, corridas: lido.data.corridas }).select("id").single();
   atualizar();
-  return { ok: true };
+  return { ok: true, id: data?.id, tipo: "ganho" };
 }
 
 export async function lancarDespesa(_: EstadoForm, form: FormData): Promise<EstadoForm> {
@@ -73,11 +83,14 @@ export async function lancarDespesa(_: EstadoForm, form: FormData): Promise<Esta
     .safeParse(Object.fromEntries(form));
   if (!lido.success) return { erro: lido.error.issues[0]?.message ?? "Confira os campos." };
   const d = lido.data;
-  await supabaseAdmin()
+  const dia = form.get("dia") ? dataISO(d.dia) : await diaDeHoje(usuario.id);
+  const { data } = await supabaseAdmin()
     .from("despesas_motorista")
-    .insert({ usuario_id: usuario.id, dia: dataISO(d.dia), categoria: d.categoria, valor_centavos: d.valor!, quantidade_mil: d.quantidade ? Math.round(d.quantidade * 1000) : null, km_odometro: d.km, descricao: d.descricao || null });
+    .insert({ usuario_id: usuario.id, dia, categoria: d.categoria, valor_centavos: d.valor!, quantidade_mil: d.quantidade ? Math.round(d.quantidade * 1000) : null, km_odometro: d.km, descricao: d.descricao || null })
+    .select("id")
+    .single();
   atualizar();
-  return { ok: true };
+  return { ok: true, id: data?.id, tipo: "despesa" };
 }
 
 export async function excluirLancamento(tipo: "ganho" | "despesa", id: string) {
@@ -90,18 +103,11 @@ export async function excluirLancamento(tipo: "ganho" | "despesa", id: string) {
   atualizar();
 }
 
-/** Custos e critérios vêm já montados pela tela (JSON) e são normalizados aqui. */
-export async function salvarCustos(entrada: { perfil: unknown; criterios: unknown; meta: number }): Promise<EstadoForm> {
+/** Custos do carro e meta do dia (a régua do Copiloto tem a tela dela). */
+export async function salvarCustos(entrada: { perfil: unknown; meta: number }): Promise<EstadoForm> {
   const usuario = await exigirUsuario("/m/plantao/custos");
-  const perfil = normalizarPerfil(entrada.perfil);
-  const criterios = normalizarCriterios(entrada.criterios);
   const meta = Number.isSafeInteger(entrada.meta) && entrada.meta >= 0 ? entrada.meta : 0;
-  const { error } = await supabaseAdmin()
-    .from("perfis_custo")
-    .upsert({ usuario_id: usuario.id, perfil, criterios, meta_diaria_centavos: meta, atualizado_em: new Date().toISOString() });
-  if (error) return { erro: "Não foi possível salvar. Tente de novo." };
-  atualizar();
-  return { ok: true };
+  return gravarPerfil(usuario.id, { perfil: normalizarPerfil(entrada.perfil), meta_diaria_centavos: meta });
 }
 
 const esquemaCorrida = z.object({
@@ -169,5 +175,89 @@ export async function salvarRegua(r: { minimoPorKm?: number; minimoPorHora?: num
   if (!data) return;
   const criterios = normalizarCriterios({ ...normalizarCriterios(data.criterios), ...(r.minimoPorKm != null ? { minimoPorKm: Math.round(r.minimoPorKm) } : {}), ...(r.minimoPorHora != null ? { minimoPorHora: Math.round(r.minimoPorHora) } : {}) });
   await admin.from("perfis_custo").update({ criterios, atualizado_em: new Date().toISOString() }).eq("usuario_id", usuario.id);
+  revalidatePath("/m/plantao", "layout");
+}
+
+/** Grava só a parte do perfil de custos indicada, criando a linha se ainda não existe. */
+async function gravarPerfil(usuarioId: string, campos: Record<string, unknown>) {
+  const admin = supabaseAdmin();
+  const { data } = await admin.from("perfis_custo").select("usuario_id").eq("usuario_id", usuarioId).maybeSingle();
+  const agora = new Date().toISOString();
+  const { error } = data
+    ? await admin.from("perfis_custo").update({ ...campos, atualizado_em: agora } as never).eq("usuario_id", usuarioId)
+    : await admin.from("perfis_custo").insert({ usuario_id: usuarioId, perfil: normalizarPerfil(null), criterios: normalizarCriterios(null), ...campos, atualizado_em: agora } as never);
+  atualizar();
+  return error ? { erro: "Não foi possível salvar. Se acabou de atualizar o app, rode a migração 0009 no Supabase." } : { ok: true };
+}
+
+/** Régua completa do Copiloto (tela Régua). */
+export async function salvarReguaCompleta(criterios: unknown): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/regua");
+  return gravarPerfil(usuario.id, { criterios: normalizarCriterios(criterios) });
+}
+
+export async function salvarPreferenciasCopiloto(preferencias: unknown): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/copiloto");
+  return gravarPerfil(usuario.id, { preferencias: normalizarPreferenciasCopiloto(preferencias) });
+}
+
+export async function salvarFinancas(financas: unknown): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/financas");
+  return gravarPerfil(usuario.id, { financas: normalizarFinancas(financas) });
+}
+
+/** Endereço da base (casa) → coordenadas, para o custo da volta. */
+export async function buscarEnderecoBase(texto: string): Promise<{ nome: string; lat: number; lon: number } | null> {
+  await exigirUsuario("/m/plantao/copiloto");
+  const p = await geocodificar(texto);
+  return p ? { nome: p.nome || texto, lat: p.lat, lon: p.lon } : null;
+}
+
+/** Guardar (positivo) ou usar (negativo) dinheiro da reserva de manutenção. */
+export async function movimentarReserva(_: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/financas");
+  const valor = lerReais(String(form.get("valor") ?? ""));
+  if (!valor) return { erro: "Informe o valor." };
+  const sinal = form.get("tipo") === "usar" ? -1 : 1;
+  const { error } = await supabaseAdmin()
+    .from("reservas_manutencao")
+    .insert({ usuario_id: usuario.id, dia: await diaDeHoje(usuario.id), valor_centavos: sinal * valor, descricao: String(form.get("descricao") ?? "").trim().slice(0, 80) || null });
+  if (error) return { erro: "Não foi possível salvar. Rode a migração 0009 no Supabase." };
+  atualizar();
+  return { ok: true };
+}
+
+/**
+ * Fechar o dia em 1 minuto: ganhos de cada app, km e combustível de uma vez.
+ * Cria o plantão do dia quando não houve (para o R$/hora e o R$/km).
+ */
+export async function fecharDia(_: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const usuario = await exigirUsuario("/m/plantao/fechar");
+  const dia = await diaDeHoje(usuario.id);
+  const admin = supabaseAdmin();
+  const ganhos = PLATAFORMAS.flatMap((p) => {
+    const valor = lerReais(String(form.get(`ganho_${p}`) ?? ""));
+    const corridas = Math.max(1, Math.min(200, Number(form.get(`corridas_${p}`)) || 1));
+    return valor ? [{ usuario_id: usuario.id, dia, plataforma: p, valor_centavos: valor, corridas }] : [];
+  });
+  const combustivel = lerReais(String(form.get("combustivel") ?? ""));
+  const km = Number(String(form.get("km") ?? "").replace(/\D/g, "")) || 0;
+  const horas = Number(String(form.get("horas") ?? "").replace(",", ".")) || 0;
+  if (!ganhos.length && !combustivel && !km) return { erro: "Preencha pelo menos um ganho." };
+  if (ganhos.length) await admin.from("ganhos").insert(ganhos);
+  if (combustivel) await admin.from("despesas_motorista").insert({ usuario_id: usuario.id, dia, categoria: "combustivel", valor_centavos: combustivel, descricao: "Fechamento do dia" });
+  if ((km || horas) && !(await jornadaAberta(usuario.id))) {
+    const fim = new Date();
+    const inicio = new Date(fim.getTime() - Math.min(24, Math.max(0, horas)) * 3_600_000);
+    await admin.from("jornadas").insert({ usuario_id: usuario.id, inicio: inicio.toISOString(), fim: fim.toISOString(), km_inicial: km ? 0 : null, km_final: km || null });
+  }
+  atualizar();
+  return { ok: true };
+}
+
+/** Corrigir a decisão de uma oferta no histórico (aceitei/recusei). */
+export async function corrigirDecisao(id: string, decisao: "aceitei" | "recusei" | null) {
+  const usuario = await exigirUsuario("/m/plantao/historico");
+  await supabaseAdmin().from("corridas_avaliadas").update({ decisao }).eq("id", id).eq("usuario_id", usuario.id);
   revalidatePath("/m/plantao", "layout");
 }

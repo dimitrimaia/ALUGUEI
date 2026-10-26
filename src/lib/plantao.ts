@@ -5,6 +5,8 @@ import { type DataISO, hoje, somarDias } from "@/dominio/datas/data";
 import type { Centavos } from "@/dominio/dinheiro/centavos";
 import { aluguelMensal, type Criterios, normalizarCriterios, normalizarPerfil, PERFIL_PADRAO, type PerfilCusto } from "@/dominio/ganhos/custos";
 import type { CategoriaDespesa, Plataforma } from "@/dominio/ganhos/plantao";
+import { normalizarPreferenciasCopiloto, type PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
+import { type ConfigFinancas, normalizarFinancas } from "@/dominio/ganhos/financas";
 import { contratosDoMotorista } from "./motorista";
 import { supabaseAdmin } from "./supabase/admin";
 
@@ -21,7 +23,7 @@ export const aluguelDoContrato = cache(async (usuarioId: string): Promise<Centav
   return ativo ? (ativo.parametros as unknown as ParametrosContrato).aluguelSemanal : null;
 });
 
-export type ConfigPlantao = { perfil: PerfilCusto; criterios: Criterios; meta: Centavos; salvo: boolean; aluguelSemanal: Centavos | null };
+export type ConfigPlantao = { perfil: PerfilCusto; criterios: Criterios; meta: Centavos; salvo: boolean; aluguelSemanal: Centavos | null; preferencias: PreferenciasCopiloto; financas: ConfigFinancas };
 
 /**
  * Custos do motorista. O aluguel do contrato entra sozinho e acompanha o
@@ -33,7 +35,9 @@ export const configPlantao = cache(async (usuarioId: string): Promise<ConfigPlan
   const semContrato = perfil.fixosMensais.filter((f) => !f.doContrato);
   const usarContrato = !data || perfil.fixosMensais.some((f) => f.doContrato);
   perfil.fixosMensais = aluguelSemanal && usarContrato ? [{ nome: NOME_ALUGUEL, valor: aluguelMensal(aluguelSemanal), doContrato: true }, ...semContrato] : semContrato;
-  return { perfil, criterios: normalizarCriterios(data?.criterios), meta: data?.meta_diaria_centavos ?? 0, salvo: Boolean(data), aluguelSemanal };
+  // preferencias e financas chegam com a migração 0009; antes dela, ficam no padrão.
+  const linha = (data ?? {}) as { preferencias?: unknown; financas?: unknown };
+  return { perfil, criterios: normalizarCriterios(data?.criterios), meta: data?.meta_diaria_centavos ?? 0, salvo: Boolean(data), aluguelSemanal, preferencias: normalizarPreferenciasCopiloto(linha.preferencias), financas: normalizarFinancas(linha.financas) };
 });
 
 export const jornadaAberta = cache(async (usuarioId: string) => {
