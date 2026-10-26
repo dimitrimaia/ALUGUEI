@@ -4,7 +4,7 @@ import { ClipboardPaste, Save, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { Aviso, Botao, Cartao, DadoRotulado } from "@/components/ui";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
-import { avaliarCorrida } from "@/dominio/ganhos/corrida";
+import { avaliarCorrida, precoIdeal } from "@/dominio/ganhos/corrida";
 import { type Criterios, type PerfilCusto, taxas } from "@/dominio/ganhos/custos";
 import { lerOferta } from "@/dominio/ganhos/oferta";
 import { calcularViagem, compararCombustivel } from "@/dominio/ganhos/viagem";
@@ -44,7 +44,13 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
   const [salvo, setSalvo] = useState<string | null>(null);
   const [salvando, iniciar] = useTransition();
   const t = useMemo(() => taxas(perfil), [perfil]);
-  const a = valor && kmCorrida ? avaliarCorrida({ valor, kmCorrida, minutosCorrida: minCorrida, kmBusca, minutosBusca: minBusca }, t, criterios) : null;
+  // Caixinha "Contar a volta": liga e desliga na hora, sem mexer na régua salva.
+  const [comVolta, setComVolta] = useState(criterios.contarVolta);
+  const [kmVolta, setKmVolta] = useState<number | null>(null);
+  const regua = { ...criterios, contarVolta: comVolta && !!kmVolta };
+  const oferta = valor && kmCorrida ? { valor, kmCorrida, minutosCorrida: minCorrida, kmBusca, minutosBusca: minBusca, kmVolta } : null;
+  const a = oferta ? avaliarCorrida(oferta, t, regua) : null;
+  const ideal = oferta && a && a.sinal !== "verde" ? precoIdeal(oferta, t, regua) : null;
 
   async function colar() {
     try {
@@ -80,12 +86,22 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
           <Rotulo texto="Tempo da viagem"><EntradaNumero rotulo="Minutos da viagem" inteiro valor={minCorrida} sufixo="min" placeholder="Opcional" aoMudar={setMinCorrida} /></Rotulo>
           <Rotulo texto="Até o passageiro"><EntradaNumero rotulo="Km até o passageiro" valor={kmBusca} sufixo="km" placeholder="Opcional" aoMudar={setKmBusca} /></Rotulo>
         </div>
+        <div className="flex flex-col gap-2 rounded-xl bg-cartao-2 p-3">
+          <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold">
+            Contar a volta para casa
+            <input type="checkbox" checked={comVolta} onChange={(e) => setComVolta(e.target.checked)} className="size-5 accent-[var(--marca)]" />
+          </label>
+          {comVolta && <EntradaNumero rotulo="Km do destino até a sua casa" valor={kmVolta} sufixo="km volta" placeholder="Km do destino até casa" aoMudar={setKmVolta} />}
+        </div>
         <button type="button" onClick={colar} className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-marca"><ClipboardPaste size={16} /> Colar oferta copiada</button>
         {colado && <p className="text-xs text-suave">{colado}</p>}
       </Cartao>
       {a ? (
         <>
           <CartaoSemaforo a={a} kmBusca={kmBusca} />
+          {a.custoVolta > 0 && <p className="-mt-2 text-center text-xs text-suave">Volta de {kmVolta?.toLocaleString("pt-BR")} km: {formatarBRL(a.custoVolta)} já descontados do lucro.</p>}
+          {ideal !== null && ideal !== oferta!.valor && <Aviso tom="info">Para ficar verde{comVolta && kmVolta ? " contando a volta" : ""}: peça pelo menos <strong>{formatarBRL(ideal)}</strong>.</Aviso>}
+          {ideal === null && a.sinal !== "verde" && <Aviso tom="perigo">Nem o dobro do valor deixa esta corrida verde.</Aviso>}
           <div className="grid grid-cols-2 gap-2">
             <Botao variante="secundario" icone={ThumbsDown} disabled={salvando} onClick={() => salvar("recusei")}>Não peguei</Botao>
             <Botao variante="secundario" icone={ThumbsUp} disabled={salvando} onClick={() => salvar("aceitei")}>Peguei</Botao>

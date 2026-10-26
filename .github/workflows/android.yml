@@ -34,3 +34,24 @@ jobs:
           name: aluguei-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14
+      # Play Store: com a chave de envio nos segredos do repositório, gera também o AAB
+      # assinado (docs/play-store.md). Sem os segredos, este passo não faz nada.
+      - name: AAB assinado para a Play Store
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ALUGUEI_KEYSTORE_BASE64 }}
+          ALUGUEI_KEYSTORE_SENHA: ${{ secrets.ALUGUEI_KEYSTORE_SENHA }}
+          ALUGUEI_CHAVE_ALIAS: ${{ secrets.ALUGUEI_CHAVE_ALIAS }}
+          ALUGUEI_CHAVE_SENHA: ${{ secrets.ALUGUEI_CHAVE_SENHA }}
+        working-directory: android
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "Sem chave de envio: pulando o AAB da Play Store."; exit 0; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/envio.jks"
+          export ALUGUEI_KEYSTORE_ARQUIVO="$RUNNER_TEMP/envio.jks"
+          ./gradlew bundleRelease --no-daemon
+          rm -f "$RUNNER_TEMP/envio.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aluguei-play-store-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+          retention-days: 30
