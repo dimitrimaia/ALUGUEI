@@ -3,6 +3,7 @@
     Configuração do leitor de corridas (LeitorCorridasService).
     packageNames vem de @string/pacotes_corridas (res/values/plantao.xml): a lista fica num lugar só.
     Sem flagRequestTouchExplorationMode, sem gestos, sem ações: só lê o texto da tela desses apps.
+    canTakeScreenshot: só para o "print das ofertas" (opcional, Android 11+, desligado por padrão).
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
@@ -10,6 +11,7 @@
     android:accessibilityFlags="flagDefault"
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="false"
+    android:canTakeScreenshot="true"
     android:isAccessibilityTool="false"
     android:notificationTimeout="300"
     android:packageNames="@string/pacotes_corridas"

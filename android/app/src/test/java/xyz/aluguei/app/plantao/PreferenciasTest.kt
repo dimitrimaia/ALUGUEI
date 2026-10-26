@@ -83,4 +83,73 @@ class PreferenciasTest {
             Preferencias.montarMensagem(Preferencias.MENSAGEM_PADRAO, hora = 9, nome = " Maria Clara ", minutos = 0.4),
         )
     }
+
+    @Test
+    fun `preferências novas - estilo, centro, navegação, câmera e print`() {
+        val p = Preferencias.PADRAO
+        assertEquals("completo", p.estiloCartao)
+        assertFalse(p.fixarCentro)
+        assertEquals("padrao", p.appNavegacao)
+        assertEquals(emptyList<PerfilRegua>(), p.perfis)
+        assertEquals(PreferenciasCamera("media", "frontal", 5, 8), p.camera)
+        assertFalse(p.printOfertas)
+        assertEquals(listOf("porKm", "porHora", "lucro", "nota", "distanciaTotal", "volta"), p.campos)
+
+        val q = Preferencias.deJson(
+            JSONObject()
+                .put("estiloCartao", "bordas")
+                .put("fixarCentro", true)
+                .put("appNavegacao", "waze")
+                .put("camera", JSONObject().put("qualidade", "alta").put("lente", "traseira").put("minutosPorArquivo", "10").put("limiteGb", 64))
+                .put("printOfertas", true),
+        )
+        assertEquals("bordas", q.estiloCartao)
+        assertEquals(true, q.fixarCentro)
+        assertEquals("waze", q.appNavegacao)
+        assertEquals(PreferenciasCamera("alta", "traseira", 10, 64), q.camera)
+        assertEquals(true, q.printOfertas)
+        assertEquals(q, Preferencias.deJson(q.paraJson()))
+
+        val r = Preferencias.deJson(
+            JSONObject()
+                .put("estiloCartao", "lateral")
+                .put("fixarCentro", "sim")
+                .put("appNavegacao", "uber")
+                .put("camera", JSONObject().put("qualidade", "4k").put("lente", "traseira").put("minutosPorArquivo", 31).put("limiteGb", 0.5))
+                .put("printOfertas", 1),
+        )
+        assertEquals("completo", r.estiloCartao)
+        assertFalse(r.fixarCentro)
+        assertEquals("padrao", r.appNavegacao)
+        assertEquals(PreferenciasCamera("media", "traseira", 5, 8), r.camera) // cada campo volta ao padrão dele
+        assertFalse(r.printOfertas)
+        assertEquals(Preferencias.CAMERA_PADRAO, Preferencias.deJson(JSONObject().put("camera", JSONArray())).camera)
+    }
+
+    @Test
+    fun `perfis - até 6, nome de 1 a 30 letras, qualquer item inválido zera`() {
+        fun perfil(nome: Any?, criterios: Any? = JSONObject().put("minimoPorKm", 250)) = JSONObject().put("nome", nome).put("criterios", criterios)
+        val ok = Preferencias.deJson(JSONObject().put("perfis", JSONArray().put(perfil(" Noite ")).put(perfil("Aeroporto", "x"))))
+        assertEquals(listOf("Noite", "Aeroporto"), ok.perfis.map { it.nome })
+        assertEquals(null, ok.perfis[1].criterios) // critério que não é objeto: aplica o padrão
+        assertEquals(ok, Preferencias.deJson(ok.paraJson()))
+        assertEquals(emptyList<PerfilRegua>(), Preferencias.deJson(JSONObject().put("perfis", JSONArray().put(perfil("Dia")).put(perfil("")))).perfis)
+        assertEquals(emptyList<PerfilRegua>(), Preferencias.deJson(JSONObject().put("perfis", JSONArray().put(perfil("x".repeat(31))))).perfis)
+        val sete = JSONArray().apply { repeat(7) { put(perfil("P$it")) } }
+        assertEquals(emptyList<PerfilRegua>(), Preferencias.deJson(JSONObject().put("perfis", sete)).perfis)
+        assertEquals(emptyList<PerfilRegua>(), Preferencias.deJson(JSONObject().put("perfis", "Dia")).perfis)
+    }
+
+    @Test
+    fun `perfil aplicado vira os critérios normalizados como a régua`() {
+        val criterios = JSONObject().put("minimoPorKm", 250).put("minimoPorHora", "5000").put("buscaMaximaKm", 500).put("contarVolta", true)
+        val p = Preferencias.deJson(JSONObject().put("perfis", JSONArray().put(JSONObject().put("nome", "Noite").put("criterios", criterios)))).perfis.single()
+        val c = p.criteriosNormalizados()
+        assertEquals(NormalizarCriterios.deJson(criterios), c)
+        assertEquals(250L, c.minimoPorKm)
+        assertEquals(5000L, c.minimoPorHora)
+        assertEquals(CRITERIOS_PADRAO.buscaMaximaKm, c.buscaMaximaKm, 0.0) // inválido volta ao padrão
+        assertEquals(true, c.contarVolta)
+        assertEquals(CRITERIOS_PADRAO, PerfilRegua("Vazio", null).criteriosNormalizados())
+    }
 }

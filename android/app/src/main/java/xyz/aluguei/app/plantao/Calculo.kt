@@ -240,6 +240,12 @@ private fun nivelMetrica(valor: Long, minimo: Long, bom: Long): Int {
 }
 
 /** Espelho de avaliarCorrida (corrida.ts): mesma ordem de regras e mesmos textos de motivos. */
+/**
+ * Chip "Contar volta para casa" do cartão: liga/desliga o contarVolta só no
+ * cálculo do cartão (a régua salva não muda). null = segue a régua.
+ */
+fun comVoltaDoCartao(c: Criterios, chip: Boolean?): Criterios = if (chip == null || chip == c.contarVolta) c else c.copy(contarVolta = chip)
+
 fun avaliarCorrida(o: Oferta, t: Taxas, c: Criterios): Avaliacao {
     val kmBusca = max(0.0, o.kmBusca ?: 0.0)
     val kmTotal = max(0.1, o.kmCorrida + kmBusca)

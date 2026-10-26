@@ -57,6 +57,17 @@
                 android:resource="@xml/leitor_corridas" />
         </service>
 
+        <!--
+            Câmera de segurança da corrida: grava em arquivos no próprio celular
+            (Movies/Aluguei/Corridas), com a notificação fixa "Câmera de segurança
+            gravando" e o botão Parar. Só começa com o Aluguei aberto. Microfone só
+            quando o motorista deu a permissão.
+        -->
+        <service
+            android:name=".plantao.CameraService"
+            android:exported="false"
+            android:foregroundServiceType="camera|microphone" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -91,10 +102,26 @@
     <!-- Pedir para o Android não suspender o Copiloto durante a jornada. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Câmera de segurança (opcional): vídeo da corrida só no celular; áudio só com a permissão do microfone. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <!-- Voz do Copiloto (TextToSpeech): o Android 11+ só mostra o motor de voz com esta consulta. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!-- Botões Embarque/Destino: saber se o Google Maps ou o Waze estão instalados (senão, o mapa padrão). -->
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.waze" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
         </intent>
     </queries>
 

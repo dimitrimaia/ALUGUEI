@@ -21,8 +21,25 @@ android {
         // Os testes JUnit do plantão (Calculo, LeitorOferta, Formato, Preferencias, Volta) são Kotlin puro.
         unitTests.returnDefaultValues = true
     }
+    // Assinatura do release pelo ambiente (CI); sem as variáveis, o release sai sem assinatura.
+    def ksArquivo = System.getenv("ALUGUEI_KEYSTORE_ARQUIVO")
+    def ksSenha = System.getenv("ALUGUEI_KEYSTORE_SENHA")
+    def chaveAlias = System.getenv("ALUGUEI_CHAVE_ALIAS")
+    def chaveSenha = System.getenv("ALUGUEI_CHAVE_SENHA")
+    def assinar = ksArquivo && ksSenha && chaveAlias && chaveSenha && file(ksArquivo).exists()
+    signingConfigs {
+        if (assinar) {
+            release {
+                storeFile file(ksArquivo)
+                storePassword ksSenha
+                keyAlias chaveAlias
+                keyPassword chaveSenha
+            }
+        }
+    }
     buildTypes {
         release {
+            if (assinar) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

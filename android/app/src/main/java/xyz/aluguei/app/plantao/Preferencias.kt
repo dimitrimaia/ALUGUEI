@@ -20,6 +20,30 @@ import kotlin.math.max
 /** Casa ou ponto preferido, para o custo da volta. */
 data class Base(val nome: String, val lat: Double, val lon: Double)
 
+/**
+ * Régua salva (ex.: Dia, Noite, Aeroporto), trocada pelo menu da bolha.
+ * [criterios] é o JSON (texto) dos critérios no formato de custos.ts, ou null se
+ * não veio um objeto; é normalizado só na hora de aplicar (como a régua).
+ */
+data class PerfilRegua(val nome: String, val criterios: String?) {
+    fun criteriosJson(): JSONObject? = criterios?.let { runCatching { JSONObject(it) }.getOrNull() }
+
+    /** Critérios que este perfil aplica (normalizados como a régua: inválido volta ao padrão). */
+    fun criteriosNormalizados(): Criterios = NormalizarCriterios.deJson(criteriosJson())
+}
+
+/** Câmera de segurança da corrida (grava só no celular). */
+data class PreferenciasCamera(
+    /** baixa (360p) | media (480p) | alta (720p) */
+    val qualidade: String,
+    /** frontal | traseira */
+    val lente: String,
+    /** 1 a 30 */
+    val minutosPorArquivo: Int,
+    /** 1 a 128 */
+    val limiteGb: Int,
+)
+
 data class PreferenciasCopiloto(
     /** Campos do cartão, na ordem (máximo 6; os 3 primeiros são os grandes). */
     val campos: List<String>,
@@ -44,6 +68,17 @@ data class PreferenciasCopiloto(
     val base: Base?,
     /** O leitor dorme quando o app de corrida está offline. */
     val economia: Boolean,
+    /** completo (cartão único) | bordas (peças pequenas coladas na borda da tela). */
+    val estiloCartao: String = "completo",
+    /** Cartão sempre no centro da largura (só sobe e desce ao arrastar). */
+    val fixarCentro: Boolean = false,
+    /** padrao | maps | waze | perguntar: app que os botões Embarque e Destino abrem. */
+    val appNavegacao: String = "padrao",
+    /** Réguas salvas (até 6). */
+    val perfis: List<PerfilRegua> = emptyList(),
+    val camera: PreferenciasCamera = Preferencias.CAMERA_PADRAO,
+    /** Guarda um print de cada oferta lida (Android 11+). */
+    val printOfertas: Boolean = false,
 ) {
     /** Escala do texto do cartão: p 0,9 · m 1 · g 1,15. */
     val escalaFonte: Float get() = when (tamanhoFonte) {
@@ -65,6 +100,21 @@ data class PreferenciasCopiloto(
         put("mensagem", mensagem)
         put("base", base?.let { JSONObject().put("nome", it.nome).put("lat", it.lat).put("lon", it.lon) } ?: JSONObject.NULL)
         put("economia", economia)
+        put("estiloCartao", estiloCartao)
+        put("fixarCentro", fixarCentro)
+        put("appNavegacao", appNavegacao)
+        put("perfis", JSONArray().apply {
+            perfis.forEach { pr -> put(JSONObject().put("nome", pr.nome).put("criterios", pr.criteriosJson() ?: JSONObject.NULL)) }
+        })
+        put(
+            "camera",
+            JSONObject()
+                .put("qualidade", camera.qualidade)
+                .put("lente", camera.lente)
+                .put("minutosPorArquivo", camera.minutosPorArquivo)
+                .put("limiteGb", camera.limiteGb),
+        )
+        put("printOfertas", printOfertas)
     }
 }
 
@@ -73,8 +123,12 @@ object Preferencias {
 
     const val MENSAGEM_PADRAO = "{saudacao}, {nome}! Já estou a caminho e chego em aproximadamente {tempo}. Por gentileza, me aguarde no local de embarque."
 
+    val CAMERA_PADRAO = PreferenciasCamera(qualidade = "media", lente = "frontal", minutosPorArquivo = 5, limiteGb = 8)
+
+    const val MAXIMO_PERFIS = 6
+
     val PADRAO = PreferenciasCopiloto(
-        campos = listOf("porKm", "porHora", "lucro", "nota", "tempoTotal", "distanciaTotal"),
+        campos = listOf("porKm", "porHora", "lucro", "nota", "distanciaTotal", "volta"),
         tamanhoFonte = "m",
         segundosCartao = 12,
         opacidadeBolha = 100,
@@ -86,6 +140,12 @@ object Preferencias {
         mensagem = MENSAGEM_PADRAO,
         base = null,
         economia = true,
+        estiloCartao = "completo",
+        fixarCentro = false,
+        appNavegacao = "padrao",
+        perfis = emptyList(),
+        camera = CAMERA_PADRAO,
+        printOfertas = false,
     )
 
     /** Igual ao normalizarPreferenciasCopiloto do TS: campo inválido volta ao padrão daquele campo. */
@@ -110,6 +170,34 @@ object Preferencias {
             mensagem = (o.opt("mensagem") as? String)?.trim()?.takeIf { it.length in 3..300 } ?: MENSAGEM_PADRAO,
             base = baseDeJson(o.opt("base")),
             economia = Json.booleano(o, "economia") ?: true,
+            estiloCartao = (o.opt("estiloCartao") as? String)?.takeIf { it in setOf("completo", "bordas") } ?: "completo",
+            fixarCentro = Json.booleano(o, "fixarCentro") ?: false,
+            appNavegacao = (o.opt("appNavegacao") as? String)?.takeIf { it in Navegacao.APPS } ?: "padrao",
+            perfis = perfisDeJson(o.opt("perfis")),
+            camera = cameraDeJson(o.opt("camera")),
+            printOfertas = Json.booleano(o, "printOfertas") ?: false,
+        )
+    }
+
+    /** z.array({ nome 1..30 (sem espaços nas pontas), criterios: unknown }).max(6): qualquer item inválido zera a lista. */
+    fun perfisDeJson(v: Any?): List<PerfilRegua> {
+        val arr = v as? JSONArray ?: return emptyList()
+        if (arr.length() > MAXIMO_PERFIS) return emptyList()
+        return (0 until arr.length()).map { i ->
+            val p = arr.opt(i) as? JSONObject ?: return emptyList()
+            val nome = (p.opt("nome") as? String)?.trim()?.takeIf { it.length in 1..30 } ?: return emptyList()
+            PerfilRegua(nome, (p.opt("criterios") as? JSONObject)?.toString())
+        }
+    }
+
+    /** Cada campo inválido volta ao padrão dele; se não for objeto, a câmera inteira volta ao padrão. */
+    fun cameraDeJson(v: Any?): PreferenciasCamera {
+        val c = v as? JSONObject ?: return CAMERA_PADRAO
+        return PreferenciasCamera(
+            qualidade = (c.opt("qualidade") as? String)?.takeIf { it in setOf("baixa", "media", "alta") } ?: "media",
+            lente = (c.opt("lente") as? String)?.takeIf { it in setOf("frontal", "traseira") } ?: "frontal",
+            minutosPorArquivo = Json.numero(c, "minutosPorArquivo", 1.0, 30.0, inteiro = true)?.toInt() ?: 5,
+            limiteGb = Json.numero(c, "limiteGb", 1.0, 128.0, inteiro = true)?.toInt() ?: 8,
         )
     }
 

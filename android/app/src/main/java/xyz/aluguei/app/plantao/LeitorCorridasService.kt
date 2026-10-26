@@ -1,9 +1,15 @@
 package xyz.aluguei.app.plantao
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.MediaStore
+import android.view.Display
+import java.util.concurrent.Executors
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -23,7 +29,12 @@ import android.view.accessibility.AccessibilityNodeInfo
  * "Online" ou uma oferta (e confere a tela inteira a cada 2 s em telas novas,
  * ou a cada 20 s no máximo).
  *
- * O que NÃO faz: não guarda a tela, não envia nada para fora do aparelho e não
+ * Print das ofertas (preferencias.printOfertas, Android 11+): quando uma oferta
+ * nova é lida, guarda UM print da tela em Pictures/Aluguei/Ofertas (JPEG), para o
+ * motorista contestar no app de corrida. No máximo 1 a cada 3 s, comprimido numa
+ * thread de fundo. Abaixo do Android 11 fica desligado (aviso no diagnóstico).
+ *
+ * O que NÃO faz: não guarda a tela (fora o print acima, só se o motorista ligar), não envia nada para fora do aparelho e não
  * executa nenhuma ação (performAction, gestos) nos outros apps. Quem aceita,
  * recusa ou oferece tarifa é sempre o motorista.
  */
@@ -37,6 +48,14 @@ class LeitorCorridasService : AccessibilityService() {
         @Volatile
         var dormindo = false
             private set
+
+        /** O leitor ligado agora (para a BolhaService pedir o print da oferta). */
+        @Volatile
+        var instancia: LeitorCorridasService? = null
+            private set
+
+        /** O print das ofertas funciona neste Android? (takeScreenshot é do Android 11+.) */
+        val printDisponivel: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
         private const val MAXIMO_NOS = 500
         private const val MAXIMO_PROFUNDIDADE = 30
@@ -62,8 +81,13 @@ class LeitorCorridasService : AccessibilityService() {
     /** Só o hash da última lista lida, para não reprocessar a mesma tela. */
     private var ultimoHash = 0
 
+    /** Fila de uma thread só para comprimir e salvar os prints (nunca na thread principal). */
+    private val fundo = Executors.newSingleThreadExecutor()
+    private var ultimoPrint: Long? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instancia = this
         pacotes = Pacotes.lista(this)
         // O motorista acabou de ligar o leitor a partir do Aluguei: volta para o app sozinho.
         val pedido = Armazenamento.pedidoAcessibilidadeEm(this)
@@ -153,8 +177,79 @@ class LeitorCorridasService : AccessibilityService() {
         PlantaoPlugin.emitirEstado(this)
     }
 
+    /**
+     * Guarda um print da oferta que acabou de ser lida (chamado pela BolhaService uma
+     * vez por oferta). Sem travar: o Android tira o print em segundo plano, e a
+     * compressão e o salvamento vão para a thread de fundo. Qualquer erro: sem print.
+     */
+    fun printOferta(valor: Long?, app: String?) {
+        if (!printDisponivel) return
+        if (!Armazenamento.preferencias(this).printOfertas) return
+        val agora = SystemClock.elapsedRealtime()
+        if (!Gravacoes.podePrint(agora, ultimoPrint)) return
+        ultimoPrint = agora
+        val nome = Gravacoes.nomePrint(System.currentTimeMillis(), valor, app)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        try {
+            takeScreenshot(
+                Display.DEFAULT_DISPLAY,
+                fundo,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(resultado: ScreenshotResult) {
+                        salvarPrint(resultado, nome)
+                    }
+
+                    override fun onFailure(erro: Int) {
+                        // muito seguido ou tela protegida: sem print desta vez
+                    }
+                },
+            )
+        } catch (e: RuntimeException) {
+            // sem print
+        }
+    }
+
+    /** Na thread de fundo: HardwareBuffer → JPEG 80% → MediaStore. */
+    private fun salvarPrint(resultado: ScreenshotResult, nome: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val buffer = resultado.hardwareBuffer
+        try {
+            val hw = Bitmap.wrapHardwareBuffer(buffer, resultado.colorSpace) ?: return
+            val bmp = hw.copy(Bitmap.Config.ARGB_8888, false)
+            hw.recycle()
+            if (bmp == null) return
+            try {
+                val valores = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, nome)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, Gravacoes.PASTA_PRINTS)
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+                val uri = contentResolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), valores) ?: return
+                val ok = contentResolver.openOutputStream(uri)?.use { bmp.compress(Bitmap.CompressFormat.JPEG, 80, it) } ?: false
+                if (ok) {
+                    contentResolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
+                } else {
+                    contentResolver.delete(uri, null, null)
+                }
+            } finally {
+                bmp.recycle()
+            }
+        } catch (e: Exception) {
+            // sem espaço etc.: sem print
+        } finally {
+            try {
+                buffer.close()
+            } catch (e: Exception) {
+                // ok
+            }
+        }
+    }
+
     override fun onDestroy() {
         principal.removeCallbacks(lerPendente)
+        if (instancia === this) instancia = null
+        fundo.shutdown()
         dormindo = false
         super.onDestroy()
     }

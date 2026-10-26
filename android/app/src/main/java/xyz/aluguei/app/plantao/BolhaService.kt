@@ -7,6 +7,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -109,6 +110,8 @@ class BolhaService : Service() {
         /** inDrive: tela sem oferta por este tempo = a oferta sumiu. */
         private const val SUMICO_MS = 1_500L
         private const val FUSO = "America/Sao_Paulo"
+        /** Posição (y) salva das peças do estilo "bordas". */
+        private const val CHAVE_BORDAS = "bordas"
 
         /** Agora no fuso de Brasília. */
         fun agoraBrasilia(): Calendar = Calendar.getInstance(TimeZone.getTimeZone(FUSO))
@@ -165,6 +168,10 @@ class BolhaService : Service() {
     private var cartaoOferta: OfertaDetalhada? = null
     private var cartaoVolta: EstadoVolta = EstadoVolta.Nenhuma
     private var cartaoFaixa: String? = null
+    /** O cartão na tela é o das bordas (estilo "bordas" ainda não expandido). */
+    private var cartaoEmBordas = false
+    /** Estilo "bordas": o motorista tocou e o cartão completo está aberto (volta às bordas na próxima oferta). */
+    private var cartaoExpandido = false
     /** O cartão foi fechado no ✕ ou arrastado para o lado (não pergunta "Você aceitou?"). */
     private var cartaoDispensado = false
     private val fecharCartaoNoTempo = Runnable { ofertaSumiu() }
@@ -179,6 +186,7 @@ class BolhaService : Service() {
     /** Última vez (elapsedRealtime) que o leitor viu a oferta aberta (para saber quando ela sumiu). */
     private var ofertaVistaEm = 0L
     private var circuloBolha: View? = null
+    private var sombraBolha: View? = null
     /** Escala do texto enquanto monta o cartão (preferencias.tamanhoFonte). */
     private var escalaTexto = 1f
 
@@ -280,6 +288,7 @@ class BolhaService : Service() {
         }
         val p = Armazenamento.preferencias(this)
         circuloBolha?.alpha = p.opacidadeBolha / 100f
+        sombraBolha?.alpha = p.opacidadeBolha / 100f
         avisos?.aplicar(p.voz)
         redesenharCartao()
     }
@@ -349,11 +358,39 @@ class BolhaService : Service() {
     private val imutavel: Int get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
 
     private fun intentNavegar(codigo: Int, endereco: String): PendingIntent =
-        PendingIntent.getActivity(
-            this, codigo,
-            Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(endereco))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            imutavel or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+        PendingIntent.getActivity(this, codigo, intentNavegacao(endereco), imutavel or PendingIntent.FLAG_UPDATE_CURRENT)
+
+    @Suppress("DEPRECATION")
+    private fun pacoteInstalado(pacote: String): Boolean = try {
+        packageManager.getPackageInfo(pacote, 0)
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun intentDe(alvo: Navegacao.Alvo): Intent {
+        val i = Intent(Intent.ACTION_VIEW, Uri.parse(alvo.uri))
+        alvo.pacote?.let { i.setPackage(it) }
+        val final = if (alvo.perguntar) Intent.createChooser(i, "Abrir com") else i
+        return final.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    /** Intent de Embarque/Destino pelo app escolhido (appNavegacao); sem o app instalado, o padrão (geo:). */
+    private fun intentNavegacao(endereco: String): Intent =
+        intentDe(Navegacao.escolher(Armazenamento.preferencias(this).appNavegacao, endereco) { pacoteInstalado(it) })
+
+    /** Botões Embarque/Destino do cartão: abre o app de navegação (é o motorista que toca). */
+    private fun abrirNavegacao(endereco: String) {
+        try {
+            startActivity(intentNavegacao(endereco))
+        } catch (e: RuntimeException) {
+            try {
+                startActivity(intentDe(Navegacao.padrao(endereco)))
+            } catch (e2: RuntimeException) {
+                aviso("Nenhum app de mapas para abrir o endereço.")
+            }
+        }
+    }
 
     private fun emojiDoSinal(s: Sinal) = when (s) {
         Sinal.VERDE -> "🟢"
@@ -447,7 +484,8 @@ class BolhaService : Service() {
 
     private fun parametros(largura: Int, altura: Int, flags: Int) = WindowManager.LayoutParams(
         largura, altura, tipoJanela,
-        flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+        // Aceleração de hardware: janela de serviço não ganha sozinha (sem ela, sombras e cantos saem errados).
+        flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
         PixelFormat.TRANSLUCENT,
     )
 
@@ -497,6 +535,29 @@ class BolhaService : Service() {
         cornerRadius = dp(raioDp).toFloat()
         setColor(cor)
         if (borda != null) setStroke(dp(1), borda)
+    }
+
+    /** Folga em volta das peças com sombra (pequena: é área da janela que não deixa o toque passar). */
+    private val folgaLado get() = dp(6)
+    private val folgaTopo get() = dp(3)
+    private val folgaBaixo get() = dp(10)
+
+    /**
+     * Moldura transparente com a sombra suave desenhada em volta de [corpo]
+     * (cantos de [raioDp]); a janela é a moldura, então a sombra não é cortada.
+     */
+    private fun moldura(
+        corpo: View,
+        raioDp: Number,
+        base: FrameLayout = FrameLayout(ui),
+        esquerda: Int = folgaLado,
+        direita: Int = folgaLado,
+    ): FrameLayout = base.apply {
+        clipChildren = false
+        clipToPadding = false
+        setPadding(esquerda, folgaTopo, direita, folgaBaixo)
+        background = Sombra(dp(raioDp).toFloat(), esquerda, folgaTopo, direita, folgaBaixo, dp(7).toFloat(), dp(2).toFloat())
+        addView(corpo, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
 
     private fun circulo(cor: Int, borda: Int? = null, larguraBorda: Int = 2): GradientDrawable = GradientDrawable().apply {
@@ -563,13 +624,13 @@ class BolhaService : Service() {
     // ------------------------------------------------------------------ bolha
 
     private val tamanhoBolha get() = dp(52)
-    private val janelaBolha get() = dp(62)
+    /** Janela da bolha: o círculo mais a folga da sombra (redonda, sem cortar). */
+    private val janelaBolha get() = dp(68)
 
     @SuppressLint("ClickableViewAccessibility")
     private fun mostrarBolha() {
         val circuloView = FrameLayout(ui).apply {
             background = circulo(MARCA, BRANCO, 2)
-            elevation = dp(6).toFloat()
             alpha = Armazenamento.preferencias(this@BolhaService).opacidadeBolha / 100f
             addView(
                 ImageView(ui).apply {
@@ -581,13 +642,19 @@ class BolhaService : Service() {
         }
         val ponto = View(ui).apply {
             background = circulo(if (Armazenamento.pausado(this@BolhaService)) PAUSADO else LENDO, BRANCO, 2)
-            elevation = dp(7).toFloat()
+        }
+        // Sombra redonda desenhada à mão (a elevação saía quadrada/cortada na janela da bolha).
+        val margemSombra = (janelaBolha - tamanhoBolha) / 2
+        val sombra = View(ui).apply {
+            background = Sombra(tamanhoBolha / 2f, margemSombra, margemSombra, margemSombra, margemSombra, (margemSombra - dp(3)).toFloat(), dp(2).toFloat(), forca = 110)
+            alpha = Armazenamento.preferencias(this@BolhaService).opacidadeBolha / 100f
         }
         val v = FrameLayout(ui).apply {
             contentDescription = getString(R.string.plantao_bolha_descricao)
             clipChildren = false
+            addView(sombra, FrameLayout.LayoutParams(janelaBolha, janelaBolha, Gravity.CENTER))
             addView(circuloView, FrameLayout.LayoutParams(tamanhoBolha, tamanhoBolha, Gravity.CENTER))
-            addView(ponto, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.TOP or Gravity.END).apply { topMargin = dp(4); marginEnd = dp(4) })
+            addView(ponto, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.TOP or Gravity.END).apply { topMargin = dp(7); marginEnd = dp(7) })
         }
         val (largura, altura) = tela()
         val salva = Armazenamento.posicaoBolha(this)
@@ -657,6 +724,7 @@ class BolhaService : Service() {
         bolhaParams = p
         pontoStatus = ponto
         circuloBolha = circuloView
+        sombraBolha = sombra
     }
 
     private fun atualizarPonto() {
@@ -729,7 +797,12 @@ class BolhaService : Service() {
 
     private fun mostrarRotuloDiag() {
         if (rotuloDiag != null) return
-        val v = texto(if (Armazenamento.pausado(this)) "pausado" else "esperando uma tela…", 11f, BRANCO, true).apply {
+        val inicial = when {
+            Armazenamento.pausado(this) -> "pausado"
+            Armazenamento.preferencias(this).printOfertas && !LeitorCorridasService.printDisponivel -> "print das ofertas: precisa do Android 11+ (desligado)"
+            else -> "esperando uma tela…"
+        }
+        val v = texto(inicial, 11f, BRANCO, true).apply {
             background = fundoArredondado(0xE60B1630.toInt(), 8)
             setPadding(dp(8), dp(4), dp(8), dp(4))
             maxLines = 2
@@ -782,7 +855,8 @@ class BolhaService : Service() {
         val pausado = Armazenamento.pausado(this)
         val escuro = temaEscuro()
         val diag = Armazenamento.diagnostico(this)
-        val itens = listOf(
+        val perfis = Armazenamento.preferencias(this).perfis
+        val itens = listOfNotNull(
             ItemMenu(if (pausado) "▶" else "❚❚", if (pausado) "Retomar" else "Pausar") { alternarPausa() },
             ItemMenu("✎", "Digitar oferta") { abrirPainel() },
             ItemMenu("◐", if (escuro) "Tema claro" else "Tema escuro") {
@@ -790,6 +864,8 @@ class BolhaService : Service() {
                 redesenharCartao()
             },
             ItemMenu("±", "Régua rápida") { abrirRegua() },
+            if (perfis.isNotEmpty()) ItemMenu("☰", "Perfil: ${Armazenamento.perfilAtivo(this) ?: "escolher"}") { abrirPerfis() } else null,
+            if (CameraService.gravando) ItemMenu("●", "Câmera: parar") { CameraService.parar(this) } else null,
             ItemMenu("Σ", "Resumo do dia") { abrirResumo() },
             ItemMenu("⌂", "Definir base aqui") { definirBaseAqui() },
             ItemMenu("ⓘ", if (diag) "Diagnóstico: ligado" else "Diagnóstico") {
@@ -843,7 +919,7 @@ class BolhaService : Service() {
                     addView(
                         texto(item.icone, 13f, BRANCO, true).apply {
                             gravity = Gravity.CENTER
-                            background = circulo(if (item.rotulo == "Desligar") VERMELHO else MARCA)
+                            background = circulo(if (item.rotulo == "Desligar" || item.rotulo == "Câmera: parar") VERMELHO else MARCA)
                         },
                         LinearLayout.LayoutParams(dp(30), dp(30)),
                     )
@@ -912,11 +988,12 @@ class BolhaService : Service() {
     private fun mostrarFlutuante(conteudo: View, aoFechar: (() -> Unit)? = null) {
         fecharFlutuante()
         val pal = paleta()
-        val raiz = FrameLayout(ui).apply {
+        val corpo = FrameLayout(ui).apply {
             background = fundoArredondado(pal.fundo, 20, pal.borda)
-            elevation = dp(8).toFloat()
             setPadding(dp(16), dp(14), dp(16), dp(14))
             addView(conteudo)
+        }
+        val raiz = moldura(corpo, 20).apply {
             setOnTouchListener { _, e ->
                 if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) {
                     fecharFlutuante(); true
@@ -929,7 +1006,7 @@ class BolhaService : Service() {
         }
         val (largura, _) = tela()
         val p = parametros(
-            min(largura - dp(24), dp(380)),
+            min(largura - dp(24), dp(380)) + 2 * folgaLado,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
         ).apply {
@@ -1034,6 +1111,43 @@ class BolhaService : Service() {
             addView(item("Ganho (aceitas)", Formato.brl(r.ganho)), margem(10))
             addView(item("Lucro estimado", Formato.brl(r.lucro)), margem(10))
             addView(texto("Conta só o que você marcou como \"Aceitei\" no cartão.", 11f, pal.secundario), margem(12))
+        }
+        mostrarFlutuante(conteudo)
+    }
+
+    /** Lista dos perfis de régua: escolher aplica os critérios na hora e avisa o app web (evento "perfil"). */
+    private fun abrirPerfis() {
+        val pal = paleta()
+        val perfis = Armazenamento.preferencias(this).perfis
+        val ativo = Armazenamento.perfilAtivo(this)
+        val conteudo = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(cabecalho("Perfil da régua", pal) { fecharFlutuante() })
+            addView(texto("Troca a régua inteira agora; o Aluguei salva na sua conta quando abrir.", 12f, pal.secundario), margem(2))
+            perfis.forEach { perfil ->
+                val escolhido = perfil.nome == ativo
+                val c = perfil.criteriosNormalizados()
+                addView(
+                    LinearLayout(ui).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        background = if (escolhido) fundoArredondado(comAlfa(MARCA, 0x26), 12, MARCA) else fundoArredondado(pal.superficie, 12, pal.borda)
+                        setPadding(dp(12), dp(10), dp(12), dp(10))
+                        addView(texto(perfil.nome, 15f, pal.texto, true), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        addView(texto("${Formato.brl(c.minimoPorKm)}/km · ${Copiloto.reais(c.minimoPorHora)}/h", 12f, pal.secundario))
+                        isClickable = true
+                        contentDescription = "Usar o perfil ${perfil.nome}"
+                        setOnClickListener {
+                            Armazenamento.aplicarPerfil(this@BolhaService, perfil)
+                            PlantaoPlugin.emitirPerfil(perfil.nome, perfil.criteriosJson())
+                            fecharFlutuante()
+                            redesenharCartao()
+                            aviso("Perfil ${perfil.nome} em uso")
+                        }
+                    },
+                    margem(8),
+                )
+            }
         }
         mostrarFlutuante(conteudo)
     }
@@ -1208,7 +1322,6 @@ class BolhaService : Service() {
         raiz.apply {
             orientation = LinearLayout.VERTICAL
             background = fundoArredondado(pal.fundo, 20, pal.borda)
-            elevation = dp(8).toFloat()
             setPadding(dp(16), dp(12), dp(16), dp(16))
             isFocusableInTouchMode = true
             descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
@@ -1230,6 +1343,9 @@ class BolhaService : Service() {
                 ),
                 margem(12),
             )
+        }
+        // A janela é a moldura (com a sombra); o toque fora chega nela.
+        val janela = moldura(raiz, 20).apply {
             setOnTouchListener { v, e ->
                 if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) {
                     if (!tecladoVisivel(v)) fecharPainel()
@@ -1252,7 +1368,7 @@ class BolhaService : Service() {
 
         val (largura, _) = tela()
         val p = parametros(
-            min(largura - dp(16), dp(420)),
+            min(largura - dp(16), dp(420)) + 2 * folgaLado,
             WindowManager.LayoutParams.WRAP_CONTENT,
             // Focável (para o teclado, só quando tocar num campo); toques fora vão para o app de baixo.
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
@@ -1261,10 +1377,10 @@ class BolhaService : Service() {
             y = alturaBarraStatus() + dp(8)
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
         }
-        if (!adicionar(raiz, p)) return
-        painel = raiz
+        if (!adicionar(janela, p)) return
+        painel = janela
         raiz.requestFocus() // o foco fica no painel, não no campo: o teclado não abre sozinho
-        raiz.animate().alpha(1f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
+        janela.animate().alpha(1f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
     }
 
     private fun fecharPainel() {
@@ -1341,6 +1457,10 @@ class BolhaService : Service() {
         ofertaAberta = comVolta
         val corrida = registrarOferta(comVolta, "leitura", mostrar = true)
         ofertaAbertaId = corrida.id
+        // Print da oferta (se ligado): uma vez por oferta, com o cartão já na tela; não trava (fundo).
+        if (Armazenamento.preferencias(this).printOfertas) {
+            principal.postDelayed({ LeitorCorridasService.instancia?.printOferta(comVolta.suaOferta ?: comVolta.valor, comVolta.app) }, 350)
+        }
     }
 
     private fun tratarContraproposta(app: String, valor: Long) {
@@ -1361,10 +1481,25 @@ class BolhaService : Service() {
         atualizarNotificacao()
     }
 
+    /** Critérios salvos com o chip "Contar volta para casa" do cartão aplicado (só no aparelho). */
+    private fun criteriosDoCartao(): Criterios = comVoltaDoCartao(Armazenamento.criterios(this), Armazenamento.voltaCartao(this))
+
+    /** Chip do cartão: liga/desliga a volta no cálculo e recalcula na hora (busca a volta se faltar). */
+    private fun alternarVoltaCartao() {
+        val novo = !criteriosDoCartao().contarVolta
+        Armazenamento.definirVoltaCartao(this, novo)
+        val o = cartaoOferta ?: return
+        val c = cartaoCorrida ?: return
+        val (comVolta, estado) = prepararVolta(o)
+        cartaoVolta = estado
+        mostrarCartao(comVolta, avaliar(comVolta), c, cartaoOrigem, animar = false, volta = estado, faixa = cartaoFaixa)
+        if (estado == EstadoVolta.Calculando) pedirVolta(comVolta, c.id)
+    }
+
     /** Régua que vale agora (faixa de horário pelo relógio de Brasília). */
     private fun reguaAgora(): ReguaNoHorario {
         val agora = agoraBrasilia()
-        return criteriosNoHorario(Armazenamento.criterios(this), agora.get(Calendar.HOUR_OF_DAY) * 60 + agora.get(Calendar.MINUTE))
+        return criteriosNoHorario(criteriosDoCartao(), agora.get(Calendar.HOUR_OF_DAY) * 60 + agora.get(Calendar.MINUTE))
     }
 
     private fun avaliar(o: OfertaDetalhada, c: Criterios = reguaAgora().criterios): Copiloto.Resultado =
@@ -1436,7 +1571,7 @@ class BolhaService : Service() {
 
     /** A volta entra no cartão quando a régua conta a volta ou o motorista escolheu o campo "volta". */
     private fun voltaAplicavel(o: OfertaDetalhada): Boolean =
-        o.destino != null && (Armazenamento.criterios(this).contarVolta || "volta" in Armazenamento.preferencias(this).campos)
+        o.destino != null && (criteriosDoCartao().contarVolta || "volta" in Armazenamento.preferencias(this).campos)
 
     /** Base das preferências (ou definida pela bolha); sem base, "onde estou agora". */
     private fun pontoBase(): Ponto? = Armazenamento.preferencias(this).base?.let { Ponto(it.lat, it.lon) } ?: Localizacao.ultima(this)
@@ -1510,7 +1645,7 @@ class BolhaService : Service() {
 
     /** Cartão que dá para arrastar na vertical (muda a posição) e para o lado (fecha). */
     @SuppressLint("ViewConstructor")
-    private inner class CartaoLayout(ctx: Context, private val app: String) : FrameLayout(ctx) {
+    private inner class CartaoLayout(ctx: Context, private val app: String, private val soVertical: Boolean) : FrameLayout(ctx) {
         private val folga = ViewConfiguration.get(ctx).scaledTouchSlop
         private var x0 = 0f
         private var y0 = 0f
@@ -1537,7 +1672,8 @@ class BolhaService : Service() {
             val dx = e.rawX - x0
             val dy = e.rawY - y0
             if (abs(dx) < folga && abs(dy) < folga) return false
-            modo = if (abs(dx) > abs(dy)) 2 else 1
+            // fixarCentro: o cartão só sobe e desce (não sai de lado nem sai do centro).
+            modo = if (!soVertical && abs(dx) > abs(dy)) 2 else 1
             return true
         }
 
@@ -1614,14 +1750,21 @@ class BolhaService : Service() {
     ) {
         // Redesenho (volta chegou, tema, régua): o tempo na tela continua contando.
         if (animar) principal.removeCallbacks(fecharCartaoNoTempo)
+        if (animar) cartaoExpandido = false
+        val bordas = prefs.estiloCartao == "bordas" && !cartaoExpandido
         val antigo = cartao
-        val yAntigo = cartaoParams?.y
+        // A posição só é reaproveitada no redesenho do mesmo estilo (bordas e cartão guardam a sua).
+        val yAntigo = cartaoParams?.y?.takeIf { cartaoEmBordas == bordas }
         cartao = null
         if (animar) fecharMini()
         val pal = paleta()
         val a = r.avaliacao
         val cor = corDoSinal(a.sinal)
         val chaveApp = if (origem == "digitada" && o.app == "outra") "digitada" else o.app
+        if (bordas) {
+            montarBordas(o, r, corrida, origem, animar, volta, faixa, prefs, antigo, yAntigo)
+            return
+        }
         val dados = Cartao.Dados(o, a, volta, custoDaVolta(o))
 
         // Linha 1: ícone do app, passageiro, faixa de horário e selo do sinal.
@@ -1731,6 +1874,32 @@ class BolhaService : Service() {
                     addView(caixaSugestao(it, pal), margem(8))
                 }
             }
+            // Chip "Contar volta para casa": só muda o cálculo deste cartão (a régua salva fica igual).
+            if (o.destino != null) {
+                val ligada = criteriosDoCartao().contarVolta
+                val rotulo = if (!ligada) "☐ Contar volta para casa" else when (volta) {
+                    EstadoVolta.Calculando -> "☑ Contar volta · calculando volta…"
+                    else -> "☑ Contar volta · ${Cartao.textoVolta(dados)}"
+                }
+                addView(
+                    texto(rotulo, 12f, if (ligada) BRANCO else pal.destaque, true).apply {
+                        background = if (ligada) fundoArredondado(pal.destaque, 99) else fundoArredondado(Color.TRANSPARENT, 99, comAlfa(pal.destaque, 0x66))
+                        setPadding(dp(10), dp(5), dp(10), dp(5))
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                        isClickable = true
+                        contentDescription = if (ligada) "Parar de contar a volta para casa" else "Contar a volta para casa"
+                        setOnClickListener { alternarVoltaCartao() }
+                    },
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+                )
+            }
+            // Embarque e Destino: abrem o app de navegação escolhido (appNavegacao).
+            val navegar = listOfNotNull(
+                o.embarque?.let { e -> botao("Embarque", pal.destaque, false) { abrirNavegacao(e) }.apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * escalaTexto); setPadding(dp(8), dp(6), dp(8), dp(6)) } },
+                o.destino?.let { d -> botao("Destino", pal.destaque, false) { abrirNavegacao(d) }.apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * escalaTexto); setPadding(dp(8), dp(6), dp(8), dp(6)) } },
+            )
+            if (navegar.isNotEmpty()) addView(linha(*navegar.toTypedArray(), espaco = 8), margem(8))
             addView(
                 linha(
                     botao(getString(R.string.plantao_recusei), pal.secundario, false) { decidir(corrida, CorridaAvaliada.RECUSEI, o) },
@@ -1741,10 +1910,9 @@ class BolhaService : Service() {
             )
         }
 
-        val raiz = CartaoLayout(ui, chaveApp).apply {
+        val corpo = FrameLayout(ui).apply {
             background = fundoArredondado(pal.fundo, 20, pal.borda)
-            clipToOutline = true
-            elevation = dp(8).toFloat()
+            clipToOutline = true // a faixa colorida acompanha o canto arredondado
             addView(
                 LinearLayout(ui).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -1754,28 +1922,61 @@ class BolhaService : Service() {
                 FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
             )
         }
+        // A janela é a moldura com a sombra arredondada (antes a sombra saía cortada/quadrada).
+        val raiz = moldura(corpo, 20, CartaoLayout(ui, chaveApp, prefs.fixarCentro))
 
         val (largura, altura) = tela()
         val yPadrao = alturaBarraStatus() + dp(6)
         val p = parametros(
-            min(largura - dp(16), dp(420)),
+            min(largura - dp(16), dp(420)) + 2 * folgaLado,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         ).apply {
+            // Sempre no centro da largura (fixarCentro só tira o arrastar para o lado).
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            x = 0
             y = ((if (!animar) yAntigo else null) ?: Armazenamento.cartaoY(this@BolhaService, chaveApp) ?: yPadrao).coerceIn(0, (altura - dp(160)).coerceAtLeast(0))
         }
-        // A janela nova entra antes de a antiga sair (sem piscar no redesenho).
+        if (!instalarCartao(raiz, p, antigo, o, corrida, origem, volta, faixa, animar, prefs, emBordas = false)) return
+        if (animar) {
+            ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 300
+                interpolator = DecelerateInterpolator()
+                addUpdateListener { preencher(it.animatedValue as Float) }
+                start()
+            }
+        }
+    }
+
+    /**
+     * Põe a janela do cartão (completo ou bordas) na tela e guarda o estado. A
+     * janela nova entra antes de a antiga sair (sem piscar no redesenho). False se
+     * o Android não deixou desenhar.
+     */
+    private fun instalarCartao(
+        raiz: View,
+        p: WindowManager.LayoutParams,
+        antigo: View?,
+        o: OfertaDetalhada,
+        corrida: CorridaAvaliada,
+        origem: String,
+        volta: EstadoVolta,
+        faixa: String?,
+        animar: Boolean,
+        prefs: PreferenciasCopiloto,
+        emBordas: Boolean,
+    ): Boolean {
         val entrou = adicionar(raiz, p)
         antigo?.let { remover(it) }
         if (!entrou) {
             principal.removeCallbacks(fecharCartaoNoTempo)
             cartaoCorrida = null
             cartaoOferta = null
-            return
+            return false
         }
         cartao = raiz
         cartaoParams = p
+        cartaoEmBordas = emBordas
         cartaoApp = o.app
         cartaoOrigem = origem
         cartaoCorrida = corrida
@@ -1783,20 +1984,140 @@ class BolhaService : Service() {
         cartaoVolta = volta
         cartaoFaixa = faixa
         if (animar) cartaoDispensado = false
-
         if (animar) {
             raiz.alpha = 0f
-            raiz.translationY = -dp(24).toFloat()
-            raiz.animate().alpha(1f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
-            ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 300
-                interpolator = DecelerateInterpolator()
-                addUpdateListener { preencher(it.animatedValue as Float) }
-                start()
-            }
+            if (emBordas) raiz.translationX = (if ((p.gravity and Gravity.END) == Gravity.END) 1 else -1) * dp(40).toFloat() else raiz.translationY = -dp(24).toFloat()
+            raiz.animate().alpha(1f).translationX(0f).translationY(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
             val tempoNaTela = if (o.app == "indrive" && origem == "leitura") CARTAO_INDRIVE_MS else prefs.segundosCartao * 1000L
             principal.postDelayed(fecharCartaoNoTempo, tempoNaTela)
         }
+        return true
+    }
+
+    /** Peças das bordas: arrastar sobe e desce; tocar abre o cartão completo. */
+    @SuppressLint("ViewConstructor")
+    private inner class BordasLayout(ctx: Context) : FrameLayout(ctx) {
+        private val folga = ViewConfiguration.get(ctx).scaledTouchSlop
+        private var y0 = 0f
+        private var yJanela0 = 0
+        private var arrastando = false
+
+        override fun onInterceptTouchEvent(e: MotionEvent): Boolean = true
+
+        @SuppressLint("ClickableViewAccessibility")
+        override fun onTouchEvent(e: MotionEvent): Boolean {
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    y0 = e.rawY
+                    yJanela0 = cartaoParams?.y ?: 0
+                    arrastando = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = e.rawY - y0
+                    if (!arrastando && abs(dy) > folga) arrastando = true
+                    if (arrastando) {
+                        val p = cartaoParams ?: return true
+                        val (_, altura) = tela()
+                        p.y = (yJanela0 + dy.toInt()).coerceIn(0, (altura - height).coerceAtLeast(0))
+                        atualizar(this, p)
+                    }
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (arrastando) {
+                        cartaoParams?.let { Armazenamento.salvarCartaoY(this@BolhaService, CHAVE_BORDAS, it.y) }
+                    } else {
+                        performClick()
+                        expandirCartao()
+                    }
+                    arrastando = false
+                }
+                MotionEvent.ACTION_CANCEL -> arrastando = false
+            }
+            return true
+        }
+
+        override fun performClick(): Boolean {
+            super.performClick()
+            return true
+        }
+    }
+
+    /** Estilo "bordas": vira o cartão completo (o tempo na tela continua contando). */
+    private fun expandirCartao() {
+        if (cartao == null || !cartaoEmBordas) return
+        cartaoExpandido = true
+        redesenharCartao()
+    }
+
+    /** Pílula colada na borda: cantos arredondados só do lado de dentro da tela. */
+    private fun pilula(t: String, fundo: Int, corTexto: Int, naDireita: Boolean, borda: Int? = null): TextView =
+        texto(t, 15f, corTexto, true).apply {
+            maxLines = 1
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(if (naDireita) dp(12) else dp(10), dp(7), if (naDireita) dp(10) else dp(12), dp(7))
+            val r = dp(18).toFloat()
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadii = if (naDireita) floatArrayOf(r, r, 0f, 0f, 0f, 0f, r, r) else floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
+                setColor(fundo)
+                if (borda != null) setStroke(dp(1), borda)
+            }
+        }
+
+    /**
+     * Estilo "bordas": duas peças pequenas coladas na borda da tela (do lado oposto
+     * ao da bolha): o sinal com o R$/km e o lucro. Mais discreto que o cartão.
+     */
+    private fun montarBordas(
+        o: OfertaDetalhada,
+        r: Copiloto.Resultado,
+        corrida: CorridaAvaliada,
+        origem: String,
+        animar: Boolean,
+        volta: EstadoVolta,
+        faixa: String?,
+        prefs: PreferenciasCopiloto,
+        antigo: View?,
+        yAntigo: Int?,
+    ) {
+        val pal = paleta()
+        val a = r.avaliacao
+        val cor = corDoSinal(a.sinal)
+        val (largura, altura) = tela()
+        // Do lado oposto ao da bolha, para não ficar por baixo dela.
+        val bolhaNaDireita = (bolhaParams?.x ?: largura) + janelaBolha / 2 >= largura / 2
+        val naDireita = !bolhaNaDireita
+        val valor = o.suaOferta?.let { "Sua: ${Copiloto.reais(it)} · " } ?: ""
+        val pecas = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = if (naDireita) Gravity.END else Gravity.START
+            addView(
+                pilula("● $valor${Formato.brl(a.porKm)}/km", cor, BRANCO, naDireita).apply {
+                    contentDescription = "${seloDoSinal(a.sinal)}: ${Formato.brl(a.porKm)} por km. Toque para ver o cartão."
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+            )
+            addView(
+                pilula("Lucro ${Formato.brl(a.lucro)}", pal.fundo, if (a.lucro <= 0) VERMELHO else pal.texto, naDireita, pal.borda),
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+            )
+        }
+        val raiz = moldura(
+            pecas, 18, BordasLayout(ui),
+            esquerda = if (naDireita) folgaLado else 0,
+            direita = if (naDireita) 0 else folgaLado,
+        )
+        val p = parametros(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        ).apply {
+            gravity = Gravity.TOP or (if (naDireita) Gravity.END else Gravity.START)
+            x = 0
+            y = ((if (!animar) yAntigo else null) ?: Armazenamento.cartaoY(this@BolhaService, CHAVE_BORDAS) ?: (altura / 4))
+                .coerceIn(0, (altura - dp(100)).coerceAtLeast(0))
+        }
+        instalarCartao(raiz, p, antigo, o, corrida, origem, volta, faixa, animar, prefs, emBordas = true)
     }
 
     private fun faixaRisco(o: OfertaDetalhada, pal: Paleta): LinearLayout {
@@ -1937,12 +2258,11 @@ class BolhaService : Service() {
         fecharMini()
         val prefs = Armazenamento.preferencias(this)
         escalaTexto = prefs.escalaFonte
-        val raiz: LinearLayout
+        val corpo: LinearLayout
         try {
-            raiz = LinearLayout(ui).apply {
+            corpo = LinearLayout(ui).apply {
                 orientation = LinearLayout.VERTICAL
                 background = fundoArredondado(pal.fundo, 18, pal.borda)
-                elevation = dp(8).toFloat()
                 setPadding(dp(14), dp(10), dp(10), dp(10))
                 addView(
                     LinearLayout(ui).apply {
@@ -1990,9 +2310,10 @@ class BolhaService : Service() {
         } finally {
             escalaTexto = 1f
         }
+        val raiz = moldura(corpo, 18)
         val (largura, altura) = tela()
         val p = parametros(
-            min(largura - dp(16), dp(420)),
+            min(largura - dp(16), dp(420)) + 2 * folgaLado,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         ).apply {

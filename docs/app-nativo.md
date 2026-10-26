@@ -54,7 +54,12 @@ celular
    âmbar "Avalie", vermelho "Não compensa"), ícone do app, "Filipe ★4,71 (38) · PIX", números
    grandes (R$/km, R$/h, lucro), "37,4 km no total · a 1,0 km do passageiro · 70 min" e o destino.
    Vibra 1 vez no verde e 2 no vermelho (dá para desligar com `configurar({ vibrar: false })`).
-   Arrastar na vertical muda a posição (lembrada por app); arrastar para o lado fecha.
+   Arrastar na vertical muda a posição (lembrada por app); arrastar para o lado fecha. Com
+   endereços, os botões **Embarque** e **Destino** abrem a navegação (veja o item 17).
+   **`fixarCentro`**: o cartão fica sempre no centro da largura e só sobe e desce (arrastar para o
+   lado não faz nada; feche no ✕). A sombra do cartão, dos painéis e da bolha é desenhada à mão
+   (cantos arredondados / redonda na bolha), numa folga pequena em volta da peça (6 dp dos lados,
+   10 dp embaixo), porque a elevação em janela de serviço saía quadrada ou cortada.
 4. **inDrive:** o cartão só aparece com a oferta aberta (botão "Aceitar por R$ X"); na lista de
    pedidos ele some. A linha de destaque sugere a contraproposta: "Toque em R$ 23" (menor atalho
    que deixa verde), "Use o lápis: R$ 27" ou "Nem o dobro (R$ X) fica verde"; se já é verde,
@@ -81,6 +86,10 @@ celular
    contraproposta já considera a volta. Base = `preferencias.base`, ou a definida pela bolha, ou
    "onde estou agora". Selo verde **"🏠 Te leva para casa"** quando o destino fica pelo menos 30% mais
    perto da base (em linha reta) que a posição atual.
+   **Chip "Contar volta para casa"** no cartão (completo e no expandido das bordas, quando há destino):
+   liga/desliga o `contarVolta` só no cálculo do Copiloto (a régua salva não muda); recalcula na hora
+   lucro, sinal e a contraproposta sugerida, e mostra "volta 18 km · R$ 11" (ou "calculando volta…").
+   A escolha fica lembrada no aparelho; até o primeiro toque, segue o `contarVolta` da régua.
 9. **Voz e bip:** com `voz`, fala curto ao aparecer a oferta ("Verde. Dois reais e dez por quilômetro.",
    "Vermelho. Não compensa."). Com `bip`, um bip curto só no verde.
 10. **"Você aceitou?"** (`perguntarAceite`): se a oferta sai da tela (lista, fim, outra tela do inDrive,
@@ -105,6 +114,43 @@ celular
    "lista", "sem oferta"…), Abrir o Aluguei, Desligar.
 16. Arrastar a bolha até o **X** no rodapé desliga. Ao soltar em outro lugar, ela encosta na borda
    e a posição fica salva.
+17. **App de navegação** (`preferencias.appNavegacao`) dos botões Embarque/Destino (cartão e
+   notificação): `maps` → Google Maps já navegando (`google.navigation:q=…`, pacote
+   `com.google.android.apps.maps`); `waze` → `https://waze.com/ul?q=…&navigate=yes` no Waze;
+   `perguntar` → o Android pergunta qual app; `padrao` → `geo:0,0?q=…`. Se o app escolhido não
+   estiver instalado, abre o padrão (por isso o manifesto declara os dois pacotes em `<queries>`).
+18. **Estilo "bordas"** (`preferencias.estiloCartao = "bordas"`): no lugar do cartão, duas peças
+   pequenas coladas na borda da tela (do lado oposto ao da bolha): uma pílula na cor do sinal com
+   "● R$ 2,10/km" (e "Sua: R$ X" no inDrive depois da contraproposta) e outra com "Lucro R$ 12,30".
+   Arrastar sobe e desce (posição salva); **tocar abre o cartão completo** (com o mesmo tempo na
+   tela). A próxima oferta volta às bordas.
+19. **Perfis de régua** (`preferencias.perfis`, até 6, ex.: Dia, Noite, Aeroporto): no menu da bolha,
+   "Perfil: <atual>" abre a lista; escolher aplica os critérios do perfil na hora (normalizados como
+   a régua: inválido volta ao padrão), guarda o nome no aparelho e emite `perfil` { nome, criterios }
+   (guardado até a tela ouvir; também em `perfilPendente()`). Enquanto houver perfil pendente,
+   `configurar({ criterios })` não sobrescreve os critérios. A régua rápida pendente sai (o perfil
+   troca a régua inteira).
+20. **Print das ofertas** (`preferencias.printOfertas`, desligado por padrão; Android 11+): quando
+   uma oferta nova é lida (uma vez por oferta, 350 ms depois de o cartão aparecer), o serviço de
+   acessibilidade tira um print (`takeScreenshot`) e salva um JPEG (80%) em
+   **Pictures/Aluguei/Ofertas** com nome `oferta_2026-10-26_14-03-22_R18-40_indrive.jpg`
+   (horário de Brasília). No máximo 1 a cada 3 s; compressão e gravação numa thread de fundo; erro
+   = sem print (nunca trava a leitura). Precisa de `android:canTakeScreenshot="true"` no XML do
+   leitor. Abaixo do Android 11 fica desligado (o Diagnóstico avisa; `estado().printDisponivel = false`).
+   Serve de comprovante para contestar no app de corrida.
+21. **Câmera de segurança** (opcional): serviço em primeiro plano tipo `camera` (e `microphone` se o
+   motorista deu a permissão do microfone: aí grava com áudio) que grava vídeo com Camera2 +
+   MediaRecorder (sem CameraX) em arquivos de `camera.minutosPorArquivo` minutos (1 a 30), em
+   **Movies/Aluguei/Corridas** (MediaStore; no Android 9 ou anterior, na pasta do app em
+   Android/data). Qualidade baixa 360p (1 Mbps), média 480p (2 Mbps), alta 720p (4 Mbps); lente
+   frontal ou traseira. Passou de `camera.limiteGb`, apaga os mais antigos **que ela mesma gravou**
+   (nunca outros vídeos do celular). Notificação fixa **"Câmera de segurança gravando"** com o botão
+   **Parar** (obrigatória e transparente), e o menu da bolha ganha "Câmera: parar". Só começa com o
+   Aluguei aberto (`cameraIniciar()`; regra do Android 14 para câmera em primeiro plano). Se outro
+   app pegar a câmera ou der erro, a gravação para com um aviso (não derruba o Copiloto).
+   **Recomendações:** cole no carro o adesivo **"Veículo monitorado por câmera"** (avisar o
+   passageiro é o certo e evita problema); os vídeos ficam **só no celular** (o Aluguei não envia
+   nada), e o motorista é responsável por guardar ou apagar.
 
 **Desempenho:** o leitor junta os eventos e lê no máximo a cada 700 ms, com limite de nós
 (500), profundidade (30), textos (250) e caracteres (6000). Desligado ou pausado, não lê nada.
@@ -220,6 +266,10 @@ também `Pacotes.plataforma()`.
 | `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` | Volta para a base ("onde estou agora", selo "Te leva para casa") e "Definir base aqui". Só a posição do momento da oferta; não guarda trajeto. Opcional | explicação + caixa do sistema (`pedirLocalizacao`); negada de vez → configurações do app, com volta automática |
 | `FOREGROUND_SERVICE_LOCATION` | O Android só entrega a posição a serviço em primeiro plano do tipo `location`; a bolha usa `specialUse` e, com a localização permitida, também `location` | automática (só vale com a localização permitida) |
 | `<queries>` TTS_SERVICE | Achar o motor de voz (TextToSpeech) no Android 11+ para a voz do cartão | automática |
+| `CAMERA` + `FOREGROUND_SERVICE_CAMERA` | Câmera de segurança da corrida (opcional; vídeo só no celular) | caixa do sistema (`pedirCamera`); negada de vez → configurações do app, com volta automática |
+| `RECORD_AUDIO` + `FOREGROUND_SERVICE_MICROPHONE` | Áudio no vídeo da câmera de segurança (opcional: sem ela, grava sem som) | junto com a câmera (`pedirCamera`) |
+| `<queries>` Maps, Waze e `geo:` | Saber se o Google Maps / Waze estão instalados para os botões Embarque e Destino | automática |
+| Print (`canTakeScreenshot` no leitor) | Print de cada oferta lida (opcional, Android 11+) | vem com o serviço de acessibilidade; só funciona com `printOfertas` ligado |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Pedir para o Android não matar o plantão no meio da jornada | caixa do sistema (`pedirSemOtimizacaoBateria`). Veja o alerta da Play Store abaixo |
 
 **Volta automática:** depois de abrir a tela de configurações, o plugin confere a cada
@@ -317,6 +367,13 @@ volta não acontecer, o evento fica guardado e chega quando o motorista voltar p
   podem não ser achados; aí tenta o bairro/cidade entre parênteses. Sem base salva, a volta usa a
   última posição conhecida (até 10 min); se o Android recusar o primeiro plano com localização
   (reinício em segundo plano), só a base salva funciona.
+- **Câmera de segurança:** alguns celulares não deixam duas câmeras abertas ao mesmo tempo (se o app
+  de corrida pedir a câmera para uma selfie de verificação, a gravação para com um aviso; ligue de
+  novo no Aluguei). O vídeo gira pela orientação do sensor (celular em pé no suporte); com o celular
+  deitado, o vídeo pode sair de lado. Gravar gasta bateria e esquenta o aparelho: use carregador.
+  A gravação só começa com o Aluguei aberto e não volta sozinha se o Android matar o serviço.
+- **Print das ofertas:** só Android 11+; telas protegidas (FLAG_SECURE) saem pretas ou sem print. O
+  print inclui o cartão do Copiloto por cima (é proposital: mostra a conta junto).
 - **Economia:** reconhece "Offline"/"Online" e "Ficar online" na tela do inDrive; se o inDrive mudar
   esses textos, o leitor não dorme (gasta um pouco mais, mas não perde oferta).
 
@@ -330,7 +387,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
 import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 
-export type TipoPermissao = "sobreposicao" | "acessibilidade" | "notificacoes" | "bateria" | "localizacao";
+export type TipoPermissao = "sobreposicao" | "acessibilidade" | "notificacoes" | "bateria" | "localizacao" | "camera";
 
 export type Tema = "claro" | "escuro" | "auto";
 
@@ -353,7 +410,22 @@ export type EstadoPlantao = {
   localizacao: boolean;
   /** Economia: o inDrive está offline e o leitor está dormindo. */
   dormindo: boolean;
+  /** Permissões da câmera de segurança (microfone é opcional). */
+  camera: boolean;
+  microfone: boolean;
+  /** A câmera de segurança está gravando. */
+  gravando: boolean;
+  /** Print das ofertas funciona neste Android (11+). */
+  printDisponivel: boolean;
+  /** Nome do último perfil de régua escolhido na bolha (só no aparelho), ou null. */
+  perfilAtivo: string | null;
 };
+
+/** Câmera de segurança: desde = ISO (UTC) do início da gravação atual; usadoMb = vídeos que ela gravou. */
+export type EstadoCamera = { gravando: boolean; desde: string | null; arquivos: number; usadoMb: number };
+
+/** Perfil de régua escolhido na bolha (criterios no formato de custos.ts, ou null). */
+export type PerfilEscolhido = { nome: string; criterios: unknown };
 
 /** Critérios v2 (Criterios de custos.ts, já com nota, evitar, destinos, faixas e contarVolta). */
 export type CriteriosCopiloto = Criterios;
@@ -427,6 +499,15 @@ export interface PlantaoPlugin {
   /** Régua mudada no menu da bolha e ainda não salva na conta. */
   reguaPendente(): Promise<{ regua: Regua | null }>;
   limparReguaPendente(): Promise<{ regua: null }>;
+  /** Perfil escolhido na bolha e ainda não salvo na conta. */
+  perfilPendente(): Promise<{ perfil: PerfilEscolhido | null }>;
+  limparPerfilPendente(): Promise<{ perfil: null }>;
+  /** Câmera + microfone (caixa do sistema; negada de vez → configurações, volta automática + "permissao"). */
+  pedirCamera(): Promise<PedidoPermissao & { tipo: "camera"; microfone?: boolean }>;
+  /** Começa a gravar (só com o app visível). Rejeita "SEM_CAMERA", "NAO_VISIVEL" ou "NAO_INICIOU". */
+  cameraIniciar(): Promise<EstadoCamera>;
+  cameraParar(): Promise<EstadoCamera>;
+  cameraEstado(): Promise<EstadoCamera>;
 
   addListener(e: "oferta", f: (c: CorridaNativa & Omit<AvaliacaoNativa, "sinal" | "porKm" | "porHora" | "lucro">) => void): Promise<PluginListenerHandle>;
   addListener(e: "decisao", f: (d: { id: string; decisao: "aceitei" | "recusei" }) => void): Promise<PluginListenerHandle>;
@@ -437,6 +518,8 @@ export interface PlantaoPlugin {
   addListener(e: "base", f: (b: { lat: number; lon: number }) => void): Promise<PluginListenerHandle>;
   /** Preferência mudada na bolha ("Não perguntar mais"): salve na conta. */
   addListener(e: "preferencia", f: (p: { perguntarAceite?: boolean }) => void): Promise<PluginListenerHandle>;
+  /** Perfil de régua escolhido no menu da bolha (guardado até a tela ouvir): salve na conta. */
+  addListener(e: "perfil", f: (p: PerfilEscolhido) => void): Promise<PluginListenerHandle>;
 }
 
 export const Plantao = registerPlugin<PlantaoPlugin>("Plantao");
@@ -465,6 +548,13 @@ Observações:
   sobrescreve `minimoPorKm`/`minimoPorHora`. Fluxo: `reguaPendente()` → salvar na conta →
   `limparReguaPendente()` → `configurar` de novo.
 - O evento `regua` também é guardado até a tela ouvir.
+- **Perfil pendente:** escolher um perfil na bolha troca os critérios no aparelho, emite `perfil` e
+  deixa `perfilPendente()` preenchido. Enquanto houver pendente, `configurar({ criterios })` não
+  mexe nos critérios. Fluxo: `perfilPendente()` (ou o evento) → salvar os critérios na conta →
+  `limparPerfilPendente()` → `configurar` de novo.
+- **Câmera:** `pedirCamera()` → `cameraIniciar()` com a tela aberta → `cameraEstado()` para mostrar
+  "gravando desde…", quantos arquivos e quanto espaço. O evento `estado` sai quando a câmera começa
+  ou para (inclusive pelo botão Parar da notificação).
 - `configurar` aceita só uma parte (ex.: só `criterios`); o que não vier fica como estava.
   Campo inválido volta ao padrão daquele campo, como `normalizarPerfil`/`normalizarCriterios`.
 - O evento `permissao` é guardado até a tela ouvir (se a WebView ainda estiver voltando).

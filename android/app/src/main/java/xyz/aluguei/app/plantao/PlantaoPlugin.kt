@@ -29,6 +29,8 @@ import org.json.JSONObject
     permissions = [
         Permission(alias = "notificacoes", strings = [Manifest.permission.POST_NOTIFICATIONS]),
         Permission(alias = "localizacao", strings = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION]),
+        Permission(alias = "camera", strings = [Manifest.permission.CAMERA]),
+        Permission(alias = "microfone", strings = [Manifest.permission.RECORD_AUDIO]),
     ],
 )
 class PlantaoPlugin : Plugin() {
@@ -79,6 +81,23 @@ class PlantaoPlugin : Plugin() {
             ativo?.emitir("preferencia", JSObject().put("perguntarAceite", perguntarAceite), true)
         }
 
+        /** Perfil de régua escolhido na bolha. Também fica em perfilPendente() até o app web salvar. */
+        fun emitirPerfil(nome: String, criterios: JSONObject?) {
+            ativo?.emitir("perfil", JSObject().put("nome", nome).put("criterios", criterios ?: JSONObject.NULL), true)
+        }
+
+        /** { gravando, desde (ISO ou null), arquivos, usadoMb } da câmera de segurança. */
+        fun estadoCamera(c: Context): JSObject {
+            val videos = Armazenamento.videos(c)
+            val desde = CameraService.desde
+            return JSObject().apply {
+                put("gravando", CameraService.gravando)
+                put("desde", desde?.let { Armazenamento.isoDe(it) } ?: JSONObject.NULL)
+                put("arquivos", videos.size)
+                put("usadoMb", Gravacoes.megas(videos.sumOf { it.bytes }))
+            }
+        }
+
         fun emitirEstado(ctx: Context) {
             val p = ativo ?: return
             p.emitir("estado", p.estadoAtual(ctx))
@@ -120,6 +139,12 @@ class PlantaoPlugin : Plugin() {
         put("vibrar", Armazenamento.vibrar(c))
         put("localizacao", Localizacao.permitida(c))
         put("dormindo", LeitorCorridasService.dormindo && Armazenamento.ligado(c) && BolhaService.instancia != null)
+        put("camera", CameraService.permitidaCamera(c))
+        put("microfone", CameraService.permitidoMicrofone(c))
+        put("gravando", CameraService.gravando)
+        // Print das ofertas precisa do Android 11+ (takeScreenshot).
+        put("printDisponivel", LeitorCorridasService.printDisponivel)
+        put("perfilAtivo", Armazenamento.perfilAtivo(c) ?: JSONObject.NULL)
     }
 
     // ------------------------------------------------------------------ estado e configuração
@@ -167,6 +192,81 @@ class PlantaoPlugin : Plugin() {
     fun limparReguaPendente(call: PluginCall) {
         Armazenamento.limparReguaPendente(ctx)
         call.resolve(JSObject().put("regua", JSONObject.NULL))
+    }
+
+    /** Perfil de régua escolhido na bolha e ainda não salvo na conta ({ nome, criterios }), ou null. */
+    @PluginMethod
+    fun perfilPendente(call: PluginCall) {
+        val p: Any = Armazenamento.perfilPendente(ctx) ?: JSONObject.NULL
+        call.resolve(JSObject().put("perfil", p))
+    }
+
+    @PluginMethod
+    fun limparPerfilPendente(call: PluginCall) {
+        Armazenamento.limparPerfilPendente(ctx)
+        call.resolve(JSObject().put("perfil", JSONObject.NULL))
+    }
+
+    // ------------------------------------------------------------------ câmera de segurança
+
+    /**
+     * Câmera (obrigatória) e microfone (opcional: sem ele grava sem áudio). Primeiro a
+     * caixa do sistema; negada de vez, abre as configurações do app e volta sozinho.
+     */
+    @PluginMethod
+    fun pedirCamera(call: PluginCall) {
+        if (CameraService.permitidaCamera(ctx) && CameraService.permitidoMicrofone(ctx)) {
+            call.resolve(JSObject().put("tipo", Permissoes.CAMERA).put("concedida", true).put("aberto", false))
+            return
+        }
+        requestPermissionForAliases(arrayOf("camera", "microfone"), call, "aposPedirCamera")
+    }
+
+    @PermissionCallback
+    fun aposPedirCamera(call: PluginCall) {
+        if (CameraService.permitidaCamera(ctx)) {
+            emitirPermissao(Permissoes.CAMERA, true)
+            call.resolve(JSObject().put("tipo", Permissoes.CAMERA).put("concedida", true).put("aberto", false).put("microfone", CameraService.permitidoMicrofone(ctx)))
+            return
+        }
+        val deVez = activity?.let { a -> !a.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) } ?: false
+        if (deVez) pedir(call, Permissoes.CAMERA) else call.resolve(JSObject().put("tipo", Permissoes.CAMERA).put("concedida", false).put("aberto", false))
+    }
+
+    /**
+     * Começa a gravar. Só com o Aluguei visível (o Android 14 não deixa câmera em
+     * primeiro plano começar do segundo plano); rejeita SEM_CAMERA / NAO_VISIVEL / NAO_INICIOU.
+     */
+    @PluginMethod
+    fun cameraIniciar(call: PluginCall) {
+        if (!CameraService.permitidaCamera(ctx)) {
+            call.reject("Falta a permissão da câmera (use pedirCamera).", "SEM_CAMERA")
+            return
+        }
+        val a = activity
+        if (a == null || a.isFinishing) {
+            call.reject("Abra o Aluguei para ligar a câmera.", "NAO_VISIVEL")
+            return
+        }
+        try {
+            CameraService.iniciar(ctx)
+        } catch (e: RuntimeException) {
+            call.reject("O Android não deixou ligar a câmera agora.", "NAO_INICIOU", e)
+            return
+        }
+        // O serviço marca "gravando" ao entrar em primeiro plano; responde logo depois.
+        principal.postDelayed({ call.resolve(estadoCamera(ctx)) }, 300)
+    }
+
+    @PluginMethod
+    fun cameraParar(call: PluginCall) {
+        CameraService.parar(ctx)
+        principal.postDelayed({ call.resolve(estadoCamera(ctx).put("gravando", false)) }, 300)
+    }
+
+    @PluginMethod
+    fun cameraEstado(call: PluginCall) {
+        call.resolve(estadoCamera(ctx))
     }
 
     // ------------------------------------------------------------------ permissões (com volta automática)

@@ -19,6 +19,7 @@ object Permissoes {
     const val NOTIFICACOES = "notificacoes"
     const val BATERIA = "bateria"
     const val LOCALIZACAO = "localizacao"
+    const val CAMERA = "camera"
 
     fun sobreposicao(ctx: Context): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(ctx)
 
@@ -43,6 +44,7 @@ object Permissoes {
         NOTIFICACOES -> notificacoes(ctx)
         BATERIA -> semOtimizacaoBateria(ctx)
         LOCALIZACAO -> Localizacao.permitida(ctx)
+        CAMERA -> CameraService.permitidaCamera(ctx)
         else -> false
     }
 
@@ -76,7 +78,7 @@ object Permissoes {
             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pacote(ctx)),
             Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
         )
-        LOCALIZACAO -> listOf(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pacote(ctx)))
+        LOCALIZACAO, CAMERA -> listOf(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pacote(ctx)))
         else -> emptyList()
     }
 

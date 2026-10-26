@@ -48,6 +48,10 @@ object Armazenamento {
     private const val PREFERENCIAS = "preferencias"
     private const val BASE_PENDENTE = "basePendente"
     private const val PERGUNTAR_PENDENTE = "perguntarAceitePendente"
+    private const val PERFIL_ATIVO = "perfilAtivo"
+    private const val PERFIL_PENDENTE = "perfilPendente"
+    private const val VIDEOS = "videosCamera"
+    private const val VOLTA_CARTAO = "contarVoltaCartao"
 
     val TEMAS = setOf("claro", "escuro", "auto")
 
@@ -70,7 +74,8 @@ object Armazenamento {
     ) {
         val e = prefs(ctx).edit()
         if (perfil != null) e.putString(PERFIL, perfil.toString())
-        if (criterios != null) {
+        // Perfil escolhido na bolha e ainda não salvo na conta: os critérios dele valem.
+        if (criterios != null && !prefs(ctx).contains(PERFIL_PENDENTE)) {
             // Régua mudada na bolha e ainda não salva na conta: os dois mínimos dela valem.
             val pendente = reguaPendente(ctx)
             val c = JSONObject(criterios.toString())
@@ -187,6 +192,56 @@ object Armazenamento {
     }
 
     fun limparReguaPendente(ctx: Context) = prefs(ctx).edit().remove(REGUA_PENDENTE).apply()
+
+    // ---------- chip "Contar volta para casa" do cartão ----------
+
+    /** Escolha do chip no aparelho; null = ainda não tocou (segue o contarVolta da régua). */
+    fun voltaCartao(ctx: Context): Boolean? = prefs(ctx).let { if (it.contains(VOLTA_CARTAO)) it.getBoolean(VOLTA_CARTAO, false) else null }
+
+    fun definirVoltaCartao(ctx: Context, ligado: Boolean) = prefs(ctx).edit().putBoolean(VOLTA_CARTAO, ligado).apply()
+
+    // ---------- perfis de régua (trocados pela bolha) ----------
+
+    /** Nome do perfil escolhido por último na bolha (só local), ou null. */
+    fun perfilAtivo(ctx: Context): String? = prefs(ctx).getString(PERFIL_ATIVO, null)
+
+    /**
+     * Aplica os critérios do perfil na hora (normalizados ao ler, como a régua),
+     * guarda o nome ativo e deixa o perfil pendente até o app web salvar
+     * (evento "perfil"). A régua rápida pendente sai: o perfil troca a régua inteira.
+     */
+    fun aplicarPerfil(ctx: Context, perfil: PerfilRegua) {
+        val criterios = perfil.criteriosJson() ?: JSONObject()
+        val pendente = JSONObject().put("nome", perfil.nome).put("criterios", perfil.criteriosJson() ?: JSONObject.NULL)
+        prefs(ctx).edit()
+            .putString(CRITERIOS, criterios.toString())
+            .putString(PERFIL_ATIVO, perfil.nome)
+            .putString(PERFIL_PENDENTE, pendente.toString())
+            .remove(REGUA_PENDENTE)
+            .apply()
+    }
+
+    /** { nome, criterios } escolhido na bolha e ainda não salvo na conta, ou null. */
+    fun perfilPendente(ctx: Context): JSONObject? = prefs(ctx).getString(PERFIL_PENDENTE, null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+
+    fun limparPerfilPendente(ctx: Context) = prefs(ctx).edit().remove(PERFIL_PENDENTE).apply()
+
+    // ---------- vídeos da câmera de segurança (só os que ela mesma gravou) ----------
+
+    fun videos(ctx: Context): List<Gravacoes.Arquivo> {
+        val arr = prefs(ctx).getString(VIDEOS, null)?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val o = arr.optJSONObject(i) ?: return@mapNotNull null
+            val id = o.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            Gravacoes.Arquivo(id, o.optLong("bytes"), o.optLong("criadoEm"))
+        }
+    }
+
+    fun salvarVideos(ctx: Context, lista: List<Gravacoes.Arquivo>) {
+        val arr = JSONArray()
+        lista.forEach { arr.put(JSONObject().put("id", it.id).put("bytes", it.bytes).put("criadoEm", it.criadoEm)) }
+        prefs(ctx).edit().putString(VIDEOS, arr.toString()).commit()
+    }
 
     // ---------- lugares a evitar ----------
 
@@ -401,10 +456,12 @@ object Armazenamento {
     fun criteriosDeJson(o: JSONObject?): Criterios = NormalizarCriterios.deJson(o)
 
     /** Agora em ISO 8601 UTC ("2026-10-26T23:10:05.123Z"); dá para comparar como texto. */
-    fun agoraIso(): String {
+    fun agoraIso(): String = isoDe(System.currentTimeMillis())
+
+    fun isoDe(epochMs: Long): String {
         val f = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         f.timeZone = TimeZone.getTimeZone("UTC")
-        return f.format(Date())
+        return f.format(Date(epochMs))
     }
 }
 
