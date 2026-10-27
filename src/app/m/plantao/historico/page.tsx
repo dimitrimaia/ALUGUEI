@@ -28,7 +28,7 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
   const t = taxas(config.perfil);
   const todas = dados.corridas.map((c) => ({
     ...c,
-    a: avaliarCorrida({ valor: c.valor_centavos, kmCorrida: c.metros_corrida / 1000, minutosCorrida: c.minutos_corrida, kmBusca: c.metros_busca != null ? c.metros_busca / 1000 : null, minutosBusca: c.minutos_busca }, t, config.criterios),
+    a: avaliarCorrida({ valor: (c as { valor_final_centavos?: number | null }).valor_final_centavos ?? c.valor_centavos, kmCorrida: c.metros_corrida / 1000, minutosCorrida: c.minutos_corrida, kmBusca: c.metros_busca != null ? c.metros_busca / 1000 : null, minutosBusca: c.minutos_busca }, t, config.criterios),
   }));
   const lista = todas.filter((c) => filtro === "todas" || (filtro === "aceitas" ? c.decisao === "aceitei" : c.decisao === "recusei"));
   const recusadasRuins = todas.filter((c) => c.decisao === "recusei" && c.a.lucro < 0);
@@ -72,7 +72,7 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
             <Cartao key={c.id} className="flex items-center gap-3 !p-3">
               <span className={`h-12 w-1.5 shrink-0 rounded-full ${COR_SINAL[c.a.sinal].fundo}`} aria-label={COR_SINAL[c.a.sinal].rotulo} />
               <Link href={`/m/plantao/historico/${c.id}` as Route} className="min-w-0 flex-1">
-                <p className="flex items-baseline gap-2"><span className="font-bold tabular-nums">{formatarBRL(c.valor_centavos)}</span><span className="text-xs text-suave">{c.app ? NOME_APP[c.app] ?? c.app : "Digitada"} · {new Date(c.ocorrida_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}</span></p>
+                <p className="flex items-baseline gap-2"><span className="font-bold tabular-nums">{formatarBRL((c as { valor_final_centavos?: number | null }).valor_final_centavos ?? c.valor_centavos)}</span>{(c as { valor_final_centavos?: number | null }).valor_final_centavos != null && <span className="text-xs text-suave line-through">{formatarBRL(c.valor_centavos)}</span>}{(c as { decisao_origem?: string | null }).decisao_origem === "automatica" && <span className="rounded-full bg-marca-suave px-1.5 text-[0.6rem] font-bold text-marca">auto</span>}<span className="text-xs text-suave">{c.app ? NOME_APP[c.app] ?? c.app : "Digitada"} · {new Date(c.ocorrida_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}</span></p>
                 <p className="text-xs text-suave tabular-nums">{formatarBRL(c.a.porKm)}/km · {formatarBRL(c.a.porHora)}/h · lucro <span className={c.a.lucro < 0 ? "font-semibold text-perigo" : "font-semibold text-ok"}>{formatarBRL(c.a.lucro)}</span></p>
               </Link>
               <DecisaoOferta id={c.id} decisao={c.decisao} />

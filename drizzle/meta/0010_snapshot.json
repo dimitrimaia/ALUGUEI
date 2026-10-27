@@ -1,5 +1,5 @@
 {
-  "id": "a926e0ee-9805-4131-9898-e3d6877af129",
+  "id": "dd4f3a63-548a-42b7-a3f9-6fc4280586bb",
   "prevId": "6cc752fa-6e00-42ef-8816-1751af3bdcf1",
   "version": "7",
   "dialect": "postgresql",
@@ -3815,6 +3815,18 @@
         },
         "decisao": {
           "name": "decisao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valor_final_centavos": {
+          "name": "valor_final_centavos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decisao_origem": {
+          "name": "decisao_origem",
           "type": "text",
           "primaryKey": false,
           "notNull": false

@@ -84,6 +84,10 @@ export const corridasAvaliadas = pgTable(
     minutosBusca: integer("minutos_busca"),
     sinal: text("sinal").notNull(),
     decisao: text("decisao"), // aceitei | recusei | null
+    /** Valor com que a corrida foi feita (contraproposta ou "fiz com outro valor"); null = o da oferta. */
+    valorFinalCentavos: integer("valor_final_centavos"),
+    /** Como a decisão foi marcada: toque | pergunta | automatica. */
+    decisaoOrigem: text("decisao_origem"),
     origem: text("origem").notNull(), // leitura | digitada
     ocorridaEm: timestamp("ocorrida_em", { withTimezone: true }).notNull(),
     /** Idempotência do envio do celular: a mesma oferta não entra duas vezes. */

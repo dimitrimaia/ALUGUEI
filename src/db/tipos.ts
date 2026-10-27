@@ -83,9 +83,9 @@ export type Database = {
         Relationships: [];
       };
       corridas_avaliadas: {
-        Row: { id: string; usuario_id: string; jornada_id: string | null; app: string | null; valor_centavos: number; metros_corrida: number; minutos_corrida: number | null; metros_busca: number | null; minutos_busca: number | null; sinal: string; decisao: string | null; origem: string; ocorrida_em: string; chave: string; criado_em: string };
-        Insert: { id?: string; usuario_id: string; jornada_id?: string | null; app?: string | null; valor_centavos: number; metros_corrida: number; minutos_corrida?: number | null; metros_busca?: number | null; minutos_busca?: number | null; sinal: string; decisao?: string | null; origem: string; ocorrida_em: string; chave: string; criado_em?: string };
-        Update: { id?: string; usuario_id?: string; jornada_id?: string | null; app?: string | null; valor_centavos?: number; metros_corrida?: number; minutos_corrida?: number | null; metros_busca?: number | null; minutos_busca?: number | null; sinal?: string; decisao?: string | null; origem?: string; ocorrida_em?: string; chave?: string; criado_em?: string };
+        Row: { id: string; usuario_id: string; jornada_id: string | null; app: string | null; valor_centavos: number; metros_corrida: number; minutos_corrida: number | null; metros_busca: number | null; minutos_busca: number | null; sinal: string; decisao: string | null; valor_final_centavos: number | null; decisao_origem: string | null; origem: string; ocorrida_em: string; chave: string; criado_em: string };
+        Insert: { id?: string; usuario_id: string; jornada_id?: string | null; app?: string | null; valor_centavos: number; metros_corrida: number; minutos_corrida?: number | null; metros_busca?: number | null; minutos_busca?: number | null; sinal: string; decisao?: string | null; valor_final_centavos?: number | null; decisao_origem?: string | null; origem: string; ocorrida_em: string; chave: string; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; jornada_id?: string | null; app?: string | null; valor_centavos?: number; metros_corrida?: number; minutos_corrida?: number | null; metros_busca?: number | null; minutos_busca?: number | null; sinal?: string; decisao?: string | null; valor_final_centavos?: number | null; decisao_origem?: string | null; origem?: string; ocorrida_em?: string; chave?: string; criado_em?: string };
         Relationships: [];
       };
       despesas_motorista: {

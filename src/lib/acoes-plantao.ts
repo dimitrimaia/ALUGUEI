@@ -122,6 +122,8 @@ const esquemaCorrida = z.object({
   decisao: z.enum(["aceitei", "recusei"]).nullable().optional(),
   origem: z.enum(["leitura", "digitada"]),
   momento: z.string().datetime({ offset: true }),
+  valorFinal: z.number().int().positive().max(10_000_000).nullable().optional(),
+  decisaoOrigem: z.enum(["toque", "pergunta", "automatica"]).nullable().optional(),
 });
 
 /** Corridas avaliadas: vindas da bolha do Android (fila do celular) ou da calculadora. Sem duplicar. */
@@ -148,7 +150,10 @@ export async function registrarCorridas(lista: unknown[]): Promise<{ salvas: num
     ocorrida_em: c.momento,
     chave: c.id ? `${usuario.id}:${c.id}` : `${usuario.id}:${c.momento}:${c.valor}`,
   }));
-  const { data } = await supabaseAdmin().from("corridas_avaliadas").upsert(linhas, { onConflict: "chave", ignoreDuplicates: true }).select("id");
+  const completas = linhas.map((l, i) => ({ ...l, valor_final_centavos: validas[i]!.valorFinal ?? null, decisao_origem: validas[i]!.decisaoOrigem ?? null }));
+  let { data, error } = await supabaseAdmin().from("corridas_avaliadas").upsert(completas, { onConflict: "chave", ignoreDuplicates: true }).select("id");
+  // Antes da migração 0010 as colunas novas não existem: grava sem elas.
+  if (error) ({ data, error } = await supabaseAdmin().from("corridas_avaliadas").upsert(linhas, { onConflict: "chave", ignoreDuplicates: true }).select("id"));
   revalidatePath("/m/plantao", "layout");
   return { salvas: data?.length ?? 0 };
 }

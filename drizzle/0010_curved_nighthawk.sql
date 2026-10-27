@@ -8,5 +8,8 @@ CREATE TABLE "erros_app" (
 	"detalhe" jsonb,
 	"criado_em" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
+ALTER TABLE "corridas_avaliadas" ADD COLUMN "valor_final_centavos" integer;--> statement-breakpoint
+ALTER TABLE "corridas_avaliadas" ADD COLUMN "decisao_origem" text;--> statement-breakpoint
 CREATE INDEX "erros_app_quando" ON "erros_app" USING btree ("criado_em");--> statement-breakpoint
 ALTER TABLE "erros_app" ENABLE ROW LEVEL SECURITY;
