@@ -30,9 +30,9 @@ function Segmentos<T extends string>({ valor, opcoes, aoMudar }: { valor: T; opc
   );
 }
 
-function Bloco({ titulo, texto, children }: { titulo: string; texto?: string; children: ReactNode }) {
+function Bloco({ id, titulo, texto, children }: { id?: string; titulo: string; texto?: string; children: ReactNode }) {
   return (
-    <Cartao className="flex flex-col gap-3">
+    <Cartao id={id} className="flex scroll-mt-20 flex-col gap-3">
       <div><h2 className="font-bold">{titulo}</h2>{texto && <p className="text-xs text-suave">{texto}</p>}</div>
       {children}
     </Cartao>
@@ -59,7 +59,7 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
 
   return (
     <div className="flex flex-col gap-4">
-      <Bloco titulo="Cartão da oferta" texto="Os 3 primeiros campos aparecem grandes; os outros, na linha de baixo. Até 6.">
+      <Bloco id="cartao" titulo="Cartão da oferta" texto="Os 3 primeiros campos aparecem grandes; os outros, na linha de baixo. Até 6.">
         <ol className="flex flex-col gap-1.5">
           {p.campos.map((c, i) => (
             <li key={c} className="flex items-center gap-2 rounded-xl bg-cartao-2 py-1.5 pr-1.5 pl-3">
@@ -97,7 +97,7 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
         </label>
       </Bloco>
 
-      <Bloco titulo="Avisos">
+      <Bloco id="avisos" titulo="Avisos">
         <div className="flex flex-col divide-y divide-borda">
           <Interruptor titulo="Vibrar" texto="Um toque no verde, dois no vermelho." ligado={p.vibrar} aoMudar={(vibrar) => mudar({ vibrar })} />
           <Interruptor titulo="Bip na corrida boa" texto="Um bip curto só quando a oferta é verde." ligado={p.bip} aoMudar={(bip) => mudar({ bip })} />
@@ -107,13 +107,13 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
         </div>
       </Bloco>
 
-      <Bloco titulo="Navegação" texto="App que os botões Embarque e Destino do cartão e da notificação abrem.">
+      <Bloco id="navegacao" titulo="Navegação" texto="App que os botões Embarque e Destino do cartão e da notificação abrem.">
         <Segmentos valor={p.appNavegacao} opcoes={[["padrao", "Padrão"], ["maps", "Google Maps"], ["waze", "Waze"], ["perguntar", "Perguntar"]]} aoMudar={(appNavegacao) => mudar({ appNavegacao })} />
       </Bloco>
 
       <SegurancaCorrida p={p} mudar={mudar} nativo={nativo} />
 
-      <Bloco titulo="Base (casa)" texto="Para calcular quanto custa voltar do destino. Ligue “Contar a volta para casa” na régua.">
+      <Bloco id="base" titulo="Base (casa)" texto="Para calcular quanto custa voltar do destino. Ligue “Contar a volta para casa” na régua.">
         {p.base ? (
           <div className="flex items-center gap-3 rounded-xl bg-ok-suave px-3 py-2.5">
             <Home size={18} className="shrink-0 text-ok" />
@@ -165,7 +165,7 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
         {avisoBase && <p className="text-sm text-perigo">{avisoBase}</p>}
       </Bloco>
 
-      <Bloco titulo="Mensagem para o passageiro" texto="Depois de aceitar, o botão “Copiar mensagem” do cartão copia este texto, pronto para colar no chat do app.">
+      <Bloco id="mensagem" titulo="Mensagem para o passageiro" texto="Depois de aceitar, o botão “Copiar mensagem” do cartão copia este texto, pronto para colar no chat do app.">
         <textarea value={p.mensagem} onChange={(e) => mudar({ mensagem: e.target.value })} rows={3} maxLength={300} className={classeAreaTexto} />
         <div className="flex flex-wrap gap-2">
           {[["{saudacao}", "Saudação"], ["{nome}", "Nome do passageiro"], ["{tempo}", "Tempo até ele"]].map(([tag, r]) => (
@@ -212,7 +212,7 @@ function SegurancaCorrida({ p, mudar, nativo }: { p: PreferenciasCopiloto; mudar
   }, [nativo]);
   const c = p.camera;
   return (
-    <Bloco titulo="Segurança da corrida" texto="Tudo fica guardado só no seu celular. Nada é enviado para o Aluguei.">
+    <Bloco id="seguranca" titulo="Segurança da corrida" texto="Tudo fica guardado só no seu celular. Nada é enviado para o Aluguei.">
       <Interruptor titulo="Print de cada oferta" texto="Guarda uma foto da tela de cada oferta (Galeria › Aluguei › Ofertas): comprovante para contestar valor ou corrida no app." ligado={p.printOfertas} aoMudar={(printOfertas) => mudar({ printOfertas })} />
       <div className="flex flex-col gap-2 border-t border-borda pt-3">
         <p className="text-sm font-semibold">Câmera de segurança</p>

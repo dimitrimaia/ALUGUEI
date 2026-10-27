@@ -19,7 +19,7 @@ export default async function Semaforo() {
       <nav className="mb-4 grid grid-cols-3 gap-2" aria-label="Copiloto">
         {[
           { href: "/m/plantao/regua", rotulo: "Régua", texto: "O que é corrida boa", icone: SlidersHorizontal },
-          { href: "/m/plantao/copiloto", rotulo: "Ajustes", texto: "Cartão, voz e base", icone: Wrench },
+          { href: "/m/plantao/configuracoes", rotulo: "Ajustes", texto: "Tudo do Copiloto", icone: Wrench },
           { href: "/m/plantao/historico", rotulo: "Ofertas", texto: "O que passou", icone: History },
         ].map(({ href, rotulo, texto, icone: Icone }) => (
           <Link key={href} href={href as Route} className="flex flex-col gap-2 rounded-[1.1rem] border border-borda bg-cartao p-3 shadow-cartao transition-transform active:scale-[0.97]">

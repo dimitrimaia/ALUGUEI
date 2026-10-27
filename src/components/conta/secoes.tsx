@@ -1,4 +1,4 @@
-import { Bell, Building2, CheckCircle2, ChevronRight, CircleDashed, Download, Hourglass, KeyRound, LifeBuoy, Lock, LogOut, Mail, MonitorSmartphone, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Building2, Car, Settings2, CheckCircle2, ChevronRight, CircleDashed, Download, Hourglass, KeyRound, LifeBuoy, Lock, LogOut, Mail, MonitorSmartphone, Palette, ShieldCheck, UserRound } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { Aviso, Avatar, Cartao, Selo } from "@/components/ui";
@@ -119,6 +119,13 @@ export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: P
             : "Tem carro para alugar? Ative o modo locador e anuncie. Você continua podendo alugar carros."}
         </p>
       </section>
+
+      {base === "/m/conta" && (
+        <Grupo titulo="Trabalho">
+          <Linha href="/m/plantao/configuracoes" icone={Settings2} titulo="Configurações do Copiloto" detalhe="Régua, cartão, avisos, base, câmera" />
+          <Linha href="/m/plantao/custos" icone={Car} titulo="Custos do carro" detalhe="Para calcular o lucro de cada corrida" />
+        </Grupo>
+      )}
 
       {grupos(Boolean(locadora)).map((g) => (
         <Grupo key={g.titulo} titulo={g.titulo}>

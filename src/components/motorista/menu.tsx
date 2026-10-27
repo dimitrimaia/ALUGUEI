@@ -1,12 +1,12 @@
 "use client";
 
-import { Bell, Calculator, Camera, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Navigation, Users, Wallet } from "lucide-react";
+import { Settings2, Calculator, Camera, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Navigation, Users, Wallet } from "lucide-react";
 import { useConta } from "@/components/conta/contexto";
 import { useMenu } from "@/components/menu-app";
 
 /** Informa ao menu ☰ (que mora no layout raiz) as opções do modo motorista. */
 export function RegistrarMenuMotorista() {
-  const { perfil, naoLidas, locadora, notificacoes } = useConta();
+  const { perfil, naoLidas, locadora } = useConta();
   useMenu({
     modo: "motorista",
     locadora,
@@ -19,6 +19,7 @@ export function RegistrarMenuMotorista() {
         itens: [
           { href: "/m/plantao", rotulo: "Plantão", icone: Gauge, tambem: ["/m/plantao/ganho", "/m/plantao/despesa", "/m/plantao/custos", "/m/plantao/extrato", "/m/plantao/relatorios"] },
           { href: "/m/plantao/semaforo", rotulo: "Copiloto", icone: Navigation },
+          { href: "/m/plantao/configuracoes", rotulo: "Ajustes do Copiloto", icone: Settings2, tambem: ["/m/plantao/regua", "/m/plantao/copiloto"] },
           { href: "/m/plantao/calculadora", rotulo: "Calculadora", icone: Calculator },
           { href: "/m/caronas", rotulo: "Caronas", icone: Users },
           { href: "/m/clientes", rotulo: "Meus clientes", icone: Link2 },
@@ -43,7 +44,6 @@ export function RegistrarMenuMotorista() {
       {
         titulo: "Ajuda",
         itens: [
-          { href: "/m/avisos", rotulo: "Avisos", icone: Bell, contador: notificacoes },
           { href: "/m/suporte", rotulo: "Falar com o suporte", icone: LifeBuoy },
         ],
       },
