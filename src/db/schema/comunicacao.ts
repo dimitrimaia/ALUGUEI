@@ -120,3 +120,19 @@ export const mensagensSuporte = pgTable(
   },
   (t) => [index("mensagens_suporte_atendimento").on(t.atendimentoId, t.criadoEm)],
 );
+
+/** Erros do app (servidor e tela), para diagnóstico. Sem dados pessoais além do id do usuário. */
+export const errosApp = pgTable(
+  "erros_app",
+  {
+    id: id(),
+    origem: text("origem").notNull(), // servidor | tela
+    mensagem: text("mensagem").notNull(),
+    digest: text("digest"),
+    caminho: text("caminho"),
+    usuarioId: uuid("usuario_id"),
+    detalhe: jsonb("detalhe"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("erros_app_quando").on(t.criadoEm)],
+);

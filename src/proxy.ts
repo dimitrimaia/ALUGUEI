@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { supabaseEnv } from "@/lib/supabase/env";
+import { fetchComRetentativa } from "@/lib/supabase/rede";
 
 const AREAS_PROTEGIDAS = ["/painel", "/m"];
 
@@ -10,6 +11,7 @@ export async function proxy(request: NextRequest) {
   const { url, chave } = supabaseEnv();
 
   const supabase = createServerClient(url, chave, {
+    global: { fetch: fetchComRetentativa },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (lista, cabecalhos) => {

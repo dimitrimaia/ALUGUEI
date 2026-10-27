@@ -71,6 +71,13 @@
       "when": 1793043430361,
       "tag": "0009_sparkling_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793073312224,
+      "tag": "0010_flippant_dracula",
+      "breakpoints": true
     }
   ]
 }

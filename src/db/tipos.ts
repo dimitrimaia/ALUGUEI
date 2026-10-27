@@ -94,6 +94,12 @@ export type Database = {
         Update: { id?: string; usuario_id?: string; dia?: string; categoria?: string; valor_centavos?: number; quantidade_mil?: number | null; km_odometro?: number | null; descricao?: string | null; criado_em?: string };
         Relationships: [];
       };
+      erros_app: {
+        Row: { id: string; origem: string; mensagem: string; digest: string | null; caminho: string | null; usuario_id: string | null; detalhe: Json | null; criado_em: string };
+        Insert: { id?: string; origem: string; mensagem: string; digest?: string | null; caminho?: string | null; usuario_id?: string | null; detalhe?: Json | null; criado_em?: string };
+        Update: { id?: string; origem?: string; mensagem?: string; digest?: string | null; caminho?: string | null; usuario_id?: string | null; detalhe?: Json | null; criado_em?: string };
+        Relationships: [];
+      };
       evidencias: {
         Row: { id: string; organizacao_id: string; contrato_id: string | null; veiculo_id: string | null; locatario_id: string | null; tipo: string; finalidade: string; caminho_storage: string; sha256: string; tamanho_bytes: number; mime: string; recebido_em: string; capturado_em_dispositivo: string | null; latitude: number | null; longitude: number | null; precisao_metros: number | null; ip: string | null; dispositivo: string | null; enviado_por: string; metadados: Json | null };
         Insert: { id?: string; organizacao_id: string; contrato_id?: string | null; veiculo_id?: string | null; locatario_id?: string | null; tipo: string; finalidade: string; caminho_storage: string; sha256: string; tamanho_bytes: number; mime: string; recebido_em?: string; capturado_em_dispositivo?: string | null; latitude?: number | null; longitude?: number | null; precisao_metros?: number | null; ip?: string | null; dispositivo?: string | null; enviado_por: string; metadados?: Json | null };

@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/db/tipos";
 import { supabaseEnv } from "./env";
+import { fetchComRetentativa } from "./rede";
 
 /**
  * Cliente com a chave secreta: ignora o RLS. Use só no servidor, e só quando
@@ -13,5 +14,6 @@ export function supabaseAdmin() {
   if (!chave) throw new Error("SUPABASE_SECRET_KEY não configurada");
   return createClient<Database>(supabaseEnv().url, chave, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: fetchComRetentativa },
   });
 }

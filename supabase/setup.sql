@@ -819,4 +819,20 @@ ALTER TABLE "reservas_manutencao" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "reservas_manutencao_dono" ON "reservas_manutencao" FOR SELECT USING ("usuario_id" = auth.uid());
 
 insert into drizzle.__drizzle_migrations (hash, created_at) values ('187401338733785202be9232acde8f9c81689933cd4f0d107cac6832b87ca382', 1793043430361);
+
+-- Migração 0010_flippant_dracula
+CREATE TABLE "erros_app" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"origem" text NOT NULL,
+	"mensagem" text NOT NULL,
+	"digest" text,
+	"caminho" text,
+	"usuario_id" uuid,
+	"detalhe" jsonb,
+	"criado_em" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE INDEX "erros_app_quando" ON "erros_app" USING btree ("criado_em");
+ALTER TABLE "erros_app" ENABLE ROW LEVEL SECURITY;
+
+insert into drizzle.__drizzle_migrations (hash, created_at) values ('ceecd71b026c1a6406884999389bafe9b7724a9eedf9ea74b9d771087df55416', 1793073312224);
 commit;
