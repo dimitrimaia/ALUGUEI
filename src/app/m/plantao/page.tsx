@@ -1,4 +1,4 @@
-import { BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
+import { KeyRound, BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -12,6 +12,8 @@ import { taxas } from "@/dominio/ganhos/custos";
 import { minutosJornada, NOME_DESPESA, NOME_PLATAFORMA, progressoMeta, resumir } from "@/dominio/ganhos/plantao";
 import { configPlantao, dadosDoPeriodo, jornadaAberta, paraDominio } from "@/lib/plantao";
 import { exigirUsuario } from "@/lib/sessao";
+import { aluguelExterno, leiturasDeKm } from "@/lib/aluguel-externo";
+import { lembretesDoDia } from "@/dominio/ganhos/aluguel";
 
 export const metadata = { title: "Plantão" };
 
@@ -23,6 +25,7 @@ const FERRAMENTAS = [
   { href: "/m/plantao/financas", rotulo: "Finanças", detalhe: "Meta do mês e reserva", icone: PiggyBank },
   { href: "/m/caronas", rotulo: "Caronas", detalhe: "Divida o custo da viagem", icone: Users },
   { href: "/m/clientes", rotulo: "Meus clientes", detalhe: "Seu link de corridas", icone: Link2 },
+  { href: "/m/plantao/aluguel", rotulo: "Carro alugado", detalhe: "Vistoria, km do mês e prazo", icone: KeyRound },
   { href: "/m/plantao/custos", rotulo: "Custos do carro", detalhe: "Base do lucro real", icone: Settings2 },
 ] as const;
 
@@ -30,7 +33,8 @@ const FERRAMENTAS = [
 export default async function Plantao() {
   const usuario = await exigirUsuario("/m/plantao");
   const dia = hoje();
-  const [config, aberta, dados] = await Promise.all([configPlantao(usuario.id), jornadaAberta(usuario.id), dadosDoPeriodo(usuario.id, dia, dia)]);
+  const [config, aberta, dados, aluguel] = await Promise.all([configPlantao(usuario.id), jornadaAberta(usuario.id), dadosDoPeriodo(usuario.id, dia, dia), aluguelExterno(usuario.id).catch(() => null)]);
+  const lembretesAluguel = aluguel ? lembretesDoDia(aluguel, dia, await leiturasDeKm(usuario.id, aluguel)) : [];
   const t = taxas(config.perfil);
   const agora = new Date();
   const d = paraDominio(dados);
@@ -47,6 +51,13 @@ export default async function Plantao() {
     <div className="flex flex-col gap-4">
       <CabecalhoMotorista raiz titulo="Plantão" subtitulo="Seu dia de trabalho, com o lucro de verdade." />
       <SincronizarPlantao perfil={config.perfil} criterios={config.criterios} preferencias={config.preferencias} />
+      {lembretesAluguel.slice(0, 2).map((l) => (
+        <Link key={l.chave} href="/m/plantao/aluguel" className={`flex items-center gap-3 rounded-[1.1rem] border p-3 text-sm ${l.nivel === "perigo" ? "border-perigo/30 bg-perigo/10" : l.nivel === "alerta" ? "border-alerta/30 bg-alerta/10" : "border-borda bg-cartao"}`}>
+          <KeyRound size={18} className={l.nivel === "perigo" ? "shrink-0 text-perigo" : "shrink-0 text-alerta"} />
+          <span className="min-w-0 flex-1"><span className="block font-semibold">{l.titulo}</span><span className="block text-xs text-suave">{l.texto}</span></span>
+          <ChevronRight size={16} className="shrink-0 text-suave" />
+        </Link>
+      ))}
 
       <section className="fundo-marca relative -mt-1 overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante">
         <div className="grade-sutil absolute inset-0 opacity-60 [mask-image:radial-gradient(80%_80%_at_90%_0%,black,transparent)]" aria-hidden />

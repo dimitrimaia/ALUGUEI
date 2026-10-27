@@ -7,6 +7,7 @@ import { aluguelMensal, type Criterios, normalizarCriterios, normalizarPerfil, P
 import type { CategoriaDespesa, Plataforma } from "@/dominio/ganhos/plantao";
 import { normalizarPreferenciasCopiloto, type PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 import { type ConfigFinancas, normalizarFinancas } from "@/dominio/ganhos/financas";
+import { aluguelExterno } from "./aluguel-externo";
 import { contratosDoMotorista } from "./motorista";
 import { supabaseAdmin } from "./supabase/admin";
 
@@ -17,10 +18,12 @@ import { supabaseAdmin } from "./supabase/admin";
 
 export const NOME_ALUGUEL = "Aluguel do carro (contrato)";
 
-/** Aluguel semanal do contrato ativo no Aluguei, se houver. */
+/** Aluguel semanal do contrato ativo no Aluguei; se não houver, o do carro alugado fora do app. */
 export const aluguelDoContrato = cache(async (usuarioId: string): Promise<Centavos | null> => {
   const ativo = (await contratosDoMotorista(usuarioId)).find((c) => c.status === "ativo");
-  return ativo ? (ativo.parametros as unknown as ParametrosContrato).aluguelSemanal : null;
+  if (ativo) return (ativo.parametros as unknown as ParametrosContrato).aluguelSemanal;
+  const externo = await aluguelExterno(usuarioId).catch(() => null);
+  return externo && !externo.devolucao ? externo.valorSemanal : null;
 });
 
 export type ConfigPlantao = { perfil: PerfilCusto; criterios: Criterios; meta: Centavos; salvo: boolean; aluguelSemanal: Centavos | null; preferencias: PreferenciasCopiloto; financas: ConfigFinancas };

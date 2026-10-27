@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2, Calculator, Camera, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Navigation, Users, Wallet } from "lucide-react";
+import { KeyRound, Settings2, Calculator, Camera, ClipboardCheck, FileText, Gauge, LifeBuoy, Link2, MessageCircle, Search, Navigation, Users, Wallet } from "lucide-react";
 import { useConta } from "@/components/conta/contexto";
 import { useMenu } from "@/components/menu-app";
 
@@ -28,6 +28,7 @@ export function RegistrarMenuMotorista() {
       {
         titulo: "Meu aluguel",
         itens: [
+          { href: "/m/plantao/aluguel", rotulo: "Carro alugado fora do app", icone: KeyRound },
           { href: "/m/checkin", rotulo: "Check-in semanal", icone: Camera },
           { href: "/m/extrato", rotulo: "Pagamentos", icone: Wallet, tambem: ["/m/pagar"] },
           { href: "/m/meu-contrato", rotulo: "Contrato", icone: FileText, tambem: ["/m/contrato"] },

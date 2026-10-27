@@ -5,6 +5,8 @@ import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { conciliar, contaDoLocador, emitirCobranca } from "@/lib/cobrancas";
 import { notificar, notificarEquipe, usuarioDoContrato } from "@/lib/notificacoes";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { lembretesDoDia, normalizarAluguel } from "@/dominio/ganhos/aluguel";
+import { leiturasDeKm } from "@/lib/aluguel-externo";
 
 const DIAS_DE_ANTECEDENCIA = 3;
 
@@ -17,7 +19,8 @@ const DIAS_DE_ANTECEDENCIA = 3;
  *  4. check-in sem envio há mais dias que o contrato tolera vira uma decisão
  *     pendente para o locador (RF-073). O sistema só sugere; não notifica nem multa;
  *  5. lembretes ao motorista: pagamento na véspera e no dia, atraso no dia
- *     seguinte e check-in aberto (cada aviso tem chave própria e sai uma vez).
+ *     seguinte e check-in aberto (cada aviso tem chave própria e sai uma vez);
+ *  6. lembretes do carro alugado fora do Aluguei.
  */
 export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -25,7 +28,7 @@ export async function GET(request: Request) {
   }
   const admin = supabaseAdmin();
   const dia = hoje();
-  const resultado = { emitidas: 0, conciliadas: 0, atrasadas: 0, checkinsAtrasados: 0, erros: [] as string[] };
+  const resultado = { emitidas: 0, conciliadas: 0, atrasadas: 0, checkinsAtrasados: 0, lembretesAluguel: 0, erros: [] as string[] };
 
   const { data: ativos } = await admin.from("contratos").select("id, organizacao_id").eq("status", "ativo");
   const comConta = new Set<string>();
@@ -125,6 +128,29 @@ export async function GET(request: Request) {
         });
       }
     }
+  }
+
+  // 6. Carro alugado fora do Aluguei (user_metadata.aluguel): vistoria, pagamento,
+  //    prazo mínimo, km do mês e troca de óleo. Cada aviso sai uma vez (chave por evento).
+  for (let pagina = 1; pagina <= 50; pagina++) {
+    const { data: lote, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 1000 });
+    if (error) {
+      resultado.erros.push(`usuarios: ${error.message}`);
+      break;
+    }
+    for (const u of lote.users) {
+      const aluguel = normalizarAluguel((u.user_metadata as Record<string, unknown> | undefined)?.aluguel);
+      if (!aluguel) continue;
+      try {
+        for (const l of lembretesDoDia(aluguel, dia, await leiturasDeKm(u.id, aluguel))) {
+          await notificar({ usuarioId: u.id, modelo: "aluguel_externo.lembrete", titulo: l.titulo, texto: l.texto, link: "/m/plantao/aluguel", assunto: "lembretes", chave: `aluguel:${u.id}:${l.chave}` });
+          resultado.lembretesAluguel++;
+        }
+      } catch (e) {
+        resultado.erros.push(`aluguel ${u.id}: ${String(e)}`);
+      }
+    }
+    if (lote.users.length < 1000) break;
   }
 
   return Response.json(resultado);
