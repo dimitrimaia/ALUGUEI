@@ -247,3 +247,10 @@ textarea {
 .entrada-tela { animation: entrada-tela 200ms ease-out both; }
 @keyframes entrada-tela { from { opacity: 0.35; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .entrada-tela { animation: none; } }
+
+/* Avisos rápidos (toast.tsx): sobem com mola leve e somem descendo. */
+.toast { animation: toast-entra 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.toast.toast-sai { animation: toast-sai 260ms ease-in both; }
+@keyframes toast-entra { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes toast-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .toast, .toast.toast-sai { animation-duration: 1ms; } }

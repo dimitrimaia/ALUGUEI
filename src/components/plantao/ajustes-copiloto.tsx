@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
 import { ArrowDown, ArrowUp, Home, LocateFixed, MessageSquareText, Plus, Save, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -189,7 +190,10 @@ export function AjustesCopiloto({ inicial }: { inicial: PreferenciasCopiloto }) 
           iniciar(async () => {
             const r = await acaoSegura(() => salvarPreferenciasCopiloto(p));
             setEstado(r);
-            if ("ok" in r && r.ok) router.refresh();
+            if ("ok" in r && r.ok) {
+              avisar("Ajustes do Copiloto salvos");
+              router.refresh();
+            } else if (r.erro) avisar(r.erro, "erro");
           })
         }
       >

@@ -12,7 +12,8 @@ package xyz.aluguei.app.plantao
  *  - oferta aberta: tem "Aceitar por R$ X" → [TelaLida.ComOferta];
  *  - contraproposta enviada: "Oferecendo sua tarifa" / "Aguarde a resposta" → [TelaLida.Contraproposta];
  *  - lista de pedidos: vários "R$x/km", sem "Aceitar por" → [TelaLida.Lista];
- *  - fim: "Sua solicitação expirou", "Solicitação já aceita", "Procurando…" → [TelaLida.Fim].
+ *  - fim: "Sua solicitação expirou", "Solicitação já aceita", "Procurando…" → [TelaLida.Fim];
+ *  - corrida em andamento: "Cheguei", "Iniciar viagem"... ([Aceite.TEXTOS_EM_ANDAMENTO]) → [TelaLida.EmAndamento].
  *
  * Puro (sem Android): testado em LeitorInDriveTest.kt.
  */
@@ -95,6 +96,9 @@ object LeitorInDrive {
 
         // 5) esperando pedidos
         if ("procurando" in nJunto || "aguarde que os pedidos" in nJunto) return TelaLida.Fim
+
+        // 6) corrida em andamento ("Cheguei", "Iniciar viagem"...): o motorista aceitou
+        Aceite.gatilho(t)?.let { return TelaLida.EmAndamento(it) }
         return TelaLida.Nada
     }
 

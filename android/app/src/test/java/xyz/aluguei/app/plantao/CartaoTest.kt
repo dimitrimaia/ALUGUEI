@@ -78,4 +78,36 @@ class CartaoTest {
         assertEquals("dois mil trezentos e quarenta e cinco", Cartao.extenso(2345))
         assertEquals("catorze", Cartao.extenso(14))
     }
+
+    @Test
+    fun `km e tempo totais com o detalhe`() {
+        // 2,1 km até o passageiro + 15,2 de viagem; 6 + 22 min.
+        val o = OfertaDetalhada(app = "indrive", valor = 2600, kmCorrida = 15.2, minutosCorrida = 22.0, kmBusca = 2.1, minutosBusca = 6.0)
+        val av = avaliarCorrida(o.paraOferta(), t, CRITERIOS_PADRAO)
+        assertEquals(Cartao.Total("17,3 km no total", "2,1 até o passageiro + 15,2 de viagem"), Cartao.kmTotal(o, av))
+        assertEquals(Cartao.Total("28 min no total", "6 até o passageiro + 22 de viagem"), Cartao.minutosTotal(o, av))
+        // Sem a busca: só o total.
+        val sem = o.copy(kmBusca = null, minutosBusca = null)
+        val avSem = avaliarCorrida(sem.paraOferta(), t, CRITERIOS_PADRAO)
+        assertEquals(Cartao.Total("15,2 km no total", null), Cartao.kmTotal(sem, avSem))
+        assertEquals(Cartao.Total("22 min no total", null), Cartao.minutosTotal(sem, avSem))
+        // Tempo estimado (sem minutos na tela): "~"; km estimado pelo R$/km: "≈".
+        val est = o.copy(minutosCorrida = null, minutosBusca = null, kmCorridaEstimado = true)
+        val avEst = avaliarCorrida(est.paraOferta(), t, CRITERIOS_PADRAO)
+        assertEquals(Cartao.Total("≈17,3 km no total", "2,1 até o passageiro + ≈15,2 de viagem"), Cartao.kmTotal(est, avEst))
+        assertEquals(Cartao.Total("~43 min no total", "~5 até o passageiro + ~38 de viagem"), Cartao.minutosTotal(est, avEst))
+    }
+
+    @Test
+    fun `notificacao da oferta com a tela bloqueada`() {
+        val o = OfertaDetalhada(app = "indrive", valor = 2600, kmCorrida = 15.2, minutosCorrida = 22.0, kmBusca = 2.1, minutosBusca = 6.0)
+        val av = avaliarCorrida(o.paraOferta(), t, CRITERIOS_PADRAO).copy(sinal = Sinal.VERDE, porKm = 150, lucro = 1210)
+        assertEquals("🟢 Vale a pena · R$ 26 · R$ 1,50/km", Cartao.tituloNotificacao(o, av))
+        assertEquals("17,3 km · lucro R$ 12", Cartao.textoNotificacao(o, av))
+        assertEquals("17,3 km · lucro R$ 12 · sugestão: toque em R$ 29", Cartao.textoNotificacao(o, av, Copiloto.Sugestao.Atalho(2900, av)))
+        assertEquals("17,3 km · lucro R$ 12", Cartao.textoNotificacao(o, av, Copiloto.Sugestao.PodeAceitar))
+        // Com a contraproposta / valor final, o título mostra o valor usado.
+        assertEquals("🔴 Não compensa · R$ 22 · R$ 1,50/km", Cartao.tituloNotificacao(o.copy(suaOferta = 2200), av.copy(sinal = Sinal.VERMELHO)))
+        assertEquals("🟡 Avalie · R$ 25 · R$ 1,50/km", Cartao.tituloNotificacao(o.copy(suaOferta = 2200, valorFinal = 2500), av.copy(sinal = Sinal.AMARELO)))
+    }
 }

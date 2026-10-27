@@ -3,12 +3,14 @@
     Configuração do leitor de corridas (LeitorCorridasService).
     packageNames vem de @string/pacotes_corridas (res/values/plantao.xml): a lista fica num lugar só.
     Sem flagRequestTouchExplorationMode, sem gestos, sem ações: só lê o texto da tela desses apps.
+    flagRetrieveInteractiveWindows: para achar a janela do app de corrida quando ela não é a
+    ativa (ex.: oferta do inDrive por cima da tela bloqueada). Continua só lendo.
     canTakeScreenshot: só para o "print das ofertas" (opcional, Android 11+, desligado por padrão).
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="false"
     android:canTakeScreenshot="true"

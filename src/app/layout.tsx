@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { BarraProgresso } from "@/components/barra-progresso";
 import { ProvedorMenu } from "@/components/menu-app";
 import { VersaoApp } from "@/components/versao-app";
+import { Toasts } from "@/components/toast";
 import { ServiceWorker } from "@/components/service-worker";
 import { RegistroNavegacao } from "@/components/voltar";
 import { SCRIPT_TEMA } from "@/lib/tema";
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <RegistroNavegacao />
           <ServiceWorker />
           <VersaoApp />
+          <Toasts />
         </Suspense>
         <ProvedorMenu>{children}</ProvedorMenu>
       </body>

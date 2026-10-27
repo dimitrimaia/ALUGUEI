@@ -64,7 +64,15 @@ celular
    pedidos ele some. A linha de destaque sugere a contraproposta: "Toque em R$ 23" (menor atalho
    que deixa verde), "Use o lápis: R$ 27" ou "Nem o dobro (R$ X) fica verde"; se já é verde,
    "Pode aceitar". Enviada a contraproposta ("Oferecendo sua tarifa R$ 22"), o cartão recalcula
-   com "Sua oferta: R$ 22". Expirou / já aceita / procurando → o cartão some.
+   com "Sua oferta: R$ 22" e esse passa a ser o valor final da corrida. Expirou / já aceita /
+   procurando → o cartão some.
+   **Lápis do valor final** (ao lado do chip "Contar volta para casa", também sem destino): "✎ R$ 22"
+   abre um campo numérico (teclado só ao tocar; tocar fora ou Voltar fecha) para o valor com que o
+   motorista aceitou / vai aceitar; grava `valorFinal` na fila e recalcula o cartão ("Valor final:
+   R$ 25 (sua oferta R$ 22)"). Uma contraproposta nova depois disso volta a ser o valor.
+   **Km e tempo totais** sempre visíveis no cartão completo (e no expandido das bordas): "17,3 km no
+   total" com "2,1 até o passageiro + 15,2 de viagem" pequeno embaixo, e "28 min no total" com
+   "6 até o passageiro + 22 de viagem" ("~" quando estimado; "≈" quando o km veio do R$/km).
 5. **Área de risco** (aviso do inDrive): faixa "⚠ Área de risco" e botão "Evitar este lugar", que
    guarda o bairro (ou a rua) na lista local de lugares a evitar. Embarque ou destino com um lugar da
    lista (`criterios.evitar` + os da bolha) → cartão vermelho "Lugar que você evita: X". Nota abaixo de
@@ -94,8 +102,20 @@ celular
    "Vermelho. Não compensa."). Com `bip`, um bip curto só no verde.
 10. **"Você aceitou?"** (`perguntarAceite`): se a oferta sai da tela (lista, fim, outra tela do inDrive,
     ou o tempo do cartão acaba) sem Aceitei/Recusei, aparece por 8 s "Você aceitou a corrida de R$ 26?"
-    [Sim] [Não] e "Não perguntar mais" (desliga no aparelho e emite `preferencia`). A resposta vira a
-    decisão da corrida na fila. Fechar o cartão no ✕ não pergunta.
+    [Sim] [Não], **[Fiz com outro valor]** (campo numérico: grava a corrida como aceita com o valor
+    digitado em `valorFinal`; `valor` continua o da oferta) e "Não perguntar mais" (desliga no aparelho
+    e emite `preferencia`). A resposta vira a decisão da corrida na fila (`decisaoOrigem: "pergunta"`).
+    Fechar o cartão no ✕ não pergunta.
+    **Aceite automático (inDrive):** depois de uma oferta aberta (ou da contraproposta), se em até 3 min
+    aparecer uma tela de corrida em andamento, a corrida é marcada como aceita sozinha
+    (`decisaoOrigem: "automatica"`, `valorFinal` = a sua oferta, senão o valor da oferta) e o "Você
+    aceitou?" não aparece (se já estava aberto, fecha). Os textos (sem acento/maiúscula, palavras
+    inteiras) ficam só em `Aceite.TEXTOS_EM_ANDAMENTO`: "cheguei", "estou aqui", "iniciar viagem",
+    "iniciar corrida", "comecar viagem", "a caminho do passageiro", "va ate o passageiro", "concluir
+    viagem", "finalizar viagem", "encerrar viagem", "o passageiro foi notificado", "passageiro esta
+    esperando", "embarque". "Solicitação já aceita", "expirou", "Procurando" e "cancelad…" nunca contam
+    (e descartam a oferta pendente); tela com "Aceitar por"/"Oferecendo sua tarifa" também não. O
+    Diagnóstico mostra o texto que disparou: `inDrive: aceita automaticamente · "cheguei" · R$ 22`.
 11. **Mensagem pronta:** depois de Aceitei (ou do Sim), o botão **Copiar mensagem** monta a mensagem
     (`preferencias.mensagem`, com saudação pela hora de Brasília, nome do passageiro e minutos até o
     embarque) e copia; aviso "Mensagem copiada: cole no chat do app". O motorista cola no chat.
@@ -103,34 +123,43 @@ celular
     "Online" na tela, ou o botão de ficar online), o leitor dorme: não monta a árvore da tela, só olha
     o texto dos eventos, e acorda ao ver "Online" ou uma oferta (confere a tela inteira no máximo a
     cada 2 s em telas novas e 20 s no geral). O Diagnóstico mostra "dormindo (offline)".
-13. **Aceitei** / **Recusei** só registram a decisão. "Recusei" (ou fechar) não deixa a mesma
+13. **Tela bloqueada:** a janela sobreposta não aparece sobre o bloqueio. O leitor continua lendo
+   (com `flagRetrieveInteractiveWindows`, procura a janela do inDrive entre as janelas da tela quando
+   a ativa é a do sistema) e, com `KeyguardManager.isKeyguardLocked` (ou a tela desligada/ligando), a
+   oferta vai também numa **notificação heads-up** do canal **"Ofertas"** (`IMPORTANCE_HIGH`,
+   `VISIBILITY_PUBLIC`, sem som/vibração do canal): título "🟢 Vale a pena · R$ 26 · R$ 1,50/km",
+   texto "17,3 km · lucro R$ 12 · sugestão: toque em R$ 29" (+ destino). Voz, bip e vibração seguem as
+   preferências. A contraproposta/volta só atualiza a notificação; ao desbloquear (`USER_PRESENT`) ela
+   sai e o cartão normal (que já estava por baixo) aparece se a oferta ainda estiver aberta; quando a
+   oferta acaba, ela sai também. Tocar abre o app de corrida.
+14. **Aceitei** / **Recusei** só registram a decisão (`decisaoOrigem: "toque"`). "Recusei" (ou fechar) não deixa a mesma
    oferta reaparecer enquanto ela estiver aberta. **O app nunca toca no app de corrida e nunca
    aceita, recusa ou oferece tarifa pelo motorista** (sem performAction, sem gestos).
-14. **Toque na bolha** → digitação rápida (o teclado só abre ao tocar no campo; toque fora fecha):
+15. **Toque na bolha** → digitação rápida (o teclado só abre ao tocar no campo; toque fora fecha):
    valor, km, minutos e km até o passageiro, atalhos "+R$ 5" e "+1 km", resultado ao vivo.
-15. **Segurar a bolha** → menu em leque: Pausar/Retomar, Digitar oferta, Tema claro/escuro, Régua
+16. **Segurar a bolha** → menu em leque: Pausar/Retomar, Digitar oferta, Tema claro/escuro, Régua
    rápida (+/− nos mínimos por km e por hora; emite `regua` e fica pendente para o app salvar),
    Resumo do dia, **Definir base aqui** (pega a posição, guarda no aparelho e emite `base`), Diagnóstico (rótulo junto da bolha com o último app/tela lida: "oferta lida",
    "lista", "sem oferta"…), Abrir o Aluguei, Desligar.
-16. Arrastar a bolha até o **X** no rodapé desliga. Ao soltar em outro lugar, ela encosta na borda
+17. Arrastar a bolha até o **X** no rodapé desliga. Ao soltar em outro lugar, ela encosta na borda
    e a posição fica salva.
-17. **App de navegação** (`preferencias.appNavegacao`) dos botões Embarque/Destino (cartão e
+18. **App de navegação** (`preferencias.appNavegacao`) dos botões Embarque/Destino (cartão e
    notificação): `maps` → Google Maps já navegando (`google.navigation:q=…`, pacote
    `com.google.android.apps.maps`); `waze` → `https://waze.com/ul?q=…&navigate=yes` no Waze;
    `perguntar` → o Android pergunta qual app; `padrao` → `geo:0,0?q=…`. Se o app escolhido não
    estiver instalado, abre o padrão (por isso o manifesto declara os dois pacotes em `<queries>`).
-18. **Estilo "bordas"** (`preferencias.estiloCartao = "bordas"`): no lugar do cartão, duas peças
+19. **Estilo "bordas"** (`preferencias.estiloCartao = "bordas"`): no lugar do cartão, duas peças
    pequenas coladas na borda da tela (do lado oposto ao da bolha): uma pílula na cor do sinal com
    "● R$ 2,10/km" (e "Sua: R$ X" no inDrive depois da contraproposta) e outra com "Lucro R$ 12,30".
    Arrastar sobe e desce (posição salva); **tocar abre o cartão completo** (com o mesmo tempo na
    tela). A próxima oferta volta às bordas.
-19. **Perfis de régua** (`preferencias.perfis`, até 6, ex.: Dia, Noite, Aeroporto): no menu da bolha,
+20. **Perfis de régua** (`preferencias.perfis`, até 6, ex.: Dia, Noite, Aeroporto): no menu da bolha,
    "Perfil: <atual>" abre a lista; escolher aplica os critérios do perfil na hora (normalizados como
    a régua: inválido volta ao padrão), guarda o nome no aparelho e emite `perfil` { nome, criterios }
    (guardado até a tela ouvir; também em `perfilPendente()`). Enquanto houver perfil pendente,
    `configurar({ criterios })` não sobrescreve os critérios. A régua rápida pendente sai (o perfil
    troca a régua inteira).
-20. **Print das ofertas** (`preferencias.printOfertas`, desligado por padrão; Android 11+): quando
+21. **Print das ofertas** (`preferencias.printOfertas`, desligado por padrão; Android 11+): quando
    uma oferta nova é lida (uma vez por oferta, 350 ms depois de o cartão aparecer), o serviço de
    acessibilidade tira um print (`takeScreenshot`) e salva um JPEG (80%) em
    **Pictures/Aluguei/Ofertas** com nome `oferta_2026-10-26_14-03-22_R18-40_indrive.jpg`
@@ -138,7 +167,7 @@ celular
    = sem print (nunca trava a leitura). Precisa de `android:canTakeScreenshot="true"` no XML do
    leitor. Abaixo do Android 11 fica desligado (o Diagnóstico avisa; `estado().printDisponivel = false`).
    Serve de comprovante para contestar no app de corrida.
-21. **Câmera de segurança** (opcional): serviço em primeiro plano tipo `camera` (e `microphone` se o
+22. **Câmera de segurança** (opcional): serviço em primeiro plano tipo `camera` (e `microphone` se o
    motorista deu a permissão do microfone: aí grava com áudio) que grava vídeo com Camera2 +
    MediaRecorder (sem CameraX) em arquivos de `camera.minutosPorArquivo` minutos (1 a 30), em
    **Movies/Aluguei/Corridas** (MediaStore; no Android 9 ou anterior, na pasta do app em
@@ -468,6 +497,8 @@ export type CorridaNativa = {
   custoVolta: number | null;  // custo da volta (centavos), quando calculada (mesmo sem contarVolta)
   paradas: number;            // endereços além do embarque e do destino
   faixa: string | null;       // faixa de horário da régua no momento (ex.: "Madrugada")
+  valorFinal: number | null;  // centavos: valor com que aceitou (lápis / "Fiz com outro valor" / sua oferta / valor)
+  decisaoOrigem: "toque" | "pergunta" | "automatica" | null; // como a decisão foi tomada
 };
 
 export interface PlantaoPlugin {
@@ -510,7 +541,7 @@ export interface PlantaoPlugin {
   cameraEstado(): Promise<EstadoCamera>;
 
   addListener(e: "oferta", f: (c: CorridaNativa & Omit<AvaliacaoNativa, "sinal" | "porKm" | "porHora" | "lucro">) => void): Promise<PluginListenerHandle>;
-  addListener(e: "decisao", f: (d: { id: string; decisao: "aceitei" | "recusei" }) => void): Promise<PluginListenerHandle>;
+  addListener(e: "decisao", f: (d: { id: string; decisao: "aceitei" | "recusei"; decisaoOrigem?: "toque" | "pergunta" | "automatica"; valorFinal?: number }) => void): Promise<PluginListenerHandle>;
   addListener(e: "permissao", f: (p: { tipo: TipoPermissao; concedida: true }) => void): Promise<PluginListenerHandle>;
   addListener(e: "estado", f: (s: EstadoPlantao) => void): Promise<PluginListenerHandle>;
   addListener(e: "regua", f: (r: Regua) => void): Promise<PluginListenerHandle>;

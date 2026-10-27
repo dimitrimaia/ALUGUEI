@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useOptimistic, useTransition } from "react";
 import { corrigirDecisao } from "@/lib/acoes-plantao";
@@ -13,6 +14,7 @@ export function DecisaoOferta({ id, decisao }: { id: string; decisao: string | n
       const nova = atual === d ? null : d;
       mudar(nova);
       await corrigirDecisao(id, nova);
+      avisar(nova === "aceitei" ? "Marcada como corrida que você pegou" : nova === "recusei" ? "Marcada como não pegou" : "Marcação tirada");
     });
   return (
     <div className="flex shrink-0 gap-1">

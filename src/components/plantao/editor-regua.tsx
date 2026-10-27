@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
 import { Bookmark, Clock, MapPin, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -178,7 +179,10 @@ export function EditorRegua({ inicial, perfisIniciais }: { inicial: Criterios; p
           iniciar(async () => {
             const r = await acaoSegura(() => salvarReguaCompleta(c));
             setEstado(r);
-            if ("ok" in r && r.ok) router.refresh();
+            if ("ok" in r && r.ok) {
+              avisar("Régua salva");
+              router.refresh();
+            } else if (r.erro) avisar(r.erro, "erro");
           })
         }
       >
@@ -200,6 +204,7 @@ function Perfis({ atual, iniciais, aoUsar }: { atual: Criterios; iniciais: { nom
       if ("ok" in r && r.ok) {
         setPerfis(lista);
         setAviso(msg);
+        avisar(msg);
       } else setAviso(r.erro ?? "Não foi possível salvar.");
     });
   return (

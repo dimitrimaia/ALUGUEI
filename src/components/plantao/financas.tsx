@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
 import { Check, PiggyBank, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -56,7 +57,7 @@ export function ConfigurarFinancas({ inicial }: { inicial: ConfigFinancas }) {
         <span className="text-xs text-suave">Com a virada às 4h, o que você lança de madrugada conta no dia anterior.</span>
       </div>
       {ok && <Aviso tom="ok">{ok}</Aviso>}
-      <Botao icone={Save} disabled={salvando} onClick={() => iniciar(async () => { const r = await acaoSegura(() => salvarFinancas(c)); setOk("ok" in r && r.ok ? "Salvo." : (r.erro ?? null)); if ("ok" in r && r.ok) router.refresh(); })}>{salvando ? "Salvando…" : "Salvar"}</Botao>
+      <Botao icone={Save} disabled={salvando} onClick={() => iniciar(async () => { const r = await acaoSegura(() => salvarFinancas(c)); setOk("ok" in r && r.ok ? "Salvo." : (r.erro ?? null)); if ("ok" in r && r.ok) { avisar("Finanças salvas"); router.refresh(); } else if (r.erro) avisar(r.erro, "erro"); })}>{salvando ? "Salvando…" : "Salvar"}</Botao>
     </Cartao>
   );
 }
@@ -65,7 +66,7 @@ export function FormReserva() {
   const [estado, despachar, pendente] = useActionState(movimentarReserva, {});
   const [tipo, setTipo] = useState<"guardar" | "usar">("guardar");
   const [chave, setChave] = useState(0);
-  useEffect(() => { if (estado.ok) setChave((k) => k + 1); }, [estado]);
+  useEffect(() => { if (estado.ok) { setChave((k) => k + 1); avisar("Lançado na reserva"); } }, [estado]);
   return (
     <form key={chave} action={despachar} className="flex flex-col gap-2">
       <input type="hidden" name="tipo" value={tipo} />

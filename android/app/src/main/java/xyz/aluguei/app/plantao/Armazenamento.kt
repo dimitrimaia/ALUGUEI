@@ -365,7 +365,16 @@ object Armazenamento {
     @Synchronized
     fun atualizarSuaOferta(ctx: Context, id: String, suaOferta: Long) {
         var mudou = false
-        val nova = corridas(ctx).map { if (it.id == id) it.copy(suaOferta = suaOferta).also { mudou = true } else it }
+        // Contraproposta nova: ela passa a ser o valor (o final corrigido antes deixa de valer).
+        val nova = corridas(ctx).map { if (it.id == id) it.copy(suaOferta = suaOferta, valorFinal = null).also { mudou = true } else it }
+        if (mudou) gravar(ctx, nova)
+    }
+
+    /** Lápis do cartão: valor com que o motorista aceitou / vai aceitar (centavos). */
+    @Synchronized
+    fun atualizarValorFinal(ctx: Context, id: String, valorFinal: Long) {
+        var mudou = false
+        val nova = corridas(ctx).map { if (it.id == id) it.copy(valorFinal = valorFinal).also { mudou = true } else it }
         if (mudou) gravar(ctx, nova)
     }
 
@@ -385,9 +394,11 @@ object Armazenamento {
     }
 
     @Synchronized
-    fun atualizarDecisao(ctx: Context, id: String, decisao: String): CorridaAvaliada? {
+    fun atualizarDecisao(ctx: Context, id: String, decisao: String, origem: String, valorFinal: Long? = null): CorridaAvaliada? {
         var achada: CorridaAvaliada? = null
-        val nova = corridas(ctx).map { if (it.id == id) it.copy(decisao = decisao).also { c -> achada = c } else it }
+        val nova = corridas(ctx).map {
+            if (it.id == id) it.copy(decisao = decisao, decisaoOrigem = origem, valorFinal = valorFinal ?: it.valorFinal).also { c -> achada = c } else it
+        }
         if (achada != null) gravar(ctx, nova)
         return achada
     }
@@ -506,6 +517,10 @@ data class CorridaAvaliada(
     val paradas: Int = 0,
     /** Nome da faixa de horário da régua (ex.: "Madrugada"), ou null. */
     val faixa: String? = null,
+    /** Valor com que o motorista aceitou (centavos): o corrigido, a sua oferta ou o da oferta. null = sem valor final. */
+    val valorFinal: Long? = null,
+    /** Como a decisão foi tomada: toque | pergunta | automatica (null = sem decisão). */
+    val decisaoOrigem: String? = null,
 ) {
     fun paraJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -532,6 +547,8 @@ data class CorridaAvaliada(
         put("custoVolta", custoVolta ?: JSONObject.NULL)
         put("paradas", paradas)
         put("faixa", faixa ?: JSONObject.NULL)
+        put("valorFinal", valorFinal ?: JSONObject.NULL)
+        put("decisaoOrigem", decisaoOrigem ?: JSONObject.NULL)
     }
 
     companion object {
@@ -566,6 +583,7 @@ data class CorridaAvaliada(
             custoVolta = custoVolta,
             paradas = o.paradas,
             faixa = faixa,
+            valorFinal = o.valorFinal,
         )
 
         fun deJson(o: JSONObject): CorridaAvaliada? = runCatching {
@@ -594,6 +612,8 @@ data class CorridaAvaliada(
                 custoVolta = if (o.isNull("custoVolta") || !o.has("custoVolta")) null else o.optLong("custoVolta"),
                 paradas = o.optInt("paradas", 0),
                 faixa = if (o.isNull("faixa") || !o.has("faixa")) null else o.optString("faixa").takeIf { it.isNotEmpty() },
+                valorFinal = if (o.isNull("valorFinal") || !o.has("valorFinal")) null else o.optLong("valorFinal"),
+                decisaoOrigem = if (o.isNull("decisaoOrigem") || !o.has("decisaoOrigem")) null else o.optString("decisaoOrigem").takeIf { it.isNotEmpty() },
             )
         }.getOrNull()
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
 import { ChevronRight, Lock, Plus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -123,7 +124,10 @@ export function EditorCustos({ inicial, metaInicial, aluguelSemanal }: { inicial
           iniciar(async () => {
             const r = await acaoSegura(() => salvarCustos({ perfil: p, meta: meta ?? 0 }));
             setEstado(r);
-            if ("ok" in r && r.ok) router.refresh();
+            if ("ok" in r && r.ok) {
+              avisar("Custos do carro salvos");
+              router.refresh();
+            } else if (r.erro) avisar(r.erro, "erro");
           })
         }
         className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] w-full"

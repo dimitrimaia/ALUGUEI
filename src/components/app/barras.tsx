@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Car, Check, Menu, MessageCircle, Plus, type LucideIcon } from "lucide-react";
+import { Bell, Building2, Car, Check, Menu, MessageCircle, Plus, type LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,6 +40,17 @@ function BotaoConversas() {
   );
 }
 
+/** Sino dos avisos, com o número de não lidos (nos dois modos). */
+function BotaoAvisos() {
+  const { notificacoes, modo } = useConta();
+  return (
+    <Link href={modo === "locador" ? "/painel/avisos" : "/m/avisos"} aria-label={notificacoes ? `Avisos, ${notificacoes} novos` : "Avisos"} className="relative grid size-10 place-items-center rounded-full hover:bg-cartao-2">
+      <Bell size={21} />
+      {notificacoes > 0 && <span className="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-[#ffb020] px-1 text-[0.6rem] font-bold text-[#3a2500] ring-2 ring-cartao">{notificacoes > 9 ? "9+" : notificacoes}</span>}
+    </Link>
+  );
+}
+
 /**
  * Barra fixa do topo: o logo (que leva ao início do modo) ou, nas telas
  * internas, voltar e o título. Sempre com o ☰ à direita. Inclui o espaço que
@@ -60,6 +71,7 @@ export function BarraTopo({ voltar, titulo, className = "" }: { voltar?: string;
             <Link href={modo === "locador" ? "/painel" : "/m"} className="flex-1 pl-2" aria-label="Início do app"><Marca /></Link>
           )}
           {/* No modo locador o rodapé não tem espaço para Conversas (tem o +), então ela fica aqui. */}
+          <BotaoAvisos />
           {modo === "locador" && <BotaoConversas />}
           <BotaoMenu />
         </div>

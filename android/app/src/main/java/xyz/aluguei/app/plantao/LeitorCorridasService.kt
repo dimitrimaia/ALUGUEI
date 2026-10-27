@@ -145,7 +145,7 @@ class LeitorCorridasService : AccessibilityService() {
         val bolha = BolhaService.instancia ?: return
         if (!ativo()) return
         try {
-            val raiz = rootInActiveWindow?.takeIf { it.packageName?.toString() == pacote } ?: return
+            val raiz = raizDo(pacote) ?: return
             val textos = juntarTextos(raiz)
             val hash = textos.hashCode()
             if (hash == ultimoHash) return
@@ -165,6 +165,23 @@ class LeitorCorridasService : AccessibilityService() {
             bolha.receberTela(app, tela)
         } catch (e: RuntimeException) {
             // Nó que sumiu no meio da leitura etc.: ignora esta tela, a próxima vem em 700 ms.
+        }
+    }
+
+    /**
+     * Raiz da janela do app de corrida. Normalmente é a janela ativa; com a tela
+     * bloqueada (o inDrive mostra a oferta por cima do bloqueio) ou com outra
+     * janela por cima, a ativa pode ser a do sistema: procura entre as janelas
+     * da tela (flagRetrieveInteractiveWindows), da de cima para a de baixo.
+     */
+    private fun raizDo(pacote: String): AccessibilityNodeInfo? {
+        rootInActiveWindow?.takeIf { it.packageName?.toString() == pacote }?.let { return it }
+        return try {
+            windows.asSequence()
+                .mapNotNull { j -> j.root }
+                .firstOrNull { it.packageName?.toString() == pacote }
+        } catch (e: RuntimeException) {
+            null
         }
     }
 

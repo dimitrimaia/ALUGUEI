@@ -21,6 +21,9 @@ export type CorridaNativa = {
   minutosBusca?: number | null;
   sinal: "verde" | "amarelo" | "vermelho";
   decisao?: "aceitei" | "recusei" | "sem_resposta" | null;
+  /** Valor com que a corrida foi feita (contraproposta ou correção), em centavos. */
+  valorFinal?: number | null;
+  decisaoOrigem?: "toque" | "pergunta" | "automatica" | null;
   origem: "leitura" | "digitada";
   momento: string;
 };

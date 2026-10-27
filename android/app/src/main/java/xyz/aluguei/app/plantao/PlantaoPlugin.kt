@@ -57,8 +57,11 @@ class PlantaoPlugin : Plugin() {
             p.emitir("oferta", dados)
         }
 
-        fun emitirDecisao(id: String, decisao: String) {
-            ativo?.emitir("decisao", JSObject().put("id", id).put("decisao", decisao))
+        fun emitirDecisao(id: String, decisao: String, origem: String? = null, valorFinal: Long? = null) {
+            val d = JSObject().put("id", id).put("decisao", decisao)
+            origem?.let { d.put("decisaoOrigem", it) }
+            valorFinal?.let { d.put("valorFinal", it) }
+            ativo?.emitir("decisao", d)
         }
 
         fun emitirPermissao(tipo: String, concedida: Boolean) {

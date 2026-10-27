@@ -31,7 +31,7 @@ object Copiloto {
      */
     fun avaliar(o: OfertaDetalhada, t: Taxas, c: Criterios, evitarExtra: List<String> = emptyList()): Resultado {
         val regua = if (evitarExtra.isEmpty()) c else c.copy(evitar = normalizarEvitar(c.evitar + evitarExtra))
-        val base = avaliarCorrida(o.paraOferta().copy(valor = o.suaOferta ?: o.valor), t, regua)
+        val base = avaliarCorrida(o.paraOferta().copy(valor = o.valorUsado), t, regua)
         val lugar = base.motivos.firstOrNull { it.startsWith(PREFIXO_EVITADO) }?.removePrefix(PREFIXO_EVITADO)
         val motivos = base.motivos.toMutableList()
         var sinal = base.sinal

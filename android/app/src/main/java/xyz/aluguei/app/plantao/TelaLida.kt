@@ -12,6 +12,13 @@ sealed class TelaLida {
     /** inDrive: o motorista mandou a própria tarifa e espera a resposta ("Oferecendo sua tarifa R$ 22"). */
     data class Contraproposta(val valor: Long) : TelaLida()
 
+    /**
+     * inDrive: tela de corrida em andamento ("Cheguei", "Iniciar viagem"...). Depois
+     * de uma oferta aberta, quer dizer que o motorista aceitou (ver [Aceite]).
+     * `gatilho` é o texto da lista [Aceite.TEXTOS_EM_ANDAMENTO] que bateu.
+     */
+    data class EmAndamento(val gatilho: String) : TelaLida()
+
     /** inDrive: lista de pedidos (vários R$/km, sem "Aceitar por"). O cartão some. */
     object Lista : TelaLida()
 
@@ -25,6 +32,7 @@ sealed class TelaLida {
     fun rotulo(): String = when (this) {
         is ComOferta -> "oferta lida"
         is Contraproposta -> "sua oferta"
+        is EmAndamento -> "corrida em andamento (\"$gatilho\")"
         Lista -> "lista"
         Fim -> "oferta encerrada"
         Nada -> "sem oferta"
@@ -64,7 +72,16 @@ data class OfertaDetalhada(
     /** Volta do destino até a base, quando calculada (fora da tela: Photon + OSRM). */
     val kmVolta: Double? = null,
     val minutosVolta: Double? = null,
+    /**
+     * Valor com que o motorista aceitou / vai aceitar (centavos), quando ele
+     * corrigiu no lápis do cartão ou no "Fiz com outro valor". null = usa a sua
+     * oferta (contraproposta) ou o valor da oferta.
+     */
+    val valorFinal: Long? = null,
 ) {
+    /** Valor que o cálculo e a fila usam: o final, senão a sua oferta, senão o da oferta. */
+    val valorUsado: Long get() = valorFinal ?: suaOferta ?: valor
+
     val embarque: String? get() = enderecos.firstOrNull()
     val destino: String? get() = if (enderecos.size >= 2) enderecos.last() else null
 

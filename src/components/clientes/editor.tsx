@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
 import { Copy, Plus, Save, Share2, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -86,6 +87,7 @@ export function EditorClientes({ inicial, salvo, site }: { inicial: Perfil; salv
           iniciar(async () => {
             const r = await acaoSegura(() => salvarPerfilParticular(p));
             setEstado(r);
+            if ("ok" in r && r.ok) avisar("Página salva"); else if (r.erro) avisar(r.erro, "erro");
             if ("slug" in r && r.slug) {
               setPublicado(r.slug);
               setP((a) => ({ ...a, slug: r.slug! }));

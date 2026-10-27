@@ -1,5 +1,6 @@
 "use client";
 
+import { avisar } from "@/components/toast";
 import { Check, Play, Plus, Square } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useActionState, useEffect, useRef, useState, useTransition } from "react";
@@ -44,6 +45,7 @@ function useFormulario(acao: (e: EstadoForm, f: FormData) => Promise<EstadoForm>
     if (estado.ok) {
       form.current?.reset();
       feito.current?.();
+      avisar(estado.tipo === "ganho" ? "Ganho lançado" : estado.tipo === "despesa" ? "Despesa lançada" : "Plantão iniciado. Bom trabalho!");
     }
   }, [estado]);
   return { estado, despachar, pendente, form };

@@ -31,8 +31,8 @@ object Cartao {
         /** Custo de rodar a volta (centavos), para mostrar mesmo quando a régua não desconta. */
         val custoVolta: Long? = null,
     ) {
-        /** Valor que a avaliação usou (a contraproposta, se houver). */
-        val valor: Long get() = oferta.suaOferta ?: oferta.valor
+        /** Valor que a avaliação usou (o final, senão a contraproposta, senão o da oferta). */
+        val valor: Long get() = oferta.valorUsado
     }
 
     private val PT_BR: Locale = Locale.forLanguageTag("pt-BR")
@@ -111,6 +111,58 @@ object Cartao {
 
     /** Os 3 primeiros campos são os grandes; os demais vão juntos na linha pequena. */
     fun dividir(campos: List<String>): Pair<List<String>, List<String>> = Pair(campos.take(3), campos.drop(3))
+
+    // ------------------------------------------------------------------ km e tempo totais
+
+    /** Linha em destaque e detalhe pequeno (null quando não há o que somar). */
+    data class Total(val principal: String, val detalhe: String?)
+
+    /** "17,3 km no total" com "2,1 até o passageiro + 15,2 de viagem". */
+    fun kmTotal(o: OfertaDetalhada, a: Avaliacao): Total {
+        val aprox = if (o.kmCorridaEstimado) "≈" else ""
+        val busca = o.kmBusca?.takeIf { it > 0 }
+        return Total(
+            "$aprox${Formato.km(a.kmTotal)} km no total",
+            busca?.let { "${Formato.km(it)} até o passageiro + $aprox${Formato.km(o.kmCorrida)} de viagem" },
+        )
+    }
+
+    /** "28 min no total" com "6 até o passageiro + 22 de viagem" (estimado: "~"). */
+    fun minutosTotal(o: OfertaDetalhada, a: Avaliacao): Total {
+        val aprox = if (a.tempoEstimado) "~" else ""
+        val kmBusca = o.kmBusca?.takeIf { it > 0 }
+        val detalhe = if (kmBusca == null) null else {
+            val minBusca = o.minutosBusca ?: ((kmBusca / KM_POR_HORA_CIDADE) * 60)
+            val minViagem = o.minutosCorrida ?: ((o.kmCorrida / KM_POR_HORA_CIDADE) * 60)
+            val ab = if (o.minutosBusca == null) "~" else ""
+            val av = if (o.minutosCorrida == null) "~" else ""
+            "$ab${jsRound(minBusca)} até o passageiro + $av${jsRound(minViagem)} de viagem"
+        }
+        return Total("$aprox${a.minutosTotal} min no total", detalhe)
+    }
+
+    // ------------------------------------------------------------------ notificação (tela bloqueada)
+
+    private fun selo(s: Sinal): String = when (s) {
+        Sinal.VERDE -> "🟢 Vale a pena"
+        Sinal.AMARELO -> "🟡 Avalie"
+        Sinal.VERMELHO -> "🔴 Não compensa"
+    }
+
+    /** Título da notificação da oferta: "🟢 Vale a pena · R$ 26 · R$ 1,50/km". */
+    fun tituloNotificacao(o: OfertaDetalhada, a: Avaliacao): String =
+        "${selo(a.sinal)} · ${Copiloto.reais(o.valorUsado)} · ${Formato.brl(a.porKm)}/km"
+
+    /** Texto: "17,3 km · lucro R$ 12 · sugestão: toque em R$ 29" (a sugestão só quando há valor). */
+    fun textoNotificacao(o: OfertaDetalhada, a: Avaliacao, sugestao: Copiloto.Sugestao? = null): String {
+        val partes = mutableListOf("${Formato.km(a.kmTotal)} km", "lucro ${reaisRedondos(a.lucro)}")
+        when (sugestao) {
+            is Copiloto.Sugestao.Atalho, is Copiloto.Sugestao.Lapis ->
+                partes.add("sugestão: " + Copiloto.textoSugestao(sugestao).replaceFirstChar { it.lowercase(PT_BR) })
+            else -> {}
+        }
+        return partes.joinToString(" · ")
+    }
 
     // ------------------------------------------------------------------ voz
 
