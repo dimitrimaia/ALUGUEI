@@ -98,6 +98,7 @@ object LeitorInDrive {
         if ("procurando" in nJunto || "aguarde que os pedidos" in nJunto) return TelaLida.Fim
 
         // 6) corrida em andamento ("Cheguei", "Iniciar viagem"...): o motorista aceitou
+        Aceite.gatilhoConcluida(t)?.let { return TelaLida.Concluida(it) }
         Aceite.gatilho(t)?.let { return TelaLida.EmAndamento(it) }
         return TelaLida.Nada
     }

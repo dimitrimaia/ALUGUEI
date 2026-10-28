@@ -33,6 +33,7 @@ object Armazenamento {
     private const val BOLHA_Y = "bolhaY"
     private const val PEDIDO_ACESSIBILIDADE = "pedidoAcessibilidadeEm"
     private const val FILA = "fila"
+    private const val FINALIZADAS = "finalizadas"
     private const val TEMA = "tema"
     private const val VIBRAR = "vibrar"
     private const val PAUSADO = "pausado"
@@ -401,6 +402,35 @@ object Armazenamento {
         }
         if (achada != null) gravar(ctx, nova)
         return achada
+    }
+
+    /** Corridas acompanhadas até o fim (km e tempo medidos), esperando o envio. JSON pronto para o app web. */
+    @Synchronized
+    fun finalizadas(ctx: Context): JSONArray = runCatching { JSONArray(prefs(ctx).getString(FINALIZADAS, "[]")) }.getOrDefault(JSONArray())
+
+    @Synchronized
+    fun adicionarFinalizada(ctx: Context, t: Trajeto, fimMs: Long, status: String) {
+        val arr = finalizadas(ctx)
+        arr.put(
+            JSONObject()
+                .put("id", t.corridaId)
+                .put("metros", jsRound(t.metros))
+                .put("minutos", jsRound(t.minutos(fimMs)))
+                .put("inicio", isoDe(t.inicioMs))
+                .put("fim", isoDe(fimMs))
+                .put("status", status),
+        )
+        val ultimas = JSONArray()
+        for (i in maxOf(0, arr.length() - MAXIMO_FILA) until arr.length()) ultimas.put(arr.get(i))
+        prefs(ctx).edit().putString(FINALIZADAS, ultimas.toString()).apply()
+    }
+
+    @Synchronized
+    fun confirmarFinalizadas(ctx: Context, ids: Set<String>) {
+        val arr = finalizadas(ctx)
+        val sobra = JSONArray()
+        for (i in 0 until arr.length()) arr.optJSONObject(i)?.takeIf { it.optString("id") !in ids }?.let { sobra.put(it) }
+        prefs(ctx).edit().putString(FINALIZADAS, sobra.toString()).apply()
     }
 
     /**

@@ -536,4 +536,20 @@ class PlantaoPlugin : Plugin() {
         val restantes = Armazenamento.confirmarEnvio(ctx, ate, ids)
         call.resolve(JSObject().put("corridasPendentes", restantes))
     }
+
+    /** Corridas acompanhadas até o fim pelo GPS (km e tempo reais), para o app web enviar. */
+    @PluginMethod
+    fun corridasFinalizadas(call: PluginCall) {
+        val arr = JSArray()
+        val lista = Armazenamento.finalizadas(ctx)
+        for (i in 0 until lista.length()) arr.put(lista.get(i))
+        call.resolve(JSObject().put("corridas", arr))
+    }
+
+    @PluginMethod
+    fun confirmarFinalizadas(call: PluginCall) {
+        val ids = call.getArray("ids")?.let { arr -> (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotEmpty() } }.toSet() } ?: emptySet()
+        Armazenamento.confirmarFinalizadas(ctx, ids)
+        call.resolve()
+    }
 }

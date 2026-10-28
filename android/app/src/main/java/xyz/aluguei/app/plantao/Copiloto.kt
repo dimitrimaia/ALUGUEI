@@ -139,4 +139,8 @@ object Copiloto {
     /** "com R$ 23: R$ 2,10/km · R$ 48/h" */
     fun textoComValor(valor: Long, a: Avaliacao): String =
         "com ${reais(valor)}: ${Formato.brl(a.porKm)}/km · ${reais(jsRound(a.porHora / 100.0) * 100)}/h"
+
+    /** "Lucro R$ 12 com a volta" (a avaliação já desconta a volta quando ela conta). */
+    fun textoLucro(a: Avaliacao, comVolta: Boolean): String =
+        "Lucro ${reais(jsRound(a.lucro / 100.0) * 100)}${if (comVolta) " com a volta" else ""}"
 }

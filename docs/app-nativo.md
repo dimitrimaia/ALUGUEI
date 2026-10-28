@@ -185,6 +185,21 @@ celular
 (500), profundidade (30), textos (250) e caracteres (6000). Desligado ou pausado, não lê nada.
 Bolha e cartão não têm nenhum laço: só reagem a eventos.
 
+## Bolha, cartão e corrida em andamento
+
+- **Bolha** (44 dp): o toque abre o menu rápido (Calculadora, Pausar, Configurações).
+  Segurar a bolha, ou tocar em Configurações, abre o leque completo.
+- **Cartão**: abre no resumo (valor, sinal, R$/km, R$/h, lucro com a volta quando
+  ela conta, nota, km e tempo totais, uma linha de dica e os botões). "▾ Detalhes"
+  abre o cartão completo; "▴" volta ao resumo. Cada oferta nova começa no resumo.
+- **Corrida em andamento**: ao aceitar (toque, pergunta ou aceite automático), uma
+  pílula no topo mede tempo e km pelo GPS ("● 12 min · 4,3 km · R$ 2,80/km"). Ela
+  fecha sozinha na tela de avaliar o passageiro / viagem concluída
+  (`Aceite.TEXTOS_CONCLUIDA`), ao voltar à lista depois de 3 min, ao aceitar outra
+  ou depois de 4 h; "Finalizar" fecha na hora e "✕" descarta. Só a soma é
+  guardada (nunca o caminho), na fila `finalizadas`, e a tela web grava em
+  `corridas_avaliadas` (`metros_reais`, `minutos_reais`, `finalizada_em`; migração 0011).
+
 ## Como gerar o APK e o AAB
 
 Pré-requisitos (num computador com acesso livre à internet):
@@ -522,6 +537,9 @@ export interface PlantaoPlugin {
   /** Mostra o cartão com uma oferta de teste (liga o plantão se preciso). valor em centavos. */
   simular(o: { valor: number; kmCorrida: number; minutosCorrida?: number; kmBusca?: number; minutosBusca?: number }): Promise<AvaliacaoNativa>;
   corridasPendentes(): Promise<{ corridas: CorridaNativa[] }>;
+  /** Corridas acompanhadas até o fim pelo GPS (km e tempo reais). */
+  corridasFinalizadas(): Promise<{ corridas: { id: string; metros: number; minutos: number; inicio: string; fim: string; status: "concluida" }[] }>;
+  confirmarFinalizadas(o: { ids: string[] }): Promise<void>;
   /** Tira da fila as enviadas: momento <= ate e/ou os ids. */
   confirmarEnvio(o: { ate?: string; ids?: string[] }): Promise<{ corridasPendentes: number }>;
   /** Lugares que o motorista adicionou pelo botão "Evitar este lugar" do cartão. */

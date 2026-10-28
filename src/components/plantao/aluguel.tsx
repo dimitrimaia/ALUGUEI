@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { avisar } from "@/components/toast";
 import { Botao, Cartao } from "@/components/ui";
 import type { DataISO } from "@/dominio/datas/data";
-import { type AluguelExterno, PERGUNTAS_SUGERIDAS, type Pergunta } from "@/dominio/ganhos/aluguel";
+import { type AluguelExterno, type Pergunta } from "@/dominio/ganhos/aluguel";
 import { anotarKm, apagarAluguel, marcarVistoria, registrarDevolucao, registrarTrocaOleo, salvarAluguel, salvarPerguntas } from "@/lib/acoes-aluguel";
 import { acaoSegura } from "@/lib/versao";
 import { EntradaNumero, EntradaReais, Rotulo } from "./entradas";
@@ -154,24 +154,24 @@ export function AcoesAluguel({ devolvido, temVistoria, temOleo }: { devolvido: D
 
 /** Perguntas para a locadora, com a resposta anotada (guarde também o print da conversa). */
 export function PerguntasLocadora({ inicial }: { inicial: Pergunta[] }) {
-  const [lista, setLista] = useState<Pergunta[]>(inicial.length ? inicial : PERGUNTAS_SUGERIDAS.map((texto) => ({ texto, resposta: "" })));
+  const [lista, setLista] = useState<Pergunta[]>(inicial);
   const [nova, setNova] = useState("");
   const { ocupado, rodar } = useAcao();
   const mudar = (i: number, resposta: string) => setLista((l) => l.map((p, j) => (j === i ? { ...p, resposta } : p)));
   return (
     <Cartao className="flex flex-col gap-3">
-      <div><h2 className="font-bold">Perguntas para a locadora</h2><p className="text-xs text-suave">Pergunte por WhatsApp, anote a resposta aqui e guarde o print.</p></div>
+      <div><h2 className="font-bold">Combinados com a locadora</h2><p className="text-xs text-suave">O que ficou acertado fora do contrato (ou uma dúvida para tirar). Anote aqui e guarde o print da conversa.</p></div>
       {lista.map((p, i) => (
         <div key={p.texto} className="flex flex-col gap-1.5">
           <span className="flex items-start gap-2 text-sm font-medium">{p.resposta.trim() ? <Check size={16} className="mt-0.5 shrink-0 text-ok" /> : <span className="mt-1.5 size-2 shrink-0 rounded-full bg-alerta" />}{p.texto}</span>
-          <input className={campo} value={p.resposta} onChange={(e) => mudar(i, e.target.value)} placeholder="Resposta da locadora" />
+          <input className={campo} value={p.resposta} onChange={(e) => mudar(i, e.target.value)} placeholder="O que a locadora respondeu" />
         </div>
       ))}
       <div className="flex gap-2">
-        <input className={campo} value={nova} onChange={(e) => setNova(e.target.value)} placeholder="Outra pergunta" />
-        <Botao variante="secundario" icone={Plus} disabled={!nova.trim()} onClick={() => (setLista((l) => [...l, { texto: nova.trim(), resposta: "" }]), setNova(""))}>Pôr</Botao>
+        <input className={campo} value={nova} onChange={(e) => setNova(e.target.value)} placeholder="Ex.: troca de óleo a cada 10.000 km?" />
+        <Botao variante="secundario" icone={Plus} disabled={!nova.trim()} onClick={() => (setLista((l) => [...l, { texto: nova.trim(), resposta: "" }]), setNova(""))}>Anotar</Botao>
       </div>
-      <Botao icone={Save} disabled={ocupado} onClick={() => rodar(() => salvarPerguntas(lista), "Respostas salvas")}>Salvar respostas</Botao>
+      <Botao icone={Save} disabled={ocupado} onClick={() => rodar(() => salvarPerguntas(lista), "Combinados salvos")}>Salvar</Botao>
     </Cartao>
   );
 }

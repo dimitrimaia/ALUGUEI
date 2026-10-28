@@ -19,6 +19,9 @@ sealed class TelaLida {
      */
     data class EmAndamento(val gatilho: String) : TelaLida()
 
+    /** inDrive: a corrida terminou (avaliar o passageiro, viagem concluída). Fecha o trajeto. */
+    data class Concluida(val gatilho: String) : TelaLida()
+
     /** inDrive: lista de pedidos (vários R$/km, sem "Aceitar por"). O cartão some. */
     object Lista : TelaLida()
 
@@ -33,6 +36,7 @@ sealed class TelaLida {
         is ComOferta -> "oferta lida"
         is Contraproposta -> "sua oferta"
         is EmAndamento -> "corrida em andamento (\"$gatilho\")"
+        is Concluida -> "corrida concluída (\"$gatilho\")"
         Lista -> "lista"
         Fim -> "oferta encerrada"
         Nada -> "sem oferta"

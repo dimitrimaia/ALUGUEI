@@ -43,6 +43,30 @@ object Aceite {
         "embarque",
     )
 
+    /**
+     * Fim da corrida feita: a tela de avaliar o passageiro / viagem concluída.
+     * Ganha da lista de "em andamento" (a tela final às vezes repete "embarque").
+     */
+    val TEXTOS_CONCLUIDA: List<String> = listOf(
+        "avalie o passageiro",
+        "avaliar o passageiro",
+        "avalie a viagem",
+        "como foi a viagem",
+        "viagem concluida",
+        "corrida concluida",
+        "viagem finalizada",
+        "corrida finalizada",
+    )
+
+    /** O texto da lista de fim de corrida nesta tela, ou null. */
+    fun gatilhoConcluida(brutos: List<String>): String? {
+        val n = Textos.limpar(brutos).map { Textos.semAcento(it) }
+        if (n.isEmpty()) return null
+        val junto = n.joinToString("\n")
+        if (TEXTOS_OFERTA.any { it in junto }) return null
+        return TEXTOS_CONCLUIDA.firstOrNull { it in junto }
+    }
+
     /** Telas que dizem que a corrida NÃO ficou com o motorista (ganham da lista acima). */
     val TEXTOS_NAO_ACEITA: List<String> = listOf("ja aceita", "ja foi aceita", "expirou", "procurando", "cancelad")
 

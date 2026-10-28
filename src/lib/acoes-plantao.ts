@@ -158,6 +158,38 @@ export async function registrarCorridas(lista: unknown[]): Promise<{ salvas: num
   return { salvas: data?.length ?? 0 };
 }
 
+const esquemaFinalizada = z.object({
+  id: z.string().uuid(),
+  metros: z.number().int().min(0).max(2_000_000),
+  minutos: z.number().int().min(0).max(1440),
+  fim: z.string().datetime({ offset: true }),
+  status: z.literal("concluida"),
+});
+
+/**
+ * Corridas que o celular acompanhou até o fim (GPS): grava km e tempo reais na
+ * corrida já registrada. Devolve os ids tratados (os que ainda não subiram ficam
+ * para a próxima vez). Antes da migração 0011, não grava e não confirma.
+ */
+export async function registrarFinalizadas(lista: unknown[]): Promise<{ ids: string[] }> {
+  const usuario = await exigirUsuario("/m/plantao");
+  const ids: string[] = [];
+  for (const c of lista.slice(0, 200)) {
+    const r = esquemaFinalizada.safeParse(c);
+    if (!r.success) continue;
+    const { data, error } = await supabaseAdmin()
+      .from("corridas_avaliadas")
+      .update({ metros_reais: r.data.metros, minutos_reais: r.data.minutos, finalizada_em: r.data.fim })
+      .eq("usuario_id", usuario.id)
+      .eq("chave", `${usuario.id}:${r.data.id}`)
+      .select("id");
+    if (error) break;
+    if (data?.length) ids.push(r.data.id);
+  }
+  if (ids.length) revalidatePath("/m/plantao", "layout");
+  return { ids };
+}
+
 /** Lugares que o motorista marcou como "evitar" na bolha do Android: entram na régua dele. */
 export async function adicionarLugaresEvitar(lugares: string[]): Promise<void> {
   const usuario = await exigirUsuario("/m/plantao");

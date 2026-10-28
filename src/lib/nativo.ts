@@ -59,6 +59,9 @@ type PluginPlantao = {
   simular(o: { valor: number; kmCorrida: number; minutosCorrida?: number; kmBusca?: number; minutosBusca?: number }): Promise<unknown>;
   corridasPendentes(): Promise<{ corridas: CorridaNativa[] }>;
   confirmarEnvio(o: { ate?: string; ids?: string[] }): Promise<{ corridasPendentes: number }>;
+  /** Corridas acompanhadas até o fim pelo GPS (APK novo; nos antigos, não existe). */
+  corridasFinalizadas?(): Promise<{ corridas: { id: string; metros: number; minutos: number; inicio: string; fim: string; status: string }[] }>;
+  confirmarFinalizadas?(o: { ids: string[] }): Promise<void>;
   addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia" | "perfil", cb: (dados: unknown) => void): Promise<Ouvinte>;
 };
 

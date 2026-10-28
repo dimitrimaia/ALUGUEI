@@ -74,6 +74,14 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
               <Link href={`/m/plantao/historico/${c.id}` as Route} className="min-w-0 flex-1">
                 <p className="flex items-baseline gap-2"><span className="font-bold tabular-nums">{formatarBRL((c as { valor_final_centavos?: number | null }).valor_final_centavos ?? c.valor_centavos)}</span>{(c as { valor_final_centavos?: number | null }).valor_final_centavos != null && <span className="text-xs text-suave line-through">{formatarBRL(c.valor_centavos)}</span>}{(c as { decisao_origem?: string | null }).decisao_origem === "automatica" && <span className="rounded-full bg-marca-suave px-1.5 text-[0.6rem] font-bold text-marca">auto</span>}<span className="text-xs text-suave">{c.app ? NOME_APP[c.app] ?? c.app : "Digitada"} · {new Date(c.ocorrida_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}</span></p>
                 <p className="text-xs text-suave tabular-nums">{formatarBRL(c.a.porKm)}/km · {formatarBRL(c.a.porHora)}/h · lucro <span className={c.a.lucro < 0 ? "font-semibold text-perigo" : "font-semibold text-ok"}>{formatarBRL(c.a.lucro)}</span></p>
+                {(() => {
+                  // Acompanhada pelo GPS até o fim: o que a corrida foi de verdade.
+                  const real = c as { metros_reais?: number | null; minutos_reais?: number | null; valor_final_centavos?: number | null };
+                  if (real.metros_reais == null) return null;
+                  const km = real.metros_reais / 1000;
+                  const valor = real.valor_final_centavos ?? c.valor_centavos;
+                  return <p className="text-xs font-semibold text-marca tabular-nums">✓ Feita: {km.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km · {real.minutos_reais} min{km >= 0.5 ? ` · ${formatarBRL(Math.round(valor / km))}/km real` : ""}</p>;
+                })()}
               </Link>
               <DecisaoOferta id={c.id} decisao={c.decisao} />
             </Cartao>

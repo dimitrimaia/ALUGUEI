@@ -838,4 +838,10 @@ CREATE INDEX "erros_app_quando" ON "erros_app" USING btree ("criado_em");
 ALTER TABLE "erros_app" ENABLE ROW LEVEL SECURITY;
 
 insert into drizzle.__drizzle_migrations (hash, created_at) values ('fc832fa39ddb63071b06e3587fbe01fd0cc2175b3f652e3b59fe6c9dc9b3961d', 1793073532862);
+
+-- Migração 0011_lush_drax
+ALTER TABLE "corridas_avaliadas" ADD COLUMN "metros_reais" integer;
+ALTER TABLE "corridas_avaliadas" ADD COLUMN "minutos_reais" integer;
+ALTER TABLE "corridas_avaliadas" ADD COLUMN "finalizada_em" timestamp with time zone;
+insert into drizzle.__drizzle_migrations (hash, created_at) values ('8d03d09c3dce2e6bab7bcf4b1fdf656d1e6af35e3359d1456161be399519c3c2', 1793158787779);
 commit;

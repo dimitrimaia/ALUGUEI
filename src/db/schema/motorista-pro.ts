@@ -88,6 +88,10 @@ export const corridasAvaliadas = pgTable(
     valorFinalCentavos: integer("valor_final_centavos"),
     /** Como a decisão foi marcada: toque | pergunta | automatica. */
     decisaoOrigem: text("decisao_origem"),
+    /** Corrida acompanhada até o fim pelo GPS do celular: km e tempo de verdade. */
+    metrosReais: integer("metros_reais"),
+    minutosReais: integer("minutos_reais"),
+    finalizadaEm: timestamp("finalizada_em", { withTimezone: true }),
     origem: text("origem").notNull(), // leitura | digitada
     ocorridaEm: timestamp("ocorrida_em", { withTimezone: true }).notNull(),
     /** Idempotência do envio do celular: a mesma oferta não entra duas vezes. */

@@ -221,11 +221,3 @@ export function lembretesDoDia(a: AluguelExterno, hoje: DataISO, leituras: Leitu
   if (oleo && oleo.faltam <= 500) l.push({ chave: `oleo:${oleo.proximaKm}:${oleo.faltam <= 0 ? "passou" : "perto"}`, titulo: oleo.faltam <= 0 ? "Troca de óleo passou" : "Troca de óleo chegando", texto: oleo.faltam <= 0 ? `Passou ${-oleo.faltam} km da troca. O contrato pode cobrar por km rodado além dela: avise a locadora hoje.` : `Faltam ${oleo.faltam} km. Combine com a locadora antes de passar.`, nivel: oleo.faltam <= 0 ? "perigo" : "alerta", quando: hoje });
   return l;
 }
-
-/** Perguntas que vale fazer à locadora quando o contrato deixa dúvida. */
-export const PERGUNTAS_SUGERIDAS = [
-  "Qual o valor máximo da nota promissória?",
-  "A cada quantos km é a troca de óleo, e onde faço?",
-  "A data de início do contrato é a da retirada do carro?",
-  "Qual o horário e o local da vistoria quinzenal?",
-] as const;

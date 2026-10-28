@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { adicionarLugaresEvitar, registrarCorridas, salvarPreferenciasCopiloto, salvarRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
+import { adicionarLugaresEvitar, registrarCorridas, registrarFinalizadas, salvarPreferenciasCopiloto, salvarRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
 import { normalizarCriterios } from "@/dominio/ganhos/custos";
 import { plantaoNativo } from "@/lib/nativo";
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
@@ -51,10 +51,15 @@ export function SincronizarPlantao({ perfil, criterios: daConta, preferencias }:
           await p!.limparLugaresAdicionados().catch(() => null);
         }
         const { corridas } = await p!.corridasPendentes();
-        if (!corridas.length) return;
-        await registrarCorridas(corridas.map((c) => ({ ...c, decisao: c.decisao === "sem_resposta" ? null : c.decisao })));
-        await p!.confirmarEnvio({ ids: corridas.map((c) => c.id) });
-        if (vivo) router.refresh();
+        if (corridas.length) {
+          await registrarCorridas(corridas.map((c) => ({ ...c, decisao: c.decisao === "sem_resposta" ? null : c.decisao })));
+          await p!.confirmarEnvio({ ids: corridas.map((c) => c.id) });
+        }
+        // Depois das corridas: a finalizada atualiza a corrida que acabou de subir.
+        const finalizadas = p!.corridasFinalizadas ? (await p!.corridasFinalizadas().catch(() => ({ corridas: [] }))).corridas : [];
+        const { ids } = finalizadas.length ? await registrarFinalizadas(finalizadas) : { ids: [] as string[] };
+        if (ids.length) await p!.confirmarFinalizadas?.({ ids });
+        if (vivo && (corridas.length || ids.length)) router.refresh();
       } catch {
         // Sem rede: tenta de novo na próxima abertura.
       }
