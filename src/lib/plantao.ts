@@ -20,9 +20,10 @@ export const NOME_ALUGUEL = "Aluguel do carro (contrato)";
 
 /** Aluguel semanal do contrato ativo no Aluguei; se não houver, o do carro alugado fora do app. */
 export const aluguelDoContrato = cache(async (usuarioId: string): Promise<Centavos | null> => {
-  const ativo = (await contratosDoMotorista(usuarioId)).find((c) => c.status === "ativo");
+  // As duas buscas juntas (antes em sequência deixavam o Plantão mais lento).
+  const [contratos, externo] = await Promise.all([contratosDoMotorista(usuarioId), aluguelExterno(usuarioId).catch(() => null)]);
+  const ativo = contratos.find((c) => c.status === "ativo");
   if (ativo) return (ativo.parametros as unknown as ParametrosContrato).aluguelSemanal;
-  const externo = await aluguelExterno(usuarioId).catch(() => null);
   return externo && !externo.devolucao ? externo.valorSemanal : null;
 });
 

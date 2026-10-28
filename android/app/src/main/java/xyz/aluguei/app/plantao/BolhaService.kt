@@ -1810,7 +1810,10 @@ class BolhaService : Service() {
         val destino = o.destino ?: return
         val base = pontoBase() ?: return
         val calc = calculadoraVolta ?: return
-        calc.calcular(destino, base) { rota -> principal.post { voltaChegou(id, destino, base, rota) } }
+        // O destino fica a no máximo (busca + viagem) em linha reta de onde o motorista está.
+        val aqui = Localizacao.ultima(this)
+        val limite = if (aqui != null) (o.kmBusca ?: 5.0) + o.kmCorrida + 10 else CalculadoraVolta.LIMITE_PADRAO_KM
+        calc.calcular(destino, base, aqui, limite) { rota -> principal.post { voltaChegou(id, destino, base, rota) } }
     }
 
     private fun voltaChegou(id: String, destino: String, base: Ponto, rota: CalculadoraVolta.Rota?) {
@@ -2048,6 +2051,8 @@ class BolhaService : Service() {
                 texto("$km · $min", 12f, pal.secundario, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END; gravity = Gravity.END },
                 LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(6) },
             )
+            // O ✕ também está no topo do cartão completo (montado antes): só pode ter um pai.
+            (fechar.parent as? ViewGroup)?.removeView(fechar)
             addView(fechar, LinearLayout.LayoutParams(dp(28), dp(24)))
         })
         // Números principais: R$/km, R$/h, lucro (com a volta, se conta) e nota.

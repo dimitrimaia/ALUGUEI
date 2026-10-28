@@ -79,9 +79,14 @@ object Volta {
         PHOTON + "?q=" + URLEncoder.encode(consulta, "UTF-8") + "&limit=3" +
             (perto?.let { "&lat=${num(it.lat)}&lon=${num(it.lon)}" } ?: "")
 
-    /** Primeiro resultado do Photon no Brasil (countrycode BR), ou null. */
-    fun lerPhoton(json: String): Ponto? {
+    /**
+     * Resultado do Photon no Brasil mais perto de `perto` (onde o motorista está),
+     * desde que a até `limiteKm` em linha reta dele. Rua com o mesmo nome em outra
+     * cidade virava volta de 300 km; agora é descartada. Sem `perto`, o primeiro.
+     */
+    fun lerPhoton(json: String, perto: Ponto? = null, limiteKm: Double = Double.MAX_VALUE): Ponto? {
         val features = JSONObject(json).optJSONArray("features") ?: return null
+        val achados = mutableListOf<Ponto>()
         for (i in 0 until features.length()) {
             val f = features.optJSONObject(i) ?: continue
             val pais = f.optJSONObject("properties")?.optString("countrycode", "") ?: ""
@@ -91,9 +96,10 @@ object Volta {
             val lon = c.optDouble(0, Double.NaN)
             val lat = c.optDouble(1, Double.NaN)
             if (lat.isNaN() || lon.isNaN()) continue
-            return Ponto(lat, lon)
+            achados.add(Ponto(lat, lon))
         }
-        return null
+        if (perto == null) return achados.firstOrNull()
+        return achados.map { it to distanciaReta(perto, it) }.filter { it.second <= limiteKm }.minByOrNull { it.second }?.first
     }
 
     fun urlOsrm(de: Ponto, para: Ponto): String =
@@ -149,6 +155,9 @@ class CalculadoraVolta(
         const val PRAZO_MS = 4000
         const val TAMANHO_CACHE = 50
 
+        /** Sem saber onde o motorista está: destino a mais de 150 km da base não é volta de corrida. */
+        const val LIMITE_PADRAO_KM = 150.0
+
         /** GET com User-Agent "Aluguei/1.0" e o tempo que sobra do prazo. */
         fun baixar(url: String, prazoMs: Int): String {
             val c = URI(url).toURL().openConnection() as HttpURLConnection
@@ -183,7 +192,7 @@ class CalculadoraVolta(
     fun doCache(destino: String, base: Ponto): Cacheado? = cache.get(Volta.chave(destino, base))
 
     /** Pede a volta; `aoTerminar(null)` quando não deu (sem internet, endereço não achado). */
-    fun calcular(destino: String, base: Ponto, aoTerminar: (Rota?) -> Unit) {
+    fun calcular(destino: String, base: Ponto, perto: Ponto? = null, limiteKm: Double = LIMITE_PADRAO_KM, aoTerminar: (Rota?) -> Unit) {
         val k = Volta.chave(destino, base)
         synchronized(emAndamento) {
             emAndamento[k]?.let { it.add(aoTerminar); return }
@@ -192,7 +201,7 @@ class CalculadoraVolta(
         try {
             executor.execute {
                 val r = try {
-                    calcularAgora(destino, base, k)
+                    calcularAgora(destino, base, k, perto, limiteKm)
                 } catch (e: Exception) {
                     null
                 }
@@ -206,7 +215,7 @@ class CalculadoraVolta(
     }
 
     /** Na thread de fundo. Guarda no cache o que for definitivo (achou, ou o endereço não existe). */
-    internal fun calcularAgora(destino: String, base: Ponto, k: String = Volta.chave(destino, base)): Rota? {
+    internal fun calcularAgora(destino: String, base: Ponto, k: String = Volta.chave(destino, base), perto: Ponto? = null, limiteKm: Double = LIMITE_PADRAO_KM): Rota? {
         val inicio = agora()
         fun resta(): Int = (PRAZO_MS - (agora() - inicio)).toInt()
         var ponto: Ponto? = null
@@ -214,7 +223,7 @@ class CalculadoraVolta(
         for (q in Volta.consultas(destino)) {
             if (resta() < 300) { falhaDeRede = true; break }
             try {
-                ponto = Volta.lerPhoton(buscar(Volta.urlPhoton(q, base), resta()))
+                ponto = Volta.lerPhoton(buscar(Volta.urlPhoton(q, perto ?: base), resta()), perto ?: base, limiteKm)
             } catch (e: Exception) {
                 falhaDeRede = true
                 break

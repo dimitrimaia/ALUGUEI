@@ -33,8 +33,7 @@ const FERRAMENTAS = [
 export default async function Plantao() {
   const usuario = await exigirUsuario("/m/plantao");
   const dia = hoje();
-  const [config, aberta, dados, aluguel] = await Promise.all([configPlantao(usuario.id), jornadaAberta(usuario.id), dadosDoPeriodo(usuario.id, dia, dia), aluguelExterno(usuario.id).catch(() => null)]);
-  const lembretesAluguel = aluguel ? lembretesDoDia(aluguel, dia, await leiturasDeKm(usuario.id, aluguel)) : [];
+  const [config, aberta, dados, lembretesAluguel] = await Promise.all([configPlantao(usuario.id), jornadaAberta(usuario.id), dadosDoPeriodo(usuario.id, dia, dia), aluguelExterno(usuario.id).then((a) => (a ? leiturasDeKm(usuario.id, a).then((l) => lembretesDoDia(a, dia, l)) : [])).catch(() => [])]);
   const t = taxas(config.perfil);
   const agora = new Date();
   const d = paraDominio(dados);

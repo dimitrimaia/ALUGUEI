@@ -40,6 +40,13 @@ class VoltaTest {
         assertEquals(contagem, Volta.lerPhoton(photon))
         assertNull(Volta.lerPhoton("""{"features":[{"geometry":{"coordinates":[-58.1,-34.5]},"properties":{"countrycode":"AR"}}]}"""))
         assertNull(Volta.lerPhoton("""{"features":[]}"""))
+        // Mesma rua em outra cidade: fica o resultado mais perto do motorista, e longe demais é descartado.
+        val duas = """{"features":[
+            {"geometry":{"coordinates":[-46.63,-23.55]},"properties":{"countrycode":"BR"}},
+            {"geometry":{"coordinates":[-44.05,-19.93]},"properties":{"countrycode":"BR"}}]}"""
+        val bh = Ponto(-19.92, -43.94)
+        assertEquals(Ponto(-19.93, -44.05), Volta.lerPhoton(duas, bh, 40.0))
+        assertNull(Volta.lerPhoton("""{"features":[{"geometry":{"coordinates":[-46.63,-23.55]},"properties":{"countrycode":"BR"}}]}""", bh, 40.0))
         val r = Volta.lerOsrm(osrm)!!
         assertEquals(17.6005, r.first, 1e-9)
         assertEquals(30.0, r.second, 0.0)
