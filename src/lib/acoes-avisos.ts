@@ -40,3 +40,12 @@ export async function marcarAvisosLidos(id?: string) {
   await q;
   revalidatePath("/", "layout");
 }
+
+export type AvisoLista = { id: string; titulo: string | null; texto: string | null; criado_em: string; lida_em: string | null };
+
+/** Últimos avisos da pessoa, para a gaveta do sino. */
+export async function listarAvisos(): Promise<AvisoLista[]> {
+  const usuario = await exigirUsuario("/inicio");
+  const { data } = await supabaseAdmin().from("notificacoes").select("id, titulo, texto, criado_em, lida_em").eq("destinatario_usuario_id", usuario.id).eq("canal", "app").order("criado_em", { ascending: false }).limit(40);
+  return data ?? [];
+}

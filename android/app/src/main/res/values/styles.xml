@@ -16,7 +16,11 @@
     </style>
 
 
+    <!-- Abertura (androidx SplashScreen): azul da marca com o "A" de estrada; fica na tela
+         até a primeira página do site carregar (MainActivity), e não mostra o WebView branco. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">#1F56E8</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_frente</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

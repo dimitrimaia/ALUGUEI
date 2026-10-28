@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useConta } from "@/components/conta/contexto";
+import { GavetaAvisos } from "@/components/gaveta-avisos";
 import { useAcoesMenu } from "@/components/menu-app";
 import { Avatar, Marca } from "@/components/ui";
 import { BotaoVoltar } from "@/components/voltar";
@@ -42,13 +43,8 @@ function BotaoConversas() {
 
 /** Sino dos avisos, com o número de não lidos (nos dois modos). */
 function BotaoAvisos() {
-  const { notificacoes, modo } = useConta();
-  return (
-    <Link href={modo === "locador" ? "/painel/avisos" : "/m/avisos"} aria-label={notificacoes ? `Avisos, ${notificacoes} novos` : "Avisos"} className="relative grid size-10 place-items-center rounded-full hover:bg-cartao-2">
-      <Bell size={21} />
-      {notificacoes > 0 && <span className="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-[#ffb020] px-1 text-[0.6rem] font-bold text-[#3a2500] ring-2 ring-cartao">{notificacoes > 9 ? "9+" : notificacoes}</span>}
-    </Link>
-  );
+  const { notificacoes } = useConta();
+  return <GavetaAvisos novos={notificacoes} />;
 }
 
 /**
