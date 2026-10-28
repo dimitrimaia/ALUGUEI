@@ -16,6 +16,9 @@ data class Trajeto(
     val metros: Double = 0.0,
     val ultimo: Ponto? = null,
     val ultimoMs: Long = 0,
+    /** Para os botões de navegação da pílula (o cartão some ao aceitar). */
+    val embarque: String? = null,
+    val destino: String? = null,
 ) {
     val km: Double get() = metros / 1000
 

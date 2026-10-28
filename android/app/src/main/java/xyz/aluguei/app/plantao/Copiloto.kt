@@ -105,7 +105,7 @@ object Copiloto {
         /** Um atalho do app já deixa verde: "Toque em R$ 23". */
         data class Atalho(val valor: Long, val avaliacao: Avaliacao) : Sugestao()
 
-        /** Nenhum atalho chega: "Use o lápis: R$ 27". */
+        /** Nenhum atalho chega: "Use o Lápis: R$ 27". */
         data class Lapis(val valor: Long, val avaliacao: Avaliacao) : Sugestao()
 
         /** Nem o dobro fica verde: "Nem o dobro (R$ 116) fica verde". */
@@ -132,7 +132,7 @@ object Copiloto {
     fun textoSugestao(s: Sugestao): String = when (s) {
         Sugestao.PodeAceitar -> "Pode aceitar"
         is Sugestao.Atalho -> "Toque em ${reais(s.valor)}"
-        is Sugestao.Lapis -> "Use o lápis: ${reais(s.valor)}"
+        is Sugestao.Lapis -> "Use o Lápis: ${reais(s.valor)}"
         is Sugestao.NemODobro -> "Nem o dobro (${reais(s.dobro)}) fica verde"
     }
 

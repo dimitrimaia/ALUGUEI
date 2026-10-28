@@ -26,7 +26,7 @@ class CopilotoTest {
         val sinal = Copiloto.avaliar(inDrive58(), t, c, emptyList()).avaliacao.sinal
         val lapis = Copiloto.sugerir(inDrive58(), t, c, sinal)
         assertTrue(lapis is Copiloto.Sugestao.Lapis)
-        assertEquals("Use o lápis: R$ 75", Copiloto.textoSugestao(lapis!!))
+        assertEquals("Use o Lápis: R$ 75", Copiloto.textoSugestao(lapis!!))
 
         val atalho = Copiloto.sugerir(inDrive58(listOf(6400, 7900, 8500)), t, c, sinal)
         assertEquals("Toque em R$ 79", Copiloto.textoSugestao(atalho!!))
