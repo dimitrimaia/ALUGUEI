@@ -13,6 +13,7 @@ import { CATEGORIAS_DESPESA, PLATAFORMAS } from "@/dominio/ganhos/plantao";
 import { exigirUsuario } from "./sessao";
 import { supabaseAdmin } from "./supabase/admin";
 import { jornadaAberta } from "./plantao";
+import { lugaresDaComunidade, marcarLugares, sincronizarLugares } from "./comunidade";
 
 export type EstadoForm = { erro?: string; ok?: boolean; id?: string; tipo?: "ganho" | "despesa" };
 
@@ -201,6 +202,7 @@ export async function adicionarLugaresEvitar(lugares: string[]): Promise<void> {
   const atual = normalizarCriterios(data.criterios);
   const criterios = normalizarCriterios({ ...atual, evitar: [...atual.evitar, ...limpos] });
   await admin.from("perfis_custo").update({ criterios, atualizado_em: new Date().toISOString() }).eq("usuario_id", usuario.id);
+  await marcarLugares(usuario.id, limpos).catch(() => null);
   revalidatePath("/m/plantao", "layout");
 }
 
@@ -231,6 +233,8 @@ async function gravarPerfil(usuarioId: string, campos: Record<string, unknown>) 
 export async function salvarReguaCompleta(criterios: unknown): Promise<EstadoForm> {
   const usuario = await exigirUsuario("/m/plantao/regua");
   const c = normalizarCriterios(criterios);
+  // A lista "evitar" também conta (anônima) para os avisos da comunidade.
+  await sincronizarLugares(usuario.id, c.evitar).catch(() => null);
   if (!c.contarVolta) return gravarPerfil(usuario.id, { criterios: c });
   // Volta ligada: o cartão passa a mostrar o campo "Volta" para o motorista ver o custo.
   const { data } = await supabaseAdmin().from("perfis_custo").select("*").eq("usuario_id", usuario.id).maybeSingle();
@@ -347,4 +351,10 @@ export async function excluirCorrida(id: string) {
   await supabaseAdmin().from("corridas_avaliadas").delete().eq("id", id).eq("usuario_id", usuario.id);
   revalidatePath("/m/plantao", "layout");
   redirect("/m/plantao/historico");
+}
+
+/** Lugares que 3+ motoristas evitam (anônimo), para a bolha do Android avisar. */
+export async function buscarLugaresComunidade() {
+  await exigirUsuario("/m/plantao");
+  return lugaresDaComunidade().catch(() => []);
 }

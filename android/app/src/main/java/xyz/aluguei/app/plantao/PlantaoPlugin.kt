@@ -167,6 +167,8 @@ class PlantaoPlugin : Plugin() {
         // Formato de PreferenciasCopiloto (copiloto.ts); se vier, manda em segundosCartao e vibrar.
         val preferencias: JSONObject? = call.getObject("preferencias")
         Armazenamento.salvarConfiguracao(ctx, perfil, criterios, segundos, tema, vibrar, preferencias)
+        // Lugares que 3+ motoristas evitam (anônimo). Ausente (app web antigo): mantém a lista guardada.
+        call.getArray("comunidade")?.let { Armazenamento.salvarComunidade(ctx, it) }
         BolhaService.instancia?.aplicarPreferencias()
         call.resolve(estadoAtual(ctx))
     }

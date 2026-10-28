@@ -148,6 +148,12 @@ export type Database = {
         Update: { id?: string; organizacao_id?: string; usuario_id?: string | null; nome?: string; cpf?: string | null; telefone?: string; email?: string | null; data_nascimento?: string | null; endereco?: Json | null; cnh_numero?: string | null; cnh_primeira_habilitacao?: string | null; cnh_validade?: string | null; cnh_tem_ear?: boolean | null; status?: "convidado" | "em_cadastro" | "em_analise" | "aprovado" | "recusado"; pendencias_pre_analise?: Json | null; motivo_decisao?: string | null; decidido_por?: string | null; decidido_em?: string | null; token_convite?: string | null; convite_expira_em?: string | null; veiculo_ofertado_id?: string | null; oferta?: Json | null; criado_em?: string };
         Relationships: [];
       };
+      lugares_evitados: {
+        Row: { id: string; usuario_id: string; lugar: string; chave: string; periodo: string; criado_em: string };
+        Insert: { id?: string; usuario_id: string; lugar: string; chave: string; periodo: string; criado_em?: string };
+        Update: { id?: string; usuario_id?: string; lugar?: string; chave?: string; periodo?: string; criado_em?: string };
+        Relationships: [];
+      };
       manutencoes: {
         Row: { id: string; organizacao_id: string; veiculo_id: string; descricao: string; km: number; realizada_em: string; custo_centavos: number; responsavel_custo: string; criado_em: string };
         Insert: { id?: string; organizacao_id: string; veiculo_id: string; descricao: string; km: number; realizada_em: string; custo_centavos: number; responsavel_custo?: string; criado_em?: string };

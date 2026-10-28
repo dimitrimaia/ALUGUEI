@@ -470,7 +470,7 @@ class BolhaService : Service() {
             null
         }
         val titulo = Cartao.tituloNotificacao(o, r.avaliacao)
-        val texto = Cartao.textoNotificacao(o, r.avaliacao, sugestao)
+        val texto = Cartao.textoNotificacao(o, r.avaliacao, sugestao) + (alertaComunidade(o)?.let { "\n" + it.texto() } ?: "")
         val abrirApp = packageManager.getLaunchIntentForPackage(Pacotes.lista(this).firstOrNull { Pacotes.plataforma(it) == o.app } ?: "")
         val b = NotificationCompat.Builder(this, CANAL_OFERTAS)
             .setSmallIcon(R.drawable.ic_copiloto_simbolo)
@@ -1705,6 +1705,10 @@ class BolhaService : Service() {
         if (estado == EstadoVolta.Calculando) pedirVolta(comVolta, c.id)
     }
 
+    /** Aviso da comunidade para esta oferta (embarque ou destino que 3+ motoristas evitam). */
+    private fun alertaComunidade(o: OfertaDetalhada): Comunidade.Alerta? =
+        Comunidade.alerta(o, Armazenamento.comunidade(this), Comunidade.ehNoite(agoraBrasilia().get(Calendar.HOUR_OF_DAY)))
+
     /** Régua que vale agora (faixa de horário pelo relógio de Brasília). */
     private fun reguaAgora(): ReguaNoHorario {
         val agora = agoraBrasilia()
@@ -1739,7 +1743,7 @@ class BolhaService : Service() {
             mostrarCartao(o, r, corrida, origem, volta = volta, faixa = regua.faixa)
             vibrar(r.avaliacao.sinal)
             val prefs = Armazenamento.preferencias(this)
-            if (prefs.voz) avisos?.falar(Cartao.fala(r.avaliacao))
+            if (prefs.voz) avisos?.falar(Cartao.fala(r.avaliacao) + (alertaComunidade(o)?.let { " " + it.fala() } ?: ""))
             if (prefs.bip && r.avaliacao.sinal == Sinal.VERDE) avisos?.bip()
         }
         if (volta == EstadoVolta.Calculando) pedirVolta(o, corrida.id)
@@ -2070,8 +2074,10 @@ class BolhaService : Service() {
         )
         addView(linha(*colunas.toTypedArray(), espaco = 4), margem(6))
         // Uma linha de ajuda: o que fazer com o preço, ou o motivo, ou a área de risco.
+        val comunidade = alertaComunidade(o)
         val dica: Pair<String, Int>? = when {
             r.risco -> "⚠ Área de risco" to AMARELO
+            comunidade != null -> comunidade.texto() to AMARELO
             o.app == "indrive" && origem == "leitura" && o.suaOferta == null && r.lugarEvitado == null ->
                 when (val s = Copiloto.sugerir(o, taxas(Armazenamento.perfil(this@BolhaService)), reguaAgora().criterios, a.sinal)) {
                     is Copiloto.Sugestao.Atalho -> "${Copiloto.textoSugestao(s)} → ${Copiloto.textoLucro(s.avaliacao, comVolta).lowercase()}" to pal.destaque
@@ -2400,6 +2406,7 @@ class BolhaService : Service() {
                 Copiloto.motivoPrincipal(a)?.let { addView(texto(it, 12f, cor, true), margem(4)) }
             }
             if (r.risco) addView(faixaRisco(o, pal), margem(6))
+            alertaComunidade(o)?.let { addView(texto(it.texto(), 12f, if (pal.escuro) 0xFFFBBF24.toInt() else AMARELO, true).apply { maxLines = 2 }, margem(4)) }
             if (o.app == "indrive" && origem == "leitura" && o.suaOferta == null && r.lugarEvitado == null) {
                 Copiloto.sugerir(o, taxas(Armazenamento.perfil(this@BolhaService)), reguaAgora().criterios, a.sinal)?.let {
                     addView(caixaSugestao(it, pal), margem(8))

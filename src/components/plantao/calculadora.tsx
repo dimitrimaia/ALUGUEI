@@ -8,6 +8,8 @@ import { avaliarCorrida, precoIdeal } from "@/dominio/ganhos/corrida";
 import { type Criterios, type PerfilCusto, taxas } from "@/dominio/ganhos/custos";
 import { lerOferta } from "@/dominio/ganhos/oferta";
 import { calcularViagem, compararCombustivel } from "@/dominio/ganhos/viagem";
+import { contribuicaoMaxima } from "@/dominio/ganhos/carona";
+import { PlanejarViagem } from "./planejar-viagem";
 import { registrarCorridas } from "@/lib/acoes-plantao";
 import { EntradaNumero, EntradaReais, Rotulo } from "./entradas";
 import { CartaoSemaforo } from "./semaforo-cartao";
@@ -117,6 +119,8 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
 }
 
 function AbaViagem({ perfil }: { perfil: PerfilCusto }) {
+  // Da rota calculada (origem → destino): minutos e pedágio só da ida.
+  const [rota, setRota] = useState<{ minutos: number; pedagioIda: number; pracas: number; semPreco: number } | null>(null);
   const [km, setKm] = useState<number | null>(null);
   const [idaEVolta, setIdaEVolta] = useState(true);
   const [horas, setHoras] = useState<number | null>(null);
@@ -125,24 +129,31 @@ function AbaViagem({ perfil }: { perfil: PerfilCusto }) {
   const [hospedagem, setHospedagem] = useState<number | null>(null);
   const [receita, setReceita] = useState<number | null>(null);
   const [margem, setMargem] = useState<number | null>(30);
+  // O campo de km guarda o próprio texto: trocar a chave mostra o km que veio da rota.
+  const [versaoKm, setVersaoKm] = useState(0);
   const t = useMemo(() => taxas(perfil), [perfil]);
   const kmTotal = km ? (idaEVolta ? km * 2 : km) : 0;
+  const vezes = idaEVolta ? 2 : 1;
+  const pedagioRota = (rota?.pedagioIda ?? 0) * vezes;
+  const pedagiosTotal = pedagioRota + (pedagios ?? 0);
+  const horasAuto = rota ? Math.round(((rota.minutos * vezes) / 60) * 10) / 10 : kmTotal / 60;
   const r = km
-    ? calcularViagem({ km, idaEVolta, horas: horas ?? kmTotal / 60, pedagios: pedagios ?? 0, alimentacao: alimentacao ?? 0, hospedagem: hospedagem ?? 0, outros: 0, receita, margemDesejada: Math.round((margem ?? 0) * 100) }, t)
+    ? calcularViagem({ km, idaEVolta, horas: horas ?? horasAuto, pedagios: pedagiosTotal, alimentacao: alimentacao ?? 0, hospedagem: hospedagem ?? 0, outros: 0, receita, margemDesejada: Math.round((margem ?? 0) * 100) }, t)
     : null;
   return (
     <>
+      <PlanejarViagem aoCalcular={(x) => (setKm(x.km), setRota(x), setVersaoKm((v) => v + 1))} />
       <Cartao className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
-          <Rotulo texto="Distância"><EntradaNumero rotulo="Distância da viagem" valor={km} sufixo="km" aoMudar={setKm} /></Rotulo>
-          <Rotulo texto="Horas ao volante"><EntradaNumero rotulo="Horas ao volante" valor={horas} sufixo="h" placeholder={kmTotal ? String(Math.round(kmTotal / 60)) : "Auto"} aoMudar={setHoras} /></Rotulo>
+          <Rotulo texto="Distância (ida)"><EntradaNumero key={versaoKm} rotulo="Distância da viagem" valor={km} sufixo="km" aoMudar={setKm} /></Rotulo>
+          <Rotulo texto="Horas ao volante"><EntradaNumero rotulo="Horas ao volante" valor={horas} sufixo="h" placeholder={kmTotal ? horasAuto.toLocaleString("pt-BR") : "Auto"} aoMudar={setHoras} /></Rotulo>
         </div>
         <label className="flex items-center justify-between gap-3 rounded-xl bg-cartao-2 px-3 py-2.5 text-sm font-medium">
           Ida e volta
           <input type="checkbox" checked={idaEVolta} onChange={(e) => setIdaEVolta(e.target.checked)} className="size-5 accent-[var(--marca)]" />
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <Rotulo texto="Pedágios"><EntradaReais rotulo="Pedágios" valor={pedagios} aoMudar={setPedagios} /></Rotulo>
+          <Rotulo texto={rota?.pracas ? "Outros pedágios" : "Pedágios"}><EntradaReais rotulo="Pedágios" valor={pedagios} aoMudar={setPedagios} /></Rotulo>
           <Rotulo texto="Alimentação"><EntradaReais rotulo="Alimentação" valor={alimentacao} aoMudar={setAlimentacao} /></Rotulo>
           <Rotulo texto="Hospedagem"><EntradaReais rotulo="Hospedagem" valor={hospedagem} aoMudar={setHospedagem} /></Rotulo>
           <Rotulo texto="Vai receber"><EntradaReais rotulo="Quanto vai receber" valor={receita} placeholder="Opcional" aoMudar={setReceita} /></Rotulo>
@@ -162,8 +173,24 @@ function AbaViagem({ perfil }: { perfil: PerfilCusto }) {
             <DadoRotulado rotulo="Pedágio, comida e hospedagem">{formatarBRL(r.extras)}</DadoRotulado>
             <DadoRotulado rotulo="Custo por km">{formatarBRL(r.custoPorKm)}</DadoRotulado>
             <DadoRotulado rotulo="Ponto de equilíbrio">{formatarBRL(r.equilibrio)}</DadoRotulado>
+            {pedagioRota > 0 && <DadoRotulado rotulo={`Pedágios da rota (${rota?.pracas} praça${(rota?.pracas ?? 0) > 1 ? "s" : ""}${idaEVolta ? " × 2" : ""})`}>{formatarBRL(pedagioRota)}</DadoRotulado>}
             {r.lucro !== null && <DadoRotulado rotulo="Lucro">{<span className={r.lucro < 0 ? "text-perigo" : "text-ok"}>{formatarBRL(r.lucro)} ({((r.margem ?? 0) / 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)</span>}</DadoRotulado>}
           </dl>
+        </Cartao>
+      )}
+      {r && (
+        <Cartao className="flex flex-col gap-2">
+          <h2 className="font-bold">Dividir como carona (BlaBlaCar)</h2>
+          <p className="text-xs text-suave">Na carona ninguém lucra: cada pessoa paga no máximo a parte dela no combustível, no desgaste e nos pedágios (você conta como uma das pessoas). Acima disso vira transporte pago.</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="rounded-xl bg-cartao-2 p-2.5 text-center">
+                <p className="text-[0.7rem] text-suave">{n} passageiro{n > 1 ? "s" : ""}</p>
+                <p className="font-bold tabular-nums">{formatarBRL(contribuicaoMaxima(t, kmTotal, pedagiosTotal, n))}</p>
+                <p className="text-[0.65rem] text-suave">por pessoa, no máximo</p>
+              </div>
+            ))}
+          </div>
         </Cartao>
       )}
     </>

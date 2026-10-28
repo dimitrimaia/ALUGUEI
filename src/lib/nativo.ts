@@ -33,7 +33,7 @@ type RespostaPermissao = { tipo: string; concedida: boolean; aberto: boolean };
 type Ouvinte = { remove: () => Promise<void> | void };
 type PluginPlantao = {
   estado(): Promise<EstadoNativo>;
-  configurar(o: { perfil: PerfilCusto; criterios: Criterios; segundosCartao?: number; tema?: "claro" | "escuro" | "auto"; vibrar?: boolean; preferencias?: PreferenciasCopiloto }): Promise<EstadoNativo>;
+  configurar(o: { perfil: PerfilCusto; criterios: Criterios; comunidade?: { nome: string; dia: number; noite: number }[]; segundosCartao?: number; tema?: "claro" | "escuro" | "auto"; vibrar?: boolean; preferencias?: PreferenciasCopiloto }): Promise<EstadoNativo>;
   pedirLocalizacao(): Promise<RespostaPermissao>;
   definirBaseAqui(): Promise<{ lat: number; lon: number }>;
   pedirCamera(): Promise<RespostaPermissao>;

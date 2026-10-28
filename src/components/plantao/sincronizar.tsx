@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { adicionarLugaresEvitar, registrarCorridas, registrarFinalizadas, salvarPreferenciasCopiloto, salvarRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
+import { adicionarLugaresEvitar, buscarLugaresComunidade, registrarCorridas, registrarFinalizadas, salvarPreferenciasCopiloto, salvarRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
 import { normalizarCriterios } from "@/dominio/ganhos/custos";
 import { plantaoNativo } from "@/lib/nativo";
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
@@ -37,9 +37,11 @@ export function SincronizarPlantao({ perfil, criterios: daConta, preferencias }:
         }
         const tema = document.documentElement.dataset.tema;
         const temaApp = tema === "escuro" ? "escuro" : tema === "auto" ? "auto" : "claro";
+        const comunidade = await buscarLugaresComunidade().catch(() => []);
         await p!.configurar({
           perfil,
           criterios,
+          comunidade,
           // "app": o cartão segue o tema escolhido no Aluguei.
           tema: preferencias && preferencias.tema !== "app" ? preferencias.tema : temaApp,
           ...(preferencias ? { preferencias, segundosCartao: preferencias.segundosCartao, vibrar: preferencias.vibrar } : {}),

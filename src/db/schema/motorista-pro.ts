@@ -194,3 +194,22 @@ export const reservasManutencao = pgTable(
   },
   (t) => [index("reservas_manutencao_usuario").on(t.usuarioId, t.dia)],
 );
+
+/**
+ * Lugar que um motorista evita (lista "evitar" da régua ou "Evitar este lugar" na
+ * bolha). Somado de forma anônima em src/dominio/ganhos/comunidade.ts: o app só
+ * mostra o total de motoristas, nunca quem marcou.
+ */
+export const lugaresEvitados = pgTable(
+  "lugares_evitados",
+  {
+    id: id(),
+    usuarioId: uuid("usuario_id").notNull(),
+    lugar: text("lugar").notNull(),
+    /** chaveLugar(lugar): sem acento e minúsculas, para somar grafias diferentes. */
+    chave: text("chave").notNull(),
+    periodo: text("periodo").notNull(), // dia | noite | sempre
+    criadoEm: criadoEm(),
+  },
+  (t) => [uniqueIndex("lugares_evitados_usuario_chave").on(t.usuarioId, t.chave, t.periodo), index("lugares_evitados_chave").on(t.chave)],
+);

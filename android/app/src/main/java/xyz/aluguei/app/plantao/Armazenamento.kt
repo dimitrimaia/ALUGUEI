@@ -34,6 +34,7 @@ object Armazenamento {
     private const val PEDIDO_ACESSIBILIDADE = "pedidoAcessibilidadeEm"
     private const val FILA = "fila"
     private const val FINALIZADAS = "finalizadas"
+    private const val COMUNIDADE = "comunidade"
     private const val TEMA = "tema"
     private const val VIBRAR = "vibrar"
     private const val PAUSADO = "pausado"
@@ -343,6 +344,14 @@ object Armazenamento {
     fun pedidoAcessibilidadeEm(ctx: Context): Long = prefs(ctx).getLong(PEDIDO_ACESSIBILIDADE, 0)
 
     fun limparPedidoAcessibilidade(ctx: Context) = prefs(ctx).edit().remove(PEDIDO_ACESSIBILIDADE).apply()
+
+    // ---------- lugares que outros motoristas evitam ----------
+
+    fun salvarComunidade(ctx: Context, arr: JSONArray) =
+        prefs(ctx).edit().putString(COMUNIDADE, Comunidade.paraJson(Comunidade.deJson(arr)).toString()).apply()
+
+    fun comunidade(ctx: Context): List<Comunidade.Lugar> =
+        Comunidade.deJson(prefs(ctx).getString(COMUNIDADE, null)?.let { runCatching { JSONArray(it) }.getOrNull() })
 
     // ---------- fila de corridas ----------
 
