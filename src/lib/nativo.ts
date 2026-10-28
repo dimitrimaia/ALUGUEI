@@ -9,7 +9,7 @@ import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
  * mostra a versão web (digitação) e o convite para o app.
  */
 
-export type EstadoNativo = { ultimoErro?: string | null; localizacao?: boolean; dormindo?: boolean; android: boolean; sobreposicao: boolean; acessibilidade: boolean; notificacoes: boolean; semOtimizacaoBateria: boolean; ligado: boolean; configurado: boolean; corridasPendentes: number };
+export type EstadoNativo = { versaoApp?: number; atualizavel?: boolean; ultimoErro?: string | null; localizacao?: boolean; dormindo?: boolean; android: boolean; sobreposicao: boolean; acessibilidade: boolean; notificacoes: boolean; semOtimizacaoBateria: boolean; ligado: boolean; configurado: boolean; corridasPendentes: number };
 export type CorridaNativa = {
   /** UUID gerado no celular: chave de idempotência do envio. */
   id: string;
@@ -62,6 +62,8 @@ type PluginPlantao = {
   /** Corridas acompanhadas até o fim pelo GPS (APK novo; nos antigos, não existe). */
   corridasFinalizadas?(): Promise<{ corridas: { id: string; metros: number; minutos: number; inicio: string; fim: string; status: string }[] }>;
   confirmarFinalizadas?(o: { ids: string[] }): Promise<void>;
+  /** APK direto: baixa a versão nova e abre o instalador (sem permissão, abre a tela dela). */
+  atualizarApp?(o: { url: string }): Promise<{ permissao: boolean; baixando: boolean }>;
   addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia" | "perfil", cb: (dados: unknown) => void): Promise<Ouvinte>;
 };
 

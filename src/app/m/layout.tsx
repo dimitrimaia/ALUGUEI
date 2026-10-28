@@ -1,3 +1,4 @@
+import { AtualizarApp } from "@/components/atualizar-app";
 import { ProvedorConta } from "@/components/conta/contexto";
 import { AbasMotorista } from "@/components/motorista/abas";
 import { RegistrarMenuMotorista } from "@/components/motorista/menu";
@@ -31,6 +32,7 @@ export default async function LayoutMotorista({ children }: { children: React.Re
           {children}
         </main>
         <AbasMotorista />
+        <AtualizarApp />
         <RegistrarMenuMotorista />
       </div>
     </ProvedorConta>

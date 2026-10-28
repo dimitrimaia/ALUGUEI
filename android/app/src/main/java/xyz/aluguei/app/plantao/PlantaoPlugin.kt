@@ -149,6 +149,8 @@ class PlantaoPlugin : Plugin() {
         put("printDisponivel", LeitorCorridasService.printDisponivel)
         put("perfilAtivo", Armazenamento.perfilAtivo(c) ?: JSONObject.NULL)
         put("ultimoErro", Armazenamento.ultimoErro(c) ?: JSONObject.NULL)
+        put("versaoApp", Atualizacao.versaoInstalada(c))
+        put("atualizavel", Atualizacao.disponivel(c))
     }
 
     // ------------------------------------------------------------------ estado e configuração
@@ -554,5 +556,24 @@ class PlantaoPlugin : Plugin() {
         val ids = call.getArray("ids")?.let { arr -> (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotEmpty() } }.toSet() } ?: emptySet()
         Armazenamento.confirmarFinalizadas(ctx, ids)
         call.resolve()
+    }
+
+    /**
+     * "Atualizar o Copiloto": baixa o APK de `url` e abre o instalador. Sem a
+     * permissão de instalar apps, abre a tela dela e devolve `permissao: false`.
+     */
+    @PluginMethod
+    fun atualizarApp(call: PluginCall) {
+        val url = call.getString("url")
+        if (url.isNullOrBlank() || !Atualizacao.disponivel(ctx)) {
+            call.reject("Atualização indisponível nesta versão.", "INDISPONIVEL")
+            return
+        }
+        if (!Atualizacao.podeInstalar(ctx)) {
+            Atualizacao.abrirPermissaoInstalar(ctx)
+            call.resolve(JSObject().put("permissao", false).put("baixando", false))
+            return
+        }
+        call.resolve(JSObject().put("permissao", true).put("baixando", Atualizacao.baixarEInstalar(ctx, url)))
     }
 }

@@ -200,6 +200,27 @@ Bolha e cartão não têm nenhum laço: só reagem a eventos.
   guardada (nunca o caminho), na fila `finalizadas`, e a tela web grava em
   `corridas_avaliadas` (`metros_reais`, `minutos_reais`, `finalizada_em`; migração 0011).
 
+## Atualizar pelo próprio app (APK direto)
+
+O APK baixado fora da Play Store mostra "Atualização do Copiloto" quando sai uma
+versão nova; um toque baixa e abre o instalador do Android (a pessoa confirma).
+
+- Cada build do GitHub Actions tem `versionCode` = número da execução.
+- O passo "Publicar atualização no app" envia `copiloto-<n>.apk` e `versao.json`
+  para o bucket público `app` do Supabase Storage. O app (`atualizar-app.tsx`)
+  compara `versao.json` com a versão instalada.
+- Para instalar por cima, todo APK precisa da **mesma assinatura**: o build usa a
+  chave de envio da Play Store (segredos `ALUGUEI_KEYSTORE_*`, ver `play-store.md`).
+  Sem ela, cada build sai com uma chave temporária diferente e não publica.
+- Segredos do repositório (GitHub → Settings → Secrets and variables → Actions):
+  `ALUGUEI_KEYSTORE_BASE64`, `ALUGUEI_KEYSTORE_SENHA`, `ALUGUEI_CHAVE_ALIAS`,
+  `ALUGUEI_CHAVE_SENHA`, `SUPABASE_URL` e `SUPABASE_SECRET_KEY`.
+- Só o APK direto (build debug) declara `REQUEST_INSTALL_PACKAGES`
+  (`src/debug/AndroidManifest.xml`). O AAB da Play Store não tem: lá quem atualiza
+  é a loja (a Play proíbe apps que se instalam sozinhos).
+- Primeira vez com a chave nova: desinstale o APK antigo (assinatura diferente) e
+  instale o novo. Daí em diante, as atualizações vão por cima.
+
 ## Como gerar o APK e o AAB
 
 Pré-requisitos (num computador com acesso livre à internet):

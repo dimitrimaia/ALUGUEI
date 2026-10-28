@@ -26,7 +26,20 @@ jobs:
       # O runner do GitHub já traz o Android SDK (ANDROID_HOME); o Gradle baixa o que faltar.
       - run: pnpm install --frozen-lockfile
       - run: npx cap sync android
+      # Chave de envio (docs/play-store.md): assina o APK e o AAB sempre com a mesma
+      # chave, para o APK novo instalar por cima do antigo. Sem os segredos, segue sem.
+      - name: Chave de assinatura
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ALUGUEI_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "Sem chave de envio: APK com chave temporária (não atualiza por cima)."; exit 0; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/envio.jks"
+          echo "ALUGUEI_KEYSTORE_ARQUIVO=$RUNNER_TEMP/envio.jks" >> "$GITHUB_ENV"
       - name: Testes e APK
+        env:
+          ALUGUEI_KEYSTORE_SENHA: ${{ secrets.ALUGUEI_KEYSTORE_SENHA }}
+          ALUGUEI_CHAVE_ALIAS: ${{ secrets.ALUGUEI_CHAVE_ALIAS }}
+          ALUGUEI_CHAVE_SENHA: ${{ secrets.ALUGUEI_CHAVE_SENHA }}
         working-directory: android
         run: ./gradlew testDebugUnitTest assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
@@ -34,24 +47,39 @@ jobs:
           name: aluguei-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14
+      # "Atualizar o Copiloto" de dentro do app: publica o APK assinado no Supabase
+      # Storage (bucket público "app") com o versao.json que o app confere. Precisa
+      # da chave de envio e dos segredos SUPABASE_URL e SUPABASE_SECRET_KEY.
+      - name: Publicar atualização no app
+        if: github.ref_name == 'main' || github.ref_name == 'claude/confident-bohr-eyt8b0'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          if [ -z "$ALUGUEI_KEYSTORE_ARQUIVO" ] || [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then echo "Sem chave de envio ou sem Supabase: não publica a atualização."; exit 0; fi
+          apk=$(ls android/app/build/outputs/apk/debug/*.apk | head -1)
+          nome="copiloto-${GITHUB_RUN_NUMBER}.apk"
+          enviar() { curl -sSf -X POST "$SUPABASE_URL/storage/v1/object/app/$1" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" -H "apikey: $SUPABASE_SECRET_KEY" -H "x-upsert: true" -H "content-type: $2" --data-binary "@$3"; }
+          enviar "$nome" application/vnd.android.package-archive "$apk"
+          printf '{"versao":%s,"nome":"1.0.%s","url":"%s/storage/v1/object/public/app/%s","publicadoEm":"%s"}' "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_NUMBER" "$SUPABASE_URL" "$nome" "$(date -u +%FT%TZ)" > versao.json
+          enviar versao.json application/json versao.json
       # Play Store: com a chave de envio nos segredos do repositório, gera também o AAB
       # assinado (docs/play-store.md). Sem os segredos, este passo não faz nada.
       - name: AAB assinado para a Play Store
         env:
-          KEYSTORE_BASE64: ${{ secrets.ALUGUEI_KEYSTORE_BASE64 }}
           ALUGUEI_KEYSTORE_SENHA: ${{ secrets.ALUGUEI_KEYSTORE_SENHA }}
           ALUGUEI_CHAVE_ALIAS: ${{ secrets.ALUGUEI_CHAVE_ALIAS }}
           ALUGUEI_CHAVE_SENHA: ${{ secrets.ALUGUEI_CHAVE_SENHA }}
         working-directory: android
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then echo "Sem chave de envio: pulando o AAB da Play Store."; exit 0; fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/envio.jks"
-          export ALUGUEI_KEYSTORE_ARQUIVO="$RUNNER_TEMP/envio.jks"
+          if [ -z "$ALUGUEI_KEYSTORE_ARQUIVO" ]; then echo "Sem chave de envio: pulando o AAB da Play Store."; exit 0; fi
           ./gradlew bundleRelease --no-daemon
-          rm -f "$RUNNER_TEMP/envio.jks"
       - uses: actions/upload-artifact@v4
         with:
           name: aluguei-play-store-aab
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: ignore
           retention-days: 30
+      - name: Apagar a chave do runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/envio.jks"
