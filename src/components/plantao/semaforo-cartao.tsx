@@ -10,7 +10,7 @@ export const COR_SINAL = {
 const km = (n: number) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
 
 /** O mesmo cartão da bolha do Android, para a calculadora e a simulação. */
-export function CartaoSemaforo({ a, kmBusca }: { a: Avaliacao; kmBusca?: number | null }) {
+export function CartaoSemaforo({ a, kmBusca, busca = "passageiro" }: { a: Avaliacao; kmBusca?: number | null; busca?: string }) {
   const cor = COR_SINAL[a.sinal];
   return (
     <div className={`${cor.fundo} rounded-[1.3rem] p-4 text-white shadow-flutuante`} role="status" aria-live="polite">
@@ -24,7 +24,7 @@ export function CartaoSemaforo({ a, kmBusca }: { a: Avaliacao; kmBusca?: number 
         <div className="rounded-xl bg-black/15 py-2"><p className="text-[0.65rem] text-white/80">lucro</p><p className="text-lg font-extrabold tabular-nums">{formatarBRL(a.lucro)}</p></div>
       </div>
       <p className="mt-2 text-xs text-white/85">
-        Custo estimado {formatarBRL(a.custo)} · lucro {formatarBRL(a.lucroPorHora)}/h{kmBusca ? ` · passageiro a ${km(kmBusca)}` : ""}
+        Custo estimado {formatarBRL(a.custo)} · lucro {formatarBRL(a.lucroPorHora)}/h{kmBusca ? ` · ${busca} a ${km(kmBusca)}` : ""}
       </p>
       {!!a.motivos.length && <p className="mt-1 text-xs font-semibold">{a.motivos.join(" · ")}</p>}
     </div>

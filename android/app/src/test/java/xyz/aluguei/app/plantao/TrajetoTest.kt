@@ -17,15 +17,18 @@ class TrajetoTest {
         t = t.somar(Ponto(p(1).lat + 0.00005, p(1).lon), 10f, 25_000) // 5 m: tremida
         t = t.somar(p(2), 10f, 30_000)
         assertEquals(222.0, t.metros, 2.0)
+        assertEquals(5, t.leituras)
         val salto = t.somar(p(200), 10f, 31_000) // 22 km em 1 s
         assertEquals(t.metros, salto.metros, 0.0)
     }
 
     @Test
     fun `resumo e R$ por km real`() {
-        val t = inicio.copy(metros = 43_400.0)
+        val t = inicio.copy(metros = 43_400.0, leituras = 300)
         assertEquals("1h03 · 43,4 km", t.resumo(63 * 60_000L))
         assertEquals("12 min · 43,4 km", t.resumo(12 * 60_000L))
+        assertEquals("2 min · sem GPS", inicio.resumo(2 * 60_000L))
+        assertEquals("0 min · 0 km", inicio.resumo(30_000L))
         assertEquals(81L, t.porKmReal())
         assertNull(inicio.copy(metros = 300.0).porKmReal())
     }

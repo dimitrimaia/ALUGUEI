@@ -14,14 +14,14 @@ import { registrarCorridas } from "@/lib/acoes-plantao";
 import { EntradaNumero, EntradaReais, Rotulo } from "./entradas";
 import { CartaoSemaforo } from "./semaforo-cartao";
 
-const ABAS = { corrida: "Corrida", viagem: "Viagem", combustivel: "Etanol × gasolina" } as const;
+const ABAS = { corrida: "Corrida", entrega: "Entrega", viagem: "Viagem", combustivel: "Combustível" } as const;
 type Aba = keyof typeof ABAS;
 
 export function Calculadora({ perfil, criterios, abaInicial = "corrida" }: { perfil: PerfilCusto; criterios: Criterios; abaInicial?: Aba }) {
   const [aba, setAba] = useState<Aba>(abaInicial);
   return (
     <div className="flex flex-col gap-4">
-      <div role="tablist" className="grid grid-cols-3 gap-1 rounded-2xl bg-cartao-2 p-1">
+      <div role="tablist" className="grid grid-cols-4 gap-1 rounded-2xl bg-cartao-2 p-1">
         {(Object.keys(ABAS) as Aba[]).map((k) => (
           <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)} className={`h-10 rounded-xl text-[0.8rem] font-semibold transition-colors ${aba === k ? "bg-cartao text-texto shadow-cartao" : "text-suave"}`}>
             {ABAS[k]}
@@ -29,6 +29,7 @@ export function Calculadora({ perfil, criterios, abaInicial = "corrida" }: { per
         ))}
       </div>
       {aba === "corrida" && <AbaCorrida perfil={perfil} criterios={criterios} />}
+      {aba === "entrega" && <AbaEntrega perfil={perfil} criterios={criterios} />}
       {aba === "viagem" && <AbaViagem perfil={perfil} />}
       {aba === "combustivel" && <AbaCombustivel perfil={perfil} />}
     </div>
@@ -113,6 +114,69 @@ function AbaCorrida({ perfil, criterios }: { perfil: PerfilCusto; criterios: Cri
         </>
       ) : (
         <p className="text-center text-sm text-suave">Digite o valor e os km da oferta para ver se vale a pena.</p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Entrega (iFood, Lalamove, Loggi, Uber Flash...): a ida até a coleta, a espera
+ * no restaurante ou na loja, as paradas e a volta vazia contam no R$/km, no
+ * R$/h e no lucro, com a mesma régua das corridas.
+ */
+function AbaEntrega({ perfil, criterios }: { perfil: PerfilCusto; criterios: Criterios }) {
+  const [valor, setValor] = useState<number | null>(null);
+  const [kmColeta, setKmColeta] = useState<number | null>(null);
+  const [kmEntrega, setKmEntrega] = useState<number | null>(null);
+  const [minutos, setMinutos] = useState<number | null>(null);
+  const [espera, setEspera] = useState<number | null>(10);
+  const [paradas, setParadas] = useState(1);
+  const [comVolta, setComVolta] = useState(false);
+  const [kmVolta, setKmVolta] = useState<number | null>(null);
+  const t = useMemo(() => taxas(perfil), [perfil]);
+  // Cada parada a mais: uns 4 min de entrega (estacionar, subir, entregar).
+  const minutosParadas = (espera ?? 0) + Math.max(0, paradas - 1) * 4;
+  const minViagem = minutos ?? (kmEntrega ? (kmEntrega / 25) * 60 : null);
+  const oferta = valor && kmEntrega ? { valor, kmCorrida: kmEntrega, minutosCorrida: minViagem !== null ? minViagem + minutosParadas : null, kmBusca: kmColeta, minutosBusca: null, kmVolta } : null;
+  const regua = { ...criterios, contarVolta: comVolta && !!kmVolta };
+  const a = oferta ? avaliarCorrida(oferta, t, regua) : null;
+  const ideal = oferta && a && a.sinal !== "verde" ? precoIdeal(oferta, t, regua) : null;
+  return (
+    <>
+      <Cartao className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Rotulo texto="Valor da entrega"><EntradaReais rotulo="Valor da entrega" valor={valor} aoMudar={setValor} /></Rotulo>
+          <Rotulo texto="Até a coleta"><EntradaNumero rotulo="Km até a coleta" valor={kmColeta} sufixo="km" placeholder="Opcional" aoMudar={setKmColeta} /></Rotulo>
+          <Rotulo texto="Coleta → entrega"><EntradaNumero rotulo="Km da coleta até a entrega" valor={kmEntrega} sufixo="km" aoMudar={setKmEntrega} /></Rotulo>
+          <Rotulo texto="Tempo rodando"><EntradaNumero rotulo="Minutos rodando" inteiro valor={minutos} sufixo="min" placeholder="Auto" aoMudar={setMinutos} /></Rotulo>
+          <Rotulo texto="Espera na coleta"><EntradaNumero rotulo="Minutos de espera na coleta" inteiro valor={espera} sufixo="min" aoMudar={setEspera} /></Rotulo>
+          <Rotulo texto="Entregas na rota">
+            <div className="grid grid-cols-4 gap-1">
+              {[1, 2, 3, 4].map((n) => (
+                <button key={n} type="button" aria-pressed={paradas === n} onClick={() => setParadas(n)} className={`h-11 rounded-xl text-sm font-bold ${paradas === n ? "bg-marca text-white" : "bg-cartao-2 text-suave"}`}>{n}</button>
+              ))}
+            </div>
+          </Rotulo>
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl bg-cartao-2 p-3">
+          <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold">
+            Contar a volta vazia
+            <input type="checkbox" checked={comVolta} onChange={(e) => setComVolta(e.target.checked)} className="size-5 accent-[var(--marca)]" />
+          </label>
+          {comVolta && <EntradaNumero rotulo="Km da última entrega até onde você espera pedidos" valor={kmVolta} sufixo="km volta" placeholder="Km de volta até a sua área" aoMudar={setKmVolta} />}
+        </div>
+      </Cartao>
+      {a ? (
+        <>
+          <CartaoSemaforo a={a} kmBusca={kmColeta} busca="coleta" />
+          <p className="-mt-2 text-center text-xs text-suave">
+            Conta {Math.round(minutosParadas)} min parado (espera{paradas > 1 ? ` e ${paradas - 1} parada${paradas > 2 ? "s" : ""} a mais` : ""}).{paradas > 1 && valor ? ` ${formatarBRL(Math.round(valor / paradas))} por entrega.` : ""}
+          </p>
+          {ideal !== null && ideal !== oferta!.valor && <Aviso tom="info">Para valer a pena pela sua régua: pelo menos <strong>{formatarBRL(ideal)}</strong>.</Aviso>}
+          {ideal === null && a.sinal !== "verde" && <Aviso tom="perigo">Nem o dobro do valor deixa esta entrega verde.</Aviso>}
+        </>
+      ) : (
+        <p className="text-center text-sm text-suave">Digite o valor e os km da coleta até a entrega para ver se vale a pena.</p>
       )}
     </>
   );

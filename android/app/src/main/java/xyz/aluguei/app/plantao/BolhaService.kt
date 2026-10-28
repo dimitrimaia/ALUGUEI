@@ -1960,16 +1960,32 @@ class BolhaService : Service() {
         val agora = SystemClock.elapsedRealtime()
         trajeto = Trajeto(corridaId, valor, agora, embarque = embarque, destino = destino)
         if (Localizacao.permitida(this)) {
+            // O Android só entrega a posição em segundo plano a serviço do tipo "localização".
+            localizacaoConcedida()
             val lm = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             val ouvinte = LocationListener { l: Location ->
                 trajeto = trajeto?.somar(Ponto(l.latitude, l.longitude), if (l.hasAccuracy()) l.accuracy else 99f, SystemClock.elapsedRealtime())
             }
-            try {
-                lm?.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3_000L, 10f, ouvinte, Looper.getMainLooper())
-                ouvinteGps = ouvinte
-            } catch (e: RuntimeException) {
-                // Sem GPS: mede só o tempo.
+            // Todas as fontes: a combinada (Android 12+), o GPS, a rede e a passiva (as
+            // posições que o próprio app de corrida pede). Basta uma funcionar.
+            val fontes = buildList {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(LocationManager.FUSED_PROVIDER)
+                add(LocationManager.GPS_PROVIDER)
+                add(LocationManager.NETWORK_PROVIDER)
+                add(LocationManager.PASSIVE_PROVIDER)
             }
+            var alguma = false
+            for (f in fontes) {
+                try {
+                    if (lm?.allProviders?.contains(f) == true) {
+                        lm.requestLocationUpdates(f, 3_000L, 0f, ouvinte, Looper.getMainLooper())
+                        alguma = true
+                    }
+                } catch (e: RuntimeException) {
+                    // fonte indisponível neste aparelho
+                }
+            }
+            if (alguma) ouvinteGps = ouvinte
         }
         mostrarPilulaTrajeto()
         principal.removeCallbacks(tiqueTrajeto)
@@ -2490,7 +2506,8 @@ class BolhaService : Service() {
             // Sempre no centro da largura (fixarCentro só tira o arrastar para o lado).
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = 0
-            y = ((if (!animar) yAntigo else null) ?: Armazenamento.cartaoY(this@BolhaService, chaveApp) ?: yPadrao).coerceIn(0, (altura - dp(160)).coerceAtLeast(0))
+            // Cada oferta nova abre no topo; arrastar só vale para a oferta da vez.
+            y = ((if (!animar) yAntigo else null) ?: yPadrao).coerceIn(0, (altura - dp(160)).coerceAtLeast(0))
         }
         if (!instalarCartao(raiz, p, antigo, o, corrida, origem, volta, faixa, animar, prefs, emBordas = false)) return
     }
@@ -2908,7 +2925,7 @@ class BolhaService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = (Armazenamento.cartaoY(this@BolhaService, app) ?: (alturaBarraStatus() + dp(6))).coerceIn(0, (altura - dp(120)).coerceAtLeast(0))
+            y = (alturaBarraStatus() + dp(6)).coerceIn(0, (altura - dp(120)).coerceAtLeast(0))
         }
         if (!adicionar(raiz, p)) return
         mini = raiz
