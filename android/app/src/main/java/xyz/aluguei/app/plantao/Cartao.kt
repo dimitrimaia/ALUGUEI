@@ -64,7 +64,7 @@ object Cartao {
 
     /** "volta 18 km · R$ 11", "calculando volta…" ou "volta —". */
     fun textoVolta(d: Dados): String = when (val v = d.volta) {
-        is EstadoVolta.Pronta -> "volta ${jsRound(v.km)} km" + (d.custoVolta?.let { " · ${reaisRedondos(it)}" } ?: "")
+        is EstadoVolta.Pronta -> "volta ${jsRound(v.km)} km" + (d.custoVolta?.let { " · custa ${reaisRedondos(it)}" } ?: "")
         EstadoVolta.Calculando -> "calculando volta…"
         else -> "volta —"
     }
@@ -107,6 +107,37 @@ object Cartao {
             "porMin" -> "$v/min"
             else -> v
         }
+    }
+
+    /** Unidade curta ao lado do número grande ("R$ 1,10 /km", "-R$ 11 lucro"). */
+    fun sufixo(campo: String): String = when (campo) {
+        "porKm" -> "/km"
+        "porHora" -> "/h"
+        "lucro", "lucroPct" -> "lucro"
+        "lucroHora" -> "lucro/h"
+        "porMin" -> "/min"
+        "distanciaTotal" -> "total"
+        "tempoTotal" -> "total"
+        "busca" -> "até o passageiro"
+        "volta" -> "volta"
+        else -> ""
+    }
+
+    /**
+     * Campos que o cartão completo já mostra em outro lugar (nome com a nota, km e
+     * tempo totais, chip da volta): não se repetem na linha pequena.
+     */
+    val REPETIDOS_NO_CARTAO = setOf("nota", "distanciaTotal", "tempoTotal", "busca", "volta")
+
+    /** "19,1 km · 48 min no total" e "Até o passageiro 4,5 km · 11 min · Viagem 14,6 km · 36 min". */
+    fun totais(o: OfertaDetalhada, a: Avaliacao): Total {
+        val km = kmTotal(o, a).principal.removeSuffix(" no total")
+        val min = minutosTotal(o, a).principal.removeSuffix(" no total")
+        val busca = o.kmBusca?.takeIf { it > 0 } ?: return Total("$km · $min no total", null)
+        val aprox = if (o.kmCorridaEstimado) "≈" else ""
+        val minBusca = jsRound(o.minutosBusca ?: ((busca / KM_POR_HORA_CIDADE) * 60))
+        val minViagem = jsRound(o.minutosCorrida ?: ((o.kmCorrida / KM_POR_HORA_CIDADE) * 60))
+        return Total("$km · $min no total", "Até o passageiro ${Formato.km(busca)} km · $minBusca min   Viagem $aprox${Formato.km(o.kmCorrida)} km · $minViagem min")
     }
 
     /** Os 3 primeiros campos são os grandes; os demais vão juntos na linha pequena. */

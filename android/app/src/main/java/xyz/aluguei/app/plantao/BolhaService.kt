@@ -208,7 +208,12 @@ class BolhaService : Service() {
     private var cartaoDetalhes = false
     /** O cartão foi fechado no ✕ ou arrastado para o lado (não pergunta "Você aceitou?"). */
     private var cartaoDispensado = false
-    private val fecharCartaoNoTempo = Runnable { ofertaSumiu() }
+    private val fecharCartaoNoTempo: Runnable = object : Runnable {
+        override fun run() {
+            // Não fecha no meio da digitação do lápis: espera ela acabar.
+            if (campoValor != null) principal.postDelayed(this, 2_000) else ofertaSumiu()
+        }
+    }
 
     // mini cartão
     private var mini: View? = null
@@ -1563,6 +1568,9 @@ class BolhaService : Service() {
         }
         if (Armazenamento.pausado(this)) return
         diagnostico(app, tela)
+        // Digitando no lápis: a caixinha tira o foco do app de corrida e a leitura parece
+        // "oferta sumiu". Enquanto ela está aberta, só ofertas e contrapropostas contam.
+        if (campoValor != null && tela !is TelaLida.ComOferta && tela !is TelaLida.Contraproposta) return
         when (tela) {
             is TelaLida.ComOferta -> {
                 ofertaVistaEm = SystemClock.elapsedRealtime()
@@ -1600,7 +1608,7 @@ class BolhaService : Service() {
     }
 
     private val conferirSumico = Runnable {
-        if (cartao != null && cartaoOrigem == "leitura" && cartaoApp == "indrive" &&
+        if (campoValor == null && cartao != null && cartaoOrigem == "leitura" && cartaoApp == "indrive" &&
             SystemClock.elapsedRealtime() - ofertaVistaEm >= SUMICO_MS
         ) {
             limparLeitura()
@@ -2103,11 +2111,6 @@ class BolhaService : Service() {
         )
     }
 
-    private fun blocoTotal(t: Cartao.Total, pal: Paleta): LinearLayout = LinearLayout(ui).apply {
-        orientation = LinearLayout.VERTICAL
-        addView(texto(t.principal, 15f, pal.texto, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
-        t.detalhe?.let { addView(texto(it, 11f, pal.secundario).apply { setPadding(0, dp(2), 0, 0); maxLines = 2 }) }
-    }
 
     /**
      * Lápis do cartão: corrige o valor com que o motorista aceitou / vai aceitar
@@ -2116,7 +2119,7 @@ class BolhaService : Service() {
     private fun editarValorFinal() {
         val o = cartaoOferta ?: return
         val c = cartaoCorrida ?: return
-        abrirValorFinal("Valor com que você aceitou", Aceite.valorFinal(o)) { v ->
+        abrirValorFinal("Simular ou corrigir o valor", Aceite.valorFinal(o)) { v ->
             Armazenamento.atualizarValorFinal(this, c.id, v)
             val nova = o.copy(valorFinal = v)
             if (ofertaAbertaId == c.id) ofertaAberta = ofertaAberta?.copy(valorFinal = v)
@@ -2317,27 +2320,32 @@ class BolhaService : Service() {
             }
             addView(selo(seloDoSinal(a.sinal), cor))
             addView(
-                texto("▴", 15f, pal.secundario, true).apply {
+                texto("▴ Resumo", 12f, pal.destaque, true).apply {
                     gravity = Gravity.CENTER
+                    background = fundoArredondado(comAlfa(pal.destaque, 0x1F), 99)
+                    setPadding(dp(10), dp(4), dp(10), dp(4))
                     contentDescription = "Mostrar só o resumo"
                     isClickable = true
                     setOnClickListener { cartaoDetalhes = false; redesenharCartao() }
                 },
-                LinearLayout.LayoutParams(dp(28), dp(26)),
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(6) },
             )
             addView(fechar, LinearLayout.LayoutParams(dp(30), dp(26)))
         }
 
         // Campos escolhidos: os 3 primeiros grandes (contam de 0 até o valor), os demais na linha pequena.
         val (grandes, pequenos) = Cartao.dividir(prefs.campos)
+        // Número grande com a unidade pequena ao lado ("R$ 1,10 /km"): uma linha só.
         val numeros = grandes.map { campo ->
-            val n = texto("", 21f, pal.texto, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END }
-            val rot = texto(Cartao.grande(campo, dados).second, 11f, pal.secundario).apply { setPadding(0, dp(2), 0, 0); maxLines = 1 }
+            val n = texto("", 21f, pal.texto, true).apply { maxLines = 1 }
             if (campo.startsWith("lucro") && a.lucro <= 0) n.setTextColor(VERMELHO)
             val bloco = LinearLayout(ui).apply {
-                orientation = LinearLayout.VERTICAL
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.BOTTOM
                 addView(n)
-                addView(rot)
+                Cartao.sufixo(campo).takeIf { it.isNotEmpty() }?.let { suf ->
+                    addView(texto(suf, 11f, pal.secundario, true).apply { maxLines = 1; setPadding(dp(3), 0, 0, dp(3)) })
+                }
             }
             Triple(campo, bloco, n)
         }
@@ -2353,7 +2361,7 @@ class BolhaService : Service() {
         }
         preencher(if (animar) 0f else 1f)
 
-        val linhaPequena = pequenos.map { Cartao.pequeno(it, dados) }.filter { it.isNotEmpty() && it != "—" }.joinToString(" · ")
+        val linhaPequena = pequenos.filter { it !in Cartao.REPETIDOS_NO_CARTAO }.map { Cartao.pequeno(it, dados) }.filter { it.isNotEmpty() && it != "—" }.joinToString(" · ")
 
         val conteudo = if (!cartaoDetalhes) resumoDoCartao(o, r, corrida, origem, dados, volta, pal, cor, chaveApp, fechar) else LinearLayout(ui).apply {
             orientation = LinearLayout.VERTICAL
@@ -2367,19 +2375,11 @@ class BolhaService : Service() {
             }
             if (numeros.isNotEmpty()) addView(linha(*numeros.map { it.second }.toTypedArray(), espaco = 6), margem(8))
             // Km e tempo totais, sempre visíveis: "17,3 km no total" / "2,1 até o passageiro + 15,2 de viagem".
-            addView(
-                linha(
-                    blocoTotal(Cartao.kmTotal(o, a), pal),
-                    blocoTotal(Cartao.minutosTotal(o, a), pal),
-                    espaco = 8,
-                ),
-                margem(8),
-            )
-            if (linhaPequena.isNotEmpty()) addView(texto(linhaPequena, 12f, pal.secundario).apply { maxLines = 2 }, margem(6))
-            // Volta para a base: linha própria quando o campo "volta" não está entre os escolhidos.
-            if (volta != EstadoVolta.Nenhuma && "volta" !in prefs.campos) {
-                addView(texto(Cartao.textoVolta(dados), 12f, pal.secundario).apply { maxLines = 1 }, margem(3))
-            }
+            // Km e tempo totais numa linha; o detalhe (até o passageiro / viagem) embaixo.
+            val totais = Cartao.totais(o, a)
+            addView(texto(totais.principal, 15f, pal.texto, true).apply { maxLines = 1 }, margem(8))
+            totais.detalhe?.let { addView(texto(it, 11f, pal.secundario).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END }, margem(1)) }
+            if (linhaPequena.isNotEmpty()) addView(texto(linhaPequena, 12f, pal.secundario).apply { maxLines = 1 }, margem(4))
             o.destino?.let { d ->
                 addView(
                     texto("→ $d", 12f, pal.texto).apply {
@@ -2449,11 +2449,16 @@ class BolhaService : Service() {
             )
             addView(linhaChip, margem(6))
             // Embarque e Destino: abrem o app de navegação escolhido (appNavegacao).
-            val navegar = listOfNotNull(
-                o.embarque?.let { e -> botao("Embarque", pal.destaque, false) { abrirNavegacao(e) }.apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * escalaTexto); setPadding(dp(8), dp(6), dp(8), dp(6)) } },
-                o.destino?.let { d -> botao("Destino", pal.destaque, false) { abrirNavegacao(d) }.apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * escalaTexto); setPadding(dp(8), dp(6), dp(8), dp(6)) } },
-            )
-            if (navegar.isNotEmpty()) addView(linha(*navegar.toTypedArray(), espaco = 8), margem(8))
+            // Navegação em pílulas baixas (menos peso que os botões de decisão).
+            fun pilulaNavegar(t: String, endereco: String) = texto(t, 12f, pal.destaque, true).apply {
+                gravity = Gravity.CENTER
+                background = fundoArredondado(comAlfa(pal.destaque, 0x14), 99)
+                setPadding(dp(8), dp(6), dp(8), dp(6))
+                isClickable = true
+                setOnClickListener { abrirNavegacao(endereco) }
+            }
+            val navegar = listOfNotNull(o.embarque?.let { pilulaNavegar("📍 Ir ao embarque", it) }, o.destino?.let { pilulaNavegar("🏁 Ir ao destino", it) })
+            if (navegar.isNotEmpty()) addView(linha(*navegar.toTypedArray(), espaco = 8), margem(6))
             addView(
                 linha(
                     botao(getString(R.string.plantao_recusei), pal.secundario, false) { decidir(corrida, CorridaAvaliada.RECUSEI, o) },

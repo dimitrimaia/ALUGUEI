@@ -26,7 +26,7 @@ class CartaoTest {
         assertEquals("21 min", Cartao.valor("tempoTotal", d))
         assertEquals("20,6 km", Cartao.valor("distanciaTotal", d))
         assertEquals("a 2,1 km", Cartao.valor("busca", d))
-        assertEquals("volta 18 km · R$ 11", Cartao.valor("volta", d))
+        assertEquals("volta 18 km · custa R$ 11", Cartao.valor("volta", d))
         assertEquals(Copiloto.reais(jsRound(a.lucroPorHora / 100.0) * 100) + "/h", Cartao.valor("lucroHora", d))
     }
 
