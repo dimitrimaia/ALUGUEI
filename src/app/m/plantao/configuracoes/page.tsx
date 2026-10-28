@@ -1,4 +1,4 @@
-import { Bell, Bookmark, Camera, Car, ChevronRight, Clock, Home, LayoutTemplate, LifeBuoy, MessageSquareText, Navigation, PiggyBank, Power, SlidersHorizontal } from "lucide-react";
+import { Sparkles, Bell, Bookmark, Camera, Car, ChevronRight, Clock, Home, LayoutTemplate, LifeBuoy, MessageSquareText, Navigation, PiggyBank, Power, SlidersHorizontal } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -13,6 +13,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: "Ligar e permissões",
     itens: [
+      { href: "/m/plantao/assistente", titulo: "Assistente de configuração", detalhe: "Passo a passo com tudo explicado", icone: Sparkles },
       { href: "/m/plantao/semaforo", titulo: "Ligar o Copiloto", detalhe: "Bolha, leitura das ofertas e permissões", icone: Power },
       { href: "/m/plantao/ajuda", titulo: "Diagnóstico e ajuda", detalhe: "Ver o que o Copiloto está lendo e resolver problemas", icone: LifeBuoy },
     ],

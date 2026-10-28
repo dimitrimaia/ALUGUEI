@@ -1,4 +1,4 @@
-import { ChevronRight, History, SlidersHorizontal, Wrench } from "lucide-react";
+import { Sparkles, ChevronRight, History, SlidersHorizontal, Wrench } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -28,6 +28,11 @@ export default async function Semaforo() {
           </Link>
         ))}
       </nav>
+      <Link href={"/m/plantao/assistente" as Route} className="mb-4 flex items-center gap-3 rounded-[1.1rem] bg-marca p-4 text-white shadow-marca transition-transform active:scale-[0.98]">
+        <Sparkles size={20} className="shrink-0" />
+        <span className="min-w-0 flex-1"><span className="block font-bold">Iniciar assistente de configuração</span><span className="block text-xs text-white/80">Passo a passo: permissões, carro, régua, cartão e narrador</span></span>
+        <ChevronRight size={18} />
+      </Link>
       <AtivarSemaforo />
     </div>
   );
