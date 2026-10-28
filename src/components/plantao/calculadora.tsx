@@ -178,21 +178,7 @@ function AbaViagem({ perfil }: { perfil: PerfilCusto }) {
           </dl>
         </Cartao>
       )}
-      {r && (
-        <Cartao className="flex flex-col gap-2">
-          <h2 className="font-bold">Dividir como carona (BlaBlaCar)</h2>
-          <p className="text-xs text-suave">Na carona ninguém lucra: cada pessoa paga no máximo a parte dela no combustível, no desgaste e nos pedágios (você conta como uma das pessoas). Acima disso vira transporte pago.</p>
-          <div className="grid grid-cols-4 gap-2">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="rounded-xl bg-cartao-2 p-2.5 text-center">
-                <p className="text-[0.7rem] text-suave">{n} passageiro{n > 1 ? "s" : ""}</p>
-                <p className="font-bold tabular-nums">{formatarBRL(contribuicaoMaxima(t, kmTotal, pedagiosTotal, n))}</p>
-                <p className="text-[0.65rem] text-suave">por pessoa, no máximo</p>
-              </div>
-            ))}
-          </div>
-        </Cartao>
-      )}
+      {r && <PassageirosViagem total={r.total} sugerido={r.precoSugerido} soCombustivelEPedagio={(n) => contribuicaoMaxima(t, kmTotal, pedagiosTotal, n)} margem={margem ?? 0} />}
     </>
   );
 }
@@ -224,5 +210,53 @@ function AbaCombustivel({ perfil }: { perfil: PerfilCusto }) {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Levar passageiros (BlaBlaCar, grupo, particular): o motorista escolhe quantos e
+ * quanto cobra de cada um. Mostra o recomendado (custo + margem, dividido) e o
+ * mínimo para só dividir os gastos, e o lucro com o preço escolhido.
+ */
+function PassageirosViagem({ total, sugerido, soCombustivelEPedagio, margem }: { total: number; sugerido: number; soCombustivelEPedagio: (n: number) => number; margem: number }) {
+  const [passageiros, setPassageiros] = useState(3);
+  const [preco, setPreco] = useState<number | null>(null);
+  // O campo guarda o próprio texto: trocar a chave mostra o recomendado quando ele é tocado.
+  const [versao, setVersao] = useState(0);
+  const recomendado = Math.ceil(sugerido / passageiros / 100) * 100;
+  const receita = (preco ?? 0) * passageiros;
+  const lucro = receita - total;
+  return (
+    <Cartao className="flex flex-col gap-3">
+      <h2 className="font-bold">Levar passageiros (BlaBlaCar)</h2>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium">Passageiros</span>
+        <div className="grid grid-cols-6 gap-1">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <button key={n} type="button" aria-pressed={passageiros === n} onClick={() => setPassageiros(n)} className={`h-10 rounded-xl text-sm font-bold ${passageiros === n ? "bg-marca text-white" : "bg-cartao-2 text-suave"}`}>{n}</button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => (setPreco(recomendado), setVersao((v) => v + 1))} className="rounded-xl bg-marca-suave p-3 text-left">
+          <p className="text-xs text-suave">Recomendado por pessoa</p>
+          <p className="text-xl font-extrabold text-marca tabular-nums">{formatarBRL(recomendado)}</p>
+          <p className="text-[0.7rem] text-suave">custos + {margem}% de margem · toque para usar</p>
+        </button>
+        <div className="rounded-xl bg-cartao-2 p-3">
+          <p className="text-xs text-suave">Só dividir os gastos</p>
+          <p className="text-xl font-extrabold tabular-nums">{formatarBRL(soCombustivelEPedagio(passageiros))}</p>
+          <p className="text-[0.7rem] text-suave">combustível e pedágio, contando você</p>
+        </div>
+      </div>
+      <Rotulo texto="Quanto vai cobrar de cada um"><EntradaReais key={versao} rotulo="Preço por passageiro" valor={preco} placeholder={(recomendado / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} aoMudar={setPreco} /></Rotulo>
+      {preco !== null && preco > 0 && (
+        <dl className="divide-y divide-borda">
+          <DadoRotulado rotulo={`Recebe (${passageiros} × ${formatarBRL(preco)})`}>{formatarBRL(receita)}</DadoRotulado>
+          <DadoRotulado rotulo="Custo da viagem">{formatarBRL(total)}</DadoRotulado>
+          <DadoRotulado rotulo="Lucro">{<span className={lucro < 0 ? "font-bold text-perigo" : "font-bold text-ok"}>{formatarBRL(lucro)}</span>}</DadoRotulado>
+        </dl>
+      )}
+    </Cartao>
   );
 }
