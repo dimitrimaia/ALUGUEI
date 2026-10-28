@@ -4,7 +4,7 @@ import { Accessibility, BatteryCharging, Bell, Check, ChevronRight, Hand, Layers
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Aviso, Botao, Cartao, Selo } from "@/components/ui";
-import { type EstadoNativo, plantaoNativo, plataforma } from "@/lib/nativo";
+import { type EstadoNativo, plantaoNativo, plataforma, soltarOuvinte } from "@/lib/nativo";
 
 const CHAVE_ACEITE = "aluguei_semaforo_aceite_v1";
 
@@ -99,7 +99,7 @@ export function AtivarSemaforo() {
     const aoVoltar = () => document.visibilityState === "visible" && atualizar();
     document.addEventListener("visibilitychange", aoVoltar);
     return () => {
-      ouvinte.then((o) => o.remove());
+      soltarOuvinte(ouvinte);
       document.removeEventListener("visibilitychange", aoVoltar);
     };
   }, [atualizar]);

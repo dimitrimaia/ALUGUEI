@@ -64,7 +64,8 @@ type PluginPlantao = {
   confirmarFinalizadas?(o: { ids: string[] }): Promise<void>;
   /** APK direto: baixa a versão nova e abre o instalador (sem permissão, abre a tela dela). */
   atualizarApp?(o: { url: string }): Promise<{ permissao: boolean; baixando: boolean }>;
-  addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia" | "perfil", cb: (dados: unknown) => void): Promise<Ouvinte>;
+  /** Conforme a versão do Capacitor, volta o ouvinte direto ou uma promessa dele: use `soltarOuvinte`. */
+  addListener(evento: "permissao" | "oferta" | "decisao" | "estado" | "regua" | "base" | "preferencia" | "perfil", cb: (dados: unknown) => void): Promise<Ouvinte> | Ouvinte;
 };
 
 type JanelaCapacitor = { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string; Plugins?: { Plantao?: PluginPlantao } } };
@@ -80,4 +81,14 @@ export function plataforma(): "android" | "ios" | "web" | "app-sem-ponte" {
 export function plantaoNativo(): PluginPlantao | null {
   if (plataforma() !== "android") return null;
   return (window as unknown as JanelaCapacitor).Capacitor?.Plugins?.Plantao ?? null;
+}
+
+/**
+ * Solta um ouvinte do plugin, venha ele direto ou numa promessa. Nunca lança:
+ * erro na limpeza de um efeito derruba a tela inteira (tela branca).
+ */
+export function soltarOuvinte(o: Promise<Ouvinte> | Ouvinte | null | undefined): void {
+  Promise.resolve(o)
+    .then((x) => x?.remove?.())
+    .catch(() => null);
 }

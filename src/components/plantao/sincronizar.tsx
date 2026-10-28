@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { adicionarLugaresEvitar, buscarLugaresComunidade, registrarCorridas, registrarFinalizadas, salvarPreferenciasCopiloto, salvarRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
 import { normalizarCriterios } from "@/dominio/ganhos/custos";
-import { plantaoNativo } from "@/lib/nativo";
+import { plantaoNativo, soltarOuvinte } from "@/lib/nativo";
 import type { Criterios, PerfilCusto } from "@/dominio/ganhos/custos";
 import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 
@@ -85,7 +85,7 @@ export function SincronizarPlantao({ perfil, criterios: daConta, preferencias }:
     document.addEventListener("visibilitychange", aoVoltar);
     return () => {
       vivo = false;
-      for (const o of [regua, base, pref]) o.then((x) => x.remove()).catch(() => null);
+      for (const o of [regua, base, pref]) soltarOuvinte(o);
       document.removeEventListener("visibilitychange", aoVoltar);
     };
   }, [perfil, daConta, preferencias, router]);
