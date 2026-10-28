@@ -186,6 +186,14 @@ class BolhaService : Service() {
     private var cartaoEmBordas = false
     /** Estilo "bordas": o motorista tocou e o cartão completo está aberto (volta às bordas na próxima oferta). */
     private var cartaoExpandido = false
+    /** Toda janela de cartão posta na tela: nenhuma fica órfã (erro no meio do redesenho, animação). */
+    private val janelasCartao = mutableSetOf<View>()
+
+    private fun removerCartoesMenos(manter: View?) {
+        janelasCartao.filter { it !== manter }.forEach { remover(it) }
+        janelasCartao.retainAll { it === manter }
+    }
+
     /** Corrida aceita em andamento (km e tempo pelo GPS) e a pílula dela na tela. */
     private var trajeto: Trajeto? = null
     private var pilulaTrajeto: View? = null
@@ -401,9 +409,12 @@ class BolhaService : Service() {
     }
 
     override fun onDestroy() {
-        // Desligou com corrida aberta: guarda o que mediu até aqui.
-        finalizarTrajeto("concluida")
+        // Desligou com corrida aberta: guarda o que mediu até aqui (sem deixar um erro impedir a limpeza).
+        runCatching { finalizarTrajeto("concluida", silencioso = true) }
         principal.removeCallbacksAndMessages(null)
+        removerCartoesMenos(null)
+        remover(pilulaTrajeto)
+        pilulaTrajeto = null
         if (desbloqueioRegistrado) {
             try {
                 unregisterReceiver(desbloqueio)
@@ -1130,6 +1141,7 @@ class BolhaService : Service() {
         if (pausar) {
             fecharCartao()
             fecharMini()
+            finalizarTrajeto("concluida")
             limparLeitura()
             rotuloDiag?.text = "pausado"
         } else {
@@ -1965,7 +1977,7 @@ class BolhaService : Service() {
     }
 
     /** Fecha a corrida: guarda km e tempo reais na fila ("descartada" não guarda). */
-    private fun finalizarTrajeto(status: String) {
+    private fun finalizarTrajeto(status: String, silencioso: Boolean = false) {
         val t = trajeto ?: return
         trajeto = null
         principal.removeCallbacks(tiqueTrajeto)
@@ -1979,7 +1991,8 @@ class BolhaService : Service() {
         // O relógio do trajeto é o do aparelho ligado (elapsedRealtime); a fila guarda horário de verdade.
         val desvio = System.currentTimeMillis() - fim
         Armazenamento.adicionarFinalizada(this, t.copy(inicioMs = t.inicioMs + desvio), fim + desvio, status)
-        PlantaoPlugin.emitirEstado(this)
+        if (silencioso) return
+        runCatching { PlantaoPlugin.emitirEstado(this) }
         aviso("Corrida salva: ${t.resumo(fim)}${t.porKmReal()?.let { " · ${Formato.brl(it)}/km" } ?: ""}")
     }
 
@@ -2248,6 +2261,13 @@ class BolhaService : Service() {
         escalaTexto = prefs.escalaFonte
         try {
             montarCartao(o, r, corrida, origem, animar, volta, faixa, prefs)
+        } catch (e: RuntimeException) {
+            // Erro ao montar: não deixa cartão pela metade nem órfão na tela; o diagnóstico mostra o motivo.
+            Armazenamento.registrarErro(this, "cartão: ${e.javaClass.simpleName}: ${e.message}".take(300))
+            rotuloDiag?.text = "erro no cartão: ${e.javaClass.simpleName}"
+            cartao = null
+            removerCartoesMenos(null)
+            return
         } finally {
             escalaTexto = 1f
         }
@@ -2527,6 +2547,8 @@ class BolhaService : Service() {
     ): Boolean {
         val entrou = adicionar(raiz, p)
         antigo?.let { remover(it) }
+        removerCartoesMenos(if (entrou) raiz else null)
+        if (entrou) janelasCartao.add(raiz)
         if (!entrou) {
             principal.removeCallbacks(fecharCartaoNoTempo)
             cartaoCorrida = null
@@ -2950,10 +2972,12 @@ class BolhaService : Service() {
         cartaoOrigem = "digitada"
         cartaoVolta = EstadoVolta.Nenhuma
         cartaoFaixa = null
+        removerCartoesMenos(v)
         if (animado && v.isAttachedToWindow) {
-            v.animate().alpha(0f).translationY(-dp(16).toFloat()).setDuration(180).withEndAction { remover(v) }.start()
+            v.animate().alpha(0f).translationY(-dp(16).toFloat()).setDuration(180).withEndAction { remover(v); janelasCartao.remove(v) }.start()
         } else {
             remover(v)
+            janelasCartao.remove(v)
         }
     }
 

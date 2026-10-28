@@ -59,7 +59,14 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
     setCodigo("");
   }
 
+  // Já baixa a página de destino enquanto a pessoa digita: depois de entrar, ela abre mais rápido.
+  useEffect(() => {
+    router.prefetch(destino as never);
+  }, [router, destino]);
+
+  /** Entrou: o botão segue ocupado ("Entrando…") até a página nova abrir. */
   async function concluir() {
+    setOcupado(true);
     router.replace(destino as never);
     router.refresh();
   }

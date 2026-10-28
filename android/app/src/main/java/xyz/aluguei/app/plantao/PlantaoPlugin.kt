@@ -148,6 +148,7 @@ class PlantaoPlugin : Plugin() {
         // Print das ofertas precisa do Android 11+ (takeScreenshot).
         put("printDisponivel", LeitorCorridasService.printDisponivel)
         put("perfilAtivo", Armazenamento.perfilAtivo(c) ?: JSONObject.NULL)
+        put("ultimoErro", Armazenamento.ultimoErro(c) ?: JSONObject.NULL)
     }
 
     // ------------------------------------------------------------------ estado e configuração

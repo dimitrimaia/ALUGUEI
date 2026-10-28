@@ -345,6 +345,15 @@ object Armazenamento {
 
     fun limparPedidoAcessibilidade(ctx: Context) = prefs(ctx).edit().remove(PEDIDO_ACESSIBILIDADE).apply()
 
+    // ---------- último erro (aparece em Ajuda e diagnóstico) ----------
+
+    private const val ULTIMO_ERRO = "ultimo_erro"
+
+    fun registrarErro(ctx: Context, texto: String) =
+        prefs(ctx).edit().putString(ULTIMO_ERRO, "${isoDe(System.currentTimeMillis())} $texto").apply()
+
+    fun ultimoErro(ctx: Context): String? = prefs(ctx).getString(ULTIMO_ERRO, null)
+
     // ---------- lugares que outros motoristas evitam ----------
 
     fun salvarComunidade(ctx: Context, arr: JSONArray) =
