@@ -4,7 +4,7 @@ import type { ParametrosContrato } from "@/dominio/contrato/parametros";
 import { type DataISO, hoje, somarDias } from "@/dominio/datas/data";
 import type { Centavos } from "@/dominio/dinheiro/centavos";
 import { aluguelMensal, type Criterios, normalizarCriterios, normalizarPerfil, PERFIL_PADRAO, type PerfilCusto } from "@/dominio/ganhos/custos";
-import type { CategoriaDespesa, Plataforma } from "@/dominio/ganhos/plantao";
+import { type CategoriaDespesa, ganhosDoCopiloto, type Plataforma } from "@/dominio/ganhos/plantao";
 import { normalizarPreferenciasCopiloto, type PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 import { type ConfigFinancas, normalizarFinancas } from "@/dominio/ganhos/financas";
 import { aluguelExterno } from "./aluguel-externo";
@@ -55,14 +55,22 @@ const inicioDoDia = (d: DataISO) => `${d}T00:00:00-03:00`;
 export async function dadosDoPeriodo(usuarioId: string, de: DataISO, ate: DataISO) {
   const admin = supabaseAdmin();
   const fimExclusivo = inicioDoDia(somarDias(ate, 1));
-  const [{ data: ganhos }, { data: despesas }, { data: jornadas }, { data: corridas }] = await Promise.all([
+  const [{ data: ganhos }, { data: despesas }, { data: jornadas }, { data: corridas }, { data: aceitas }] = await Promise.all([
     admin.from("ganhos").select("*").eq("usuario_id", usuarioId).gte("dia", de).lte("dia", ate).order("criado_em", { ascending: false }),
     admin.from("despesas_motorista").select("*").eq("usuario_id", usuarioId).gte("dia", de).lte("dia", ate).order("criado_em", { ascending: false }),
     admin.from("jornadas").select("*").eq("usuario_id", usuarioId).gte("inicio", inicioDoDia(de)).lt("inicio", fimExclusivo).order("inicio"),
     admin.from("corridas_avaliadas").select("*").eq("usuario_id", usuarioId).gte("ocorrida_em", inicioDoDia(de)).lt("ocorrida_em", fimExclusivo).order("ocorrida_em", { ascending: false }).limit(500),
+    // Só as aceitas, sem limite curto: viram receita sozinhas (ganhosDoCopiloto).
+    admin.from("corridas_avaliadas").select("*").eq("usuario_id", usuarioId).eq("decisao", "aceitei").gte("ocorrida_em", inicioDoDia(de)).lt("ocorrida_em", fimExclusivo).limit(5000),
   ]);
+  const manuais = (ganhos ?? []).map((g) => ({ ...g, plataforma: g.plataforma as Plataforma, automatico: false }));
+  const doCopiloto = ganhosDoCopiloto(
+    (aceitas ?? []).map((c) => ({ app: c.app, valor: (c as { valor_final_centavos?: number | null }).valor_final_centavos ?? c.valor_centavos, quando: c.ocorrida_em })),
+    manuais,
+  ).map((g) => ({ id: `copiloto:${g.dia}:${g.plataforma}`, usuario_id: usuarioId, jornada_id: null, dia: g.dia, plataforma: g.plataforma, valor_centavos: g.valor, corridas: g.corridas, criado_em: g.ultimo, automatico: true }));
   return {
-    ganhos: (ganhos ?? []).map((g) => ({ ...g, plataforma: g.plataforma as Plataforma })),
+    // Ganhos lançados e, para os app/dias sem lançamento, as corridas aceitas no Copiloto.
+    ganhos: [...manuais, ...doCopiloto].sort((a, b) => b.criado_em.localeCompare(a.criado_em)),
     despesas: (despesas ?? []).map((d) => ({ ...d, categoria: d.categoria as CategoriaDespesa })),
     jornadas: jornadas ?? [],
     corridas: corridas ?? [],

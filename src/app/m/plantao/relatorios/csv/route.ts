@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const reais = (c: number) => (c / 100).toFixed(2).replace(".", ",");
   const linhas = [
     ["Data", "Tipo", "Descrição", "Corridas", "Valor (R$)"],
-    ...d.ganhos.map((g) => [formatarData(data(g.dia)), "Ganho", NOME_PLATAFORMA[g.plataforma] ?? g.plataforma, String(g.corridas), reais(g.valor_centavos)]),
+    ...d.ganhos.map((g) => [formatarData(data(g.dia)), g.automatico ? "Ganho (Copiloto)" : "Ganho", NOME_PLATAFORMA[g.plataforma] ?? g.plataforma, String(g.corridas), reais(g.valor_centavos)]),
     ...d.despesas.map((x) => [formatarData(data(x.dia)), "Despesa", `${NOME_DESPESA[x.categoria] ?? x.categoria}${x.descricao ? ` - ${x.descricao}` : ""}`, "", `-${reais(x.valor_centavos)}`]),
   ];
   const csv = "﻿" + linhas.map((l) => l.map((c) => `"${c.replace(/"/g, '""')}"`).join(";")).join("\r\n");

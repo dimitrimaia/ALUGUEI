@@ -42,7 +42,7 @@ export default async function Plantao() {
   const minutos = aberta ? minutosJornada({ inicio: aberta.inicio, fim: null, kmRodados: null }, agora) : 0;
   const progresso = progressoMeta(meta, r.bruto, minutos);
   const lancamentos = [
-    ...dados.ganhos.map((g) => ({ id: g.id, quando: g.criado_em, titulo: `${NOME_PLATAFORMA[g.plataforma] ?? g.plataforma}${g.corridas > 1 ? ` · ${g.corridas} corridas` : ""}`, valor: g.valor_centavos })),
+    ...dados.ganhos.map((g) => ({ id: g.id, quando: g.criado_em, titulo: `${NOME_PLATAFORMA[g.plataforma] ?? g.plataforma}${g.corridas > 1 ? ` · ${g.corridas} corridas` : ""}${g.automatico ? " (Copiloto)" : ""}`, valor: g.valor_centavos })),
     ...dados.despesas.map((d) => ({ id: d.id, quando: d.criado_em, titulo: NOME_DESPESA[d.categoria] ?? d.categoria, valor: -d.valor_centavos })),
   ].sort((a, b) => b.quando.localeCompare(a.quando));
 

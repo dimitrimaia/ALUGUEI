@@ -4,7 +4,7 @@ import { avaliarCorrida } from "./corrida";
 import { aluguelMensal, CRITERIOS_PADRAO, normalizarCriterios, normalizarPerfil, PERFIL_PADRAO, type PerfilCusto, taxas } from "./custos";
 import { lerOferta } from "./oferta";
 import { distanciaReta, estimarParticular, paraSlug, rotaEstimada, TABELA_PADRAO } from "./particular";
-import { progressoMeta, resumir } from "./plantao";
+import { ganhosDoCopiloto, progressoMeta, resumir } from "./plantao";
 import { calcularViagem, compararCombustivel } from "./viagem";
 
 // Perfil redondo para conferir à mão: gasolina R$ 6,00 a 12 km/l = 50 c/km;
@@ -160,5 +160,31 @@ describe("carona e clientes particulares", () => {
   });
   it("link público", () => {
     expect(paraSlug("  João da Silva! ")).toBe("joao-da-silva");
+  });
+});
+
+describe("ganhos das corridas do Copiloto", () => {
+  it("soma as aceitas por dia e app, no dia de Brasília", () => {
+    const g = ganhosDoCopiloto(
+      [
+        { app: "indrive", valor: 2500, quando: "2026-10-28T12:00:00Z" },
+        { app: "indrive", valor: 3000, quando: "2026-10-28T20:00:00Z" },
+        // 01h de 29/10 em UTC ainda é 28/10 em Brasília.
+        { app: "indrive", valor: 1000, quando: "2026-10-29T01:00:00Z" },
+        { app: "37city", valor: 1800, quando: "2026-10-28T15:00:00Z" },
+        { app: null, valor: 900, quando: "2026-10-28T16:00:00Z" },
+      ],
+      [],
+    );
+    expect(g.map((x) => [x.dia, x.plataforma, x.valor, x.corridas])).toEqual([
+      ["2026-10-28", "indrive", 6500, 3],
+      ["2026-10-28", "outra", 900, 1],
+      ["2026-10-28", "37city", 1800, 1],
+    ]);
+  });
+
+  it("não conta em dobro o que já foi lançado à mão", () => {
+    const g = ganhosDoCopiloto([{ app: "indrive", valor: 2500, quando: "2026-10-28T12:00:00Z" }, { app: "uber", valor: 1500, quando: "2026-10-28T13:00:00Z" }], [{ dia: "2026-10-28", plataforma: "indrive" }]);
+    expect(g.map((x) => x.plataforma)).toEqual(["uber"]);
   });
 });

@@ -32,8 +32,8 @@ export default async function ExtratoPlantao({ searchParams }: { searchParams: P
   const url = (x: { periodo?: PeriodoExtrato; filtro?: Filtro }) => `/m/plantao/extrato?periodo=${x.periodo ?? periodo}&filtro=${x.filtro ?? filtro}` as Route;
 
   const itens = [
-    ...(filtro !== "gastos" ? dados.ganhos.map((g) => ({ tipo: "ganho" as const, id: g.id, dia: g.dia, quando: g.criado_em, titulo: NOME_PLATAFORMA[g.plataforma] ?? g.plataforma, detalhe: g.corridas === 1 ? "1 corrida" : `${g.corridas} corridas`, valor: g.valor_centavos })) : []),
-    ...(filtro !== "ganhos" ? dados.despesas.map((x) => ({ tipo: "despesa" as const, id: x.id, dia: x.dia, quando: x.criado_em, titulo: NOME_DESPESA[x.categoria] ?? x.categoria, detalhe: [x.descricao, x.quantidade_mil ? `${(x.quantidade_mil / 1000).toLocaleString("pt-BR")} L` : null].filter(Boolean).join(" · "), valor: -x.valor_centavos })) : []),
+    ...(filtro !== "gastos" ? dados.ganhos.map((g) => ({ tipo: "ganho" as const, id: g.id, dia: g.dia, quando: g.criado_em, titulo: NOME_PLATAFORMA[g.plataforma] ?? g.plataforma, detalhe: `${g.corridas === 1 ? "1 corrida" : `${g.corridas} corridas`}${g.automatico ? " aceitas no Copiloto" : ""}`, valor: g.valor_centavos, automatico: g.automatico })) : []),
+    ...(filtro !== "ganhos" ? dados.despesas.map((x) => ({ tipo: "despesa" as const, id: x.id, dia: x.dia, quando: x.criado_em, titulo: NOME_DESPESA[x.categoria] ?? x.categoria, detalhe: [x.descricao, x.quantidade_mil ? `${(x.quantidade_mil / 1000).toLocaleString("pt-BR")} L` : null].filter(Boolean).join(" · "), valor: -x.valor_centavos, automatico: false })) : []),
   ].sort((a, b) => b.quando.localeCompare(a.quando));
   const porDia = [...new Set(itens.map((i) => i.dia))].sort().reverse();
   const nomeDia = (dia: string) => (dia === hoje() ? "Hoje" : dia === somarDias(hoje(), -1) ? "Ontem" : `${nomeDiaDaSemana(diaDaSemana(data(dia)))}, ${formatarData(data(dia)).slice(0, 5)}`);
@@ -129,7 +129,8 @@ export default async function ExtratoPlantao({ searchParams }: { searchParams: P
                         <p className="truncate text-xs text-suave">{new Date(l.quando).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}{l.detalhe ? ` · ${l.detalhe}` : ""}</p>
                       </div>
                       <span className={`text-sm font-bold tabular-nums ${l.valor >= 0 ? "text-ok" : ""}`}>{l.valor >= 0 ? "+" : "−"}{formatarBRL(Math.abs(l.valor))}</span>
-                      <BotaoExcluir tipo={l.tipo} id={l.id} />
+                      {/* Corridas do Copiloto: corrija no Histórico de ofertas (não são um lançamento). */}
+                      {l.automatico ? <Link href="/m/plantao/historico" className="text-xs font-semibold text-marca">Ofertas</Link> : <BotaoExcluir tipo={l.tipo} id={l.id} />}
                     </div>
                   ))}
                 </div>

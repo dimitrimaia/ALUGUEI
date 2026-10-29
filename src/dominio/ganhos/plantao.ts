@@ -1,9 +1,10 @@
 import { arredondar, type Centavos } from "../dinheiro/centavos";
+import { type DataISO, hoje } from "../datas/data";
 import type { Taxas } from "./custos";
 
-export const PLATAFORMAS = ["uber", "99", "indrive", "ifood", "particular", "outra"] as const;
+export const PLATAFORMAS = ["uber", "99", "indrive", "37city", "ifood", "particular", "outra"] as const;
 export type Plataforma = (typeof PLATAFORMAS)[number];
-export const NOME_PLATAFORMA: Record<Plataforma, string> = { uber: "Uber", "99": "99", indrive: "inDrive", ifood: "iFood", particular: "Particular", outra: "Outra" };
+export const NOME_PLATAFORMA: Record<Plataforma, string> = { uber: "Uber", "99": "99", indrive: "inDrive", "37city": "37 City", ifood: "iFood", particular: "Particular", outra: "Outra" };
 
 export const CATEGORIAS_DESPESA = ["combustivel", "manutencao", "lavagem", "alimentacao", "pedagio", "estacionamento", "multa", "aluguel", "seguro", "celular", "outra"] as const;
 export type CategoriaDespesa = (typeof CATEGORIAS_DESPESA)[number];
@@ -106,4 +107,31 @@ export function progressoMeta(meta: Centavos, feito: Centavos, minutos: number) 
     batida: meta > 0 && feito >= meta,
     minutosRestantes: falta === 0 ? 0 : ritmo && ritmo > 0 ? Math.ceil((falta / ritmo) * 60) : null,
   };
+}
+
+/** Corrida que o motorista aceitou no Copiloto (ou na calculadora). */
+export type CorridaAceita = { app: string | null; valor: Centavos; quando: string };
+export type GanhoCopiloto = { dia: DataISO; plataforma: Plataforma; valor: Centavos; corridas: number; ultimo: string };
+
+/**
+ * As corridas aceitas viram receita sozinhas: um ganho por dia e por app. Se o
+ * motorista já lançou à mão o ganho daquele app naquele dia (ex.: no "Fechar o
+ * dia"), vale o lançamento dele e as corridas daquele app e dia não entram (sem
+ * contar em dobro). Dia civil de Brasília.
+ */
+export function ganhosDoCopiloto(aceitas: CorridaAceita[], manuais: { dia: string; plataforma: string }[]): GanhoCopiloto[] {
+  const lancados = new Set(manuais.map((m) => `${m.dia}|${m.plataforma}`));
+  const por = new Map<string, GanhoCopiloto>();
+  for (const c of aceitas) {
+    const plataforma = ((PLATAFORMAS as readonly string[]).includes(c.app ?? "") ? c.app : "outra") as Plataforma;
+    const dia = hoje(new Date(c.quando));
+    const k = `${dia}|${plataforma}`;
+    if (lancados.has(k)) continue;
+    const g = por.get(k) ?? { dia, plataforma, valor: 0 as Centavos, corridas: 0, ultimo: c.quando };
+    g.valor = (g.valor + c.valor) as Centavos;
+    g.corridas++;
+    if (c.quando > g.ultimo) g.ultimo = c.quando;
+    por.set(k, g);
+  }
+  return [...por.values()].sort((a, b) => b.ultimo.localeCompare(a.ultimo));
 }
