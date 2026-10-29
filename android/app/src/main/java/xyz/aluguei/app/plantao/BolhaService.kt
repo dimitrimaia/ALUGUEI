@@ -150,6 +150,7 @@ class BolhaService : Service() {
             "indrive" -> "inDrive"
             "uber" -> "Uber"
             "99" -> "99"
+            "37city" -> "37 City"
             null -> "Digitada"
             else -> "Outro app"
         }
@@ -778,6 +779,7 @@ class BolhaService : Service() {
             "indrive" -> Quad(0xFFC1F11D.toInt(), 0xFF0B1630.toInt(), "iD", 11f)
             "uber" -> Quad(0xFF000000.toInt(), BRANCO, "Uber", 7.5f)
             "99" -> Quad(0xFFFFD400.toInt(), 0xFF0B1630.toInt(), "99", 11f)
+            "37city" -> Quad(0xFFE53935.toInt(), BRANCO, "37", 10f)
             else -> Quad(MARCA, BRANCO, "✎", 12f)
         }
         return texto(rotulo, sp, cor, true).apply {

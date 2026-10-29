@@ -15,7 +15,7 @@ export const metadata = { title: "Histórico de ofertas" };
 
 const FILTROS = { todas: "Todas", aceitas: "Aceitas", recusadas: "Recusadas" } as const;
 type Filtro = keyof typeof FILTROS;
-const NOME_APP: Record<string, string> = { uber: "Uber", "99": "99", indrive: "inDrive" };
+const NOME_APP: Record<string, string> = { uber: "Uber", "99": "99", indrive: "inDrive", "37city": "37 City" };
 
 /** Todas as ofertas que o Copiloto avaliou, com o que você aceitou, recusou e o prejuízo que evitou. */
 export default async function HistoricoOfertas({ searchParams }: { searchParams: Promise<{ periodo?: string; filtro?: string }> }) {

@@ -154,6 +154,7 @@ object Leitores {
             "indrive" -> LeitorInDrive.ler(textos)
             "uber" -> LeitorUber.ler(textos)
             "99" -> Leitor99.ler(textos)
+            "37city" -> Leitor37City.ler(textos)
             else -> LeitorGenerico.ler(textos, app)
         }
     } catch (e: RuntimeException) {
