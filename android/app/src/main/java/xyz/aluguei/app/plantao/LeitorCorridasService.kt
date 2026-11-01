@@ -64,6 +64,8 @@ class LeitorCorridasService : AccessibilityService() {
         private const val PEDIDO_VALE_MS = 120_000L
         /** Intervalo mínimo entre duas leituras da tela (o mapa gera eventos sem parar). */
         private const val INTERVALO_LEITURA_MS = 700L
+        /** Corrida em andamento e nenhum cartão aberto: o mapa muda o tempo todo; lê com calma (bateria). */
+        private const val INTERVALO_EM_CORRIDA_MS = 3_000L
         /** Dormindo: uma leitura completa de conferência no máximo a cada tanto (tela nova / qualquer evento). */
         private const val CONFERIR_TELA_NOVA_MS = 2_000L
         private const val CONFERIR_SEMPRE_MS = 20_000L
@@ -134,7 +136,8 @@ class LeitorCorridasService : AccessibilityService() {
 
         // Junta a rajada de eventos: lê na hora se faz tempo, senão uma vez no fim do intervalo.
         pacotePendente = pacote
-        val espera = INTERVALO_LEITURA_MS - (SystemClock.elapsedRealtime() - ultimaLeituraEm)
+        val intervalo = if (BolhaService.instancia?.emCorridaSemCartao() == true) INTERVALO_EM_CORRIDA_MS else INTERVALO_LEITURA_MS
+        val espera = intervalo - (SystemClock.elapsedRealtime() - ultimaLeituraEm)
         principal.removeCallbacks(lerPendente)
         if (espera <= 0) lerAgora(pacote) else principal.postDelayed(lerPendente, espera)
     }

@@ -31,4 +31,19 @@ class Leitor37CityTest {
     fun `sem aceitar nao e oferta`() {
         assertEquals(TelaLida.Nada, Leitor37City.ler(oferta.filterNot { it.startsWith("ACEITAR") }))
     }
+
+    @Test
+    fun `le mesmo com os textos quebrados em pedacos`() {
+        val quebrada = listOf(
+            "RECUSAR", "R$", "13,81", "3,0", "km (R$ 4,60/km)", "3 m", "(1 min)",
+            "Rua Versador Enilton Simões, 121 - Mangabeiras, Divinópolis - MG", "3,0 km", "(6 min)",
+            "R. Cristal, 106 - Centro, Divinópolis - MG, 35500-044, Brasil", "Aceitar", "(9)",
+        )
+        val o = (Leitor37City.ler(quebrada) as TelaLida.ComOferta).oferta
+        assertEquals(1381L, o.valor)
+        assertEquals(3.0, o.kmCorrida, 0.001)
+        assertEquals(6.0, o.minutosCorrida!!, 0.001)
+        assertEquals(0.003, o.kmBusca!!, 0.0001)
+        assertTrue(o.destino!!.startsWith("R. Cristal"))
+    }
 }

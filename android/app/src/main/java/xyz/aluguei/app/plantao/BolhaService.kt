@@ -1954,6 +1954,9 @@ class BolhaService : Service() {
     /** Linha em destaque com o detalhe pequeno embaixo (km e tempo totais do cartão). */
     // ------------------------------------------------------------------ corrida em andamento
 
+    /** Para o leitor ler com menos frequência (bateria) durante a corrida. */
+    fun emCorridaSemCartao(): Boolean = trajeto != null && cartao == null
+
     /** Aceitou: começa a medir a corrida (a anterior, se ainda aberta, termina aqui). */
     @SuppressLint("MissingPermission")
     private fun iniciarTrajeto(corridaId: String, valor: Long, embarque: String? = null, destino: String? = null) {
@@ -1968,19 +1971,14 @@ class BolhaService : Service() {
             val ouvinte = LocationListener { l: Location ->
                 trajeto = trajeto?.somar(Ponto(l.latitude, l.longitude), if (l.hasAccuracy()) l.accuracy else 99f, SystemClock.elapsedRealtime())
             }
-            // Todas as fontes: a combinada (Android 12+), o GPS, a rede e a passiva (as
-            // posições que o próprio app de corrida pede). Basta uma funcionar.
-            val fontes = buildList {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(LocationManager.FUSED_PROVIDER)
-                add(LocationManager.GPS_PROVIDER)
-                add(LocationManager.NETWORK_PROVIDER)
-                add(LocationManager.PASSIVE_PROVIDER)
-            }
+            // Bateria: uma fonte ativa só (a combinada do Android 12+, senão o GPS), a cada
+            // 5 s e 15 m; mais a passiva, que só aproveita o GPS que o app de corrida já liga.
+            val ativa = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && lm?.allProviders?.contains(LocationManager.FUSED_PROVIDER) == true) LocationManager.FUSED_PROVIDER else LocationManager.GPS_PROVIDER
             var alguma = false
-            for (f in fontes) {
+            for ((f, intervalo) in listOf(ativa to 5_000L, LocationManager.PASSIVE_PROVIDER to 3_000L)) {
                 try {
                     if (lm?.allProviders?.contains(f) == true) {
-                        lm.requestLocationUpdates(f, 3_000L, 0f, ouvinte, Looper.getMainLooper())
+                        lm.requestLocationUpdates(f, intervalo, 15f, ouvinte, Looper.getMainLooper())
                         alguma = true
                     }
                 } catch (e: RuntimeException) {

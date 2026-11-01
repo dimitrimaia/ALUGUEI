@@ -1,6 +1,7 @@
 import { Building2, CalendarClock, Camera, ChevronRight, Receipt, Check, ClipboardCheck, FileSignature, FileText, Hourglass, MessageCircle, Search, UserRoundPen, Wallet, XCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { type FiltroResumo, ResumoTrabalho } from "@/components/motorista/resumo-trabalho";
 import { ListaConversas } from "@/components/motorista/lista-conversas";
 import { CabecalhoInicio } from "@/components/motorista/cabecalho";
 import { BotaoEmergencia } from "@/components/motorista/emergencia";
@@ -30,8 +31,10 @@ function etapaAtual(cadastro: Linha<"locatarios">, contrato?: Linha<"contratos">
 }
 
 /** Início do motorista (RF-121): um resumo do que importa agora, no estilo de app de banco. */
-export default async function Motorista({ searchParams }: { searchParams: Promise<{ checkin?: string }> }) {
-  const checkinEnviado = (await searchParams).checkin === "ok";
+export default async function Motorista({ searchParams }: { searchParams: Promise<{ checkin?: string; resumo?: string; de?: string; ate?: string }> }) {
+  const q = await searchParams;
+  const checkinEnviado = q.checkin === "ok";
+  const filtroResumo: FiltroResumo = (["hoje", "semana", "mes", "trinta", "perso"] as const).find((f) => f === q.resumo) ?? "semana";
   const usuario = await exigirUsuario("/m");
   const [cadastros, contratos, perfil, conversas, locadora] = await Promise.all([
     cadastrosDoMotorista(usuario.id),
@@ -72,6 +75,8 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
         <p className="text-sm text-suave">Olá{nome ? `, ${nome}` : ""} 👋</p>
         <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight">{ativo ? "Seu aluguel em dia" : principal && principal.status !== "recusado" ? "Acompanhe seu aluguel" : "Encontre seu carro"}</h1>
       </div>
+
+      <ResumoTrabalho usuarioId={usuario.id} filtro={filtroResumo} de={q.de} ate={q.ate} />
 
       {ativo ? (
         <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante">

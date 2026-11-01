@@ -59,7 +59,7 @@ data class Trajeto(
         const val VELOCIDADE_MAXIMA_MS = 50.0
 
         /** Corrida esquecida aberta: fecha sozinha depois disso. */
-        const val DURACAO_MAXIMA_MS = 4 * 60 * 60_000L
+        const val DURACAO_MAXIMA_MS = 2 * 60 * 60_000L
 
         /** Fim antes disso (lista/procurando logo após aceitar) não conta como corrida feita. */
         const val MINIMO_PARA_FIM_MS = 3 * 60_000L
