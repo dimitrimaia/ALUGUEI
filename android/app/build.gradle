@@ -28,7 +28,20 @@ android {
     def chaveAlias = System.getenv("ALUGUEI_CHAVE_ALIAS")
     def chaveSenha = System.getenv("ALUGUEI_CHAVE_SENHA")
     def assinar = ksArquivo && ksSenha && chaveAlias && chaveSenha && file(ksArquivo).exists()
+    // Chave só do APK direto (fora da Play Store): a mesma em todo build, para o
+    // APK novo instalar por cima do antigo. Segredos ALUGUEI_APK_* (docs/app-nativo.md).
+    def apkArquivo = System.getenv("ALUGUEI_APK_KEYSTORE_ARQUIVO")
+    def apkSenha = System.getenv("ALUGUEI_APK_SENHA")
+    def assinarApk = apkArquivo && apkSenha && file(apkArquivo).exists()
     signingConfigs {
+        if (assinarApk) {
+            direto {
+                storeFile file(apkArquivo)
+                storePassword apkSenha
+                keyAlias "aluguei-apk"
+                keyPassword apkSenha
+            }
+        }
         if (assinar) {
             release {
                 storeFile file(ksArquivo)
@@ -42,7 +55,8 @@ android {
         // APK direto (atualiza pelo próprio app): com a chave de envio, sai sempre com a
         // mesma assinatura e instala por cima. Sem ela, cada build tem uma chave diferente.
         debug {
-            if (assinar) signingConfig signingConfigs.release
+            if (assinarApk) signingConfig signingConfigs.direto
+            else if (assinar) signingConfig signingConfigs.release
         }
         release {
             if (assinar) signingConfig signingConfigs.release

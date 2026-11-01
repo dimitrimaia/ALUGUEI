@@ -35,8 +35,18 @@ jobs:
           if [ -z "$KEYSTORE_BASE64" ]; then echo "Sem chave de envio: APK com chave temporária (não atualiza por cima)."; exit 0; fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/envio.jks"
           echo "ALUGUEI_KEYSTORE_ARQUIVO=$RUNNER_TEMP/envio.jks" >> "$GITHUB_ENV"
+      # Chave do APK direto: todo APK com a mesma assinatura (instala por cima e o
+      # app se atualiza sozinho). Sem o segredo, segue com uma chave temporária.
+      - name: Chave do APK direto
+        env:
+          APK_KEYSTORE_BASE64: ${{ secrets.ALUGUEI_APK_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$APK_KEYSTORE_BASE64" ]; then echo "Sem a chave do APK direto: cada APK sai com uma chave diferente."; exit 0; fi
+          echo "$APK_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/apk-direto.jks"
+          echo "ALUGUEI_APK_KEYSTORE_ARQUIVO=$RUNNER_TEMP/apk-direto.jks" >> "$GITHUB_ENV"
       - name: Testes e APK
         env:
+          ALUGUEI_APK_SENHA: ${{ secrets.ALUGUEI_APK_SENHA }}
           ALUGUEI_KEYSTORE_SENHA: ${{ secrets.ALUGUEI_KEYSTORE_SENHA }}
           ALUGUEI_CHAVE_ALIAS: ${{ secrets.ALUGUEI_CHAVE_ALIAS }}
           ALUGUEI_CHAVE_SENHA: ${{ secrets.ALUGUEI_CHAVE_SENHA }}
@@ -56,7 +66,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
-          if [ -z "$ALUGUEI_KEYSTORE_ARQUIVO" ] || [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then echo "Sem chave de envio ou sem Supabase: não publica a atualização."; exit 0; fi
+          if { [ -z "$ALUGUEI_APK_KEYSTORE_ARQUIVO" ] && [ -z "$ALUGUEI_KEYSTORE_ARQUIVO" ]; } || [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then echo "Sem chave fixa ou sem Supabase: não publica a atualização."; exit 0; fi
           apk=$(ls android/app/build/outputs/apk/debug/*.apk | head -1)
           nome="copiloto-${GITHUB_RUN_NUMBER}.apk"
           enviar() { curl -sSf -X POST "$SUPABASE_URL/storage/v1/object/app/$1" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" -H "apikey: $SUPABASE_SECRET_KEY" -H "x-upsert: true" -H "content-type: $2" --data-binary "@$3"; }
@@ -82,4 +92,4 @@ jobs:
           retention-days: 30
       - name: Apagar a chave do runner
         if: always()
-        run: rm -f "$RUNNER_TEMP/envio.jks"
+        run: rm -f "$RUNNER_TEMP/envio.jks" "$RUNNER_TEMP/apk-direto.jks"

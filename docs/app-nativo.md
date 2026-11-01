@@ -209,12 +209,14 @@ versão nova; um toque baixa e abre o instalador do Android (a pessoa confirma).
 - O passo "Publicar atualização no app" envia `copiloto-<n>.apk` e `versao.json`
   para o bucket público `app` do Supabase Storage. O app (`atualizar-app.tsx`)
   compara `versao.json` com a versão instalada.
-- Para instalar por cima, todo APK precisa da **mesma assinatura**: o build usa a
-  chave de envio da Play Store (segredos `ALUGUEI_KEYSTORE_*`, ver `play-store.md`).
-  Sem ela, cada build sai com uma chave temporária diferente e não publica.
+- Para instalar por cima, todo APK precisa da **mesma assinatura**. O APK direto usa
+  uma chave só dele (alias `aluguei-apk`, segredos `ALUGUEI_APK_KEYSTORE_BASE64` e
+  `ALUGUEI_APK_SENHA`), separada da chave de envio da Play Store. Sem ela, cada build
+  sai com uma chave temporária diferente e não publica a atualização. Perder a chave
+  do APK direto custa só uma desinstalação a mais (a da Play Store é outra).
 - Segredos do repositório (GitHub → Settings → Secrets and variables → Actions):
-  `ALUGUEI_KEYSTORE_BASE64`, `ALUGUEI_KEYSTORE_SENHA`, `ALUGUEI_CHAVE_ALIAS`,
-  `ALUGUEI_CHAVE_SENHA`, `SUPABASE_URL` e `SUPABASE_SECRET_KEY`.
+  `ALUGUEI_APK_KEYSTORE_BASE64`, `ALUGUEI_APK_SENHA`, `SUPABASE_URL` e
+  `SUPABASE_SECRET_KEY` (e, para a Play Store, os `ALUGUEI_KEYSTORE_*`).
 - Só o APK direto (build debug) declara `REQUEST_INSTALL_PACKAGES`
   (`src/debug/AndroidManifest.xml`). O AAB da Play Store não tem: lá quem atualiza
   é a loja (a Play proíbe apps que se instalam sozinhos).
