@@ -192,13 +192,10 @@ Bolha e cartão não têm nenhum laço: só reagem a eventos.
 - **Cartão**: abre no resumo (valor, sinal, R$/km, R$/h, lucro com a volta quando
   ela conta, nota, km e tempo totais, uma linha de dica e os botões). "▾ Detalhes"
   abre o cartão completo; "▴" volta ao resumo. Cada oferta nova começa no resumo.
-- **Corrida em andamento**: ao aceitar (toque, pergunta ou aceite automático), uma
-  pílula no topo mede tempo e km pelo GPS ("● 12 min · 4,3 km · R$ 2,80/km"). Ela
-  fecha sozinha na tela de avaliar o passageiro / viagem concluída
-  (`Aceite.TEXTOS_CONCLUIDA`), ao voltar à lista depois de 3 min, ao aceitar outra
-  ou depois de 4 h; "Finalizar" fecha na hora e "✕" descarta. Só a soma é
-  guardada (nunca o caminho), na fila `finalizadas`, e a tela web grava em
-  `corridas_avaliadas` (`metros_reais`, `minutos_reais`, `finalizada_em`; migração 0011).
+- **Bateria**: o Copiloto não usa GPS próprio (a volta usa a última posição
+  conhecida). O leitor lê a cada 1 s em telas de oferta ou lista de pedidos e com
+  cartão aberto, a cada 2,5 s nas outras (mapa, corrida), e nada com a tela apagada.
+  O acompanhamento da corrida pelo GPS foi retirado (gastava bateria e não media).
 
 ## Atualizar pelo próprio app (APK direto)
 

@@ -15,6 +15,6 @@
     android:canPerformGestures="false"
     android:canTakeScreenshot="true"
     android:isAccessibilityTool="false"
-    android:notificationTimeout="300"
+    android:notificationTimeout="1000"
     android:packageNames="@string/pacotes_corridas"
     android:description="@string/leitor_descricao" />

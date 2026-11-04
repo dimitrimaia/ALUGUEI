@@ -26,8 +26,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.location.Location
-import android.location.LocationListener
 import android.location.LocationManager
 import android.os.PowerManager
 import android.os.SystemClock
@@ -187,30 +185,15 @@ class BolhaService : Service() {
     private var cartaoEmBordas = false
     /** Estilo "bordas": o motorista tocou e o cartão completo está aberto (volta às bordas na próxima oferta). */
     private var cartaoExpandido = false
+    /** Para o leitor ler rápido enquanto há cartão na tela. */
+    fun temCartaoAberto(): Boolean = cartao != null
+
     /** Toda janela de cartão posta na tela: nenhuma fica órfã (erro no meio do redesenho, animação). */
     private val janelasCartao = mutableSetOf<View>()
 
     private fun removerCartoesMenos(manter: View?) {
         janelasCartao.filter { it !== manter }.forEach { remover(it) }
         janelasCartao.retainAll { it === manter }
-    }
-
-    /** Corrida aceita em andamento (km e tempo pelo GPS) e a pílula dela na tela. */
-    private var trajeto: Trajeto? = null
-    private var pilulaTrajeto: View? = null
-    private var textoTrajeto: TextView? = null
-    private var ouvinteGps: LocationListener? = null
-    private val tiqueTrajeto = object : Runnable {
-        override fun run() {
-            val t = trajeto ?: return
-            val agora = SystemClock.elapsedRealtime()
-            if (agora - t.inicioMs > Trajeto.DURACAO_MAXIMA_MS) {
-                finalizarTrajeto("concluida")
-                return
-            }
-            atualizarPilulaTrajeto()
-            principal.postDelayed(this, 15_000)
-        }
     }
 
     /** Cartão completo aberto no "▾ Detalhes" (cada oferta nova começa no resumo). */
@@ -410,12 +393,8 @@ class BolhaService : Service() {
     }
 
     override fun onDestroy() {
-        // Desligou com corrida aberta: guarda o que mediu até aqui (sem deixar um erro impedir a limpeza).
-        runCatching { finalizarTrajeto("concluida", silencioso = true) }
         principal.removeCallbacksAndMessages(null)
         removerCartoesMenos(null)
-        remover(pilulaTrajeto)
-        pilulaTrajeto = null
         if (desbloqueioRegistrado) {
             try {
                 unregisterReceiver(desbloqueio)
@@ -1143,7 +1122,6 @@ class BolhaService : Service() {
         if (pausar) {
             fecharCartao()
             fecharMini()
-            finalizarTrajeto("concluida")
             limparLeitura()
             rotuloDiag?.text = "pausado"
         } else {
@@ -1600,12 +1578,8 @@ class BolhaService : Service() {
                     principal.postDelayed(conferirSumico, SUMICO_MS)
                 }
             }
-            is TelaLida.Concluida -> {
-                if (app == "indrive") finalizarTrajeto("concluida")
-            }
+            is TelaLida.Concluida -> Unit
             TelaLida.Lista, TelaLida.Fim -> {
-                // De volta à lista depois de uns minutos de corrida: ela acabou.
-                trajeto?.let { t -> if (app == "indrive" && SystemClock.elapsedRealtime() - t.inicioMs >= Trajeto.MINIMO_PARA_FIM_MS) finalizarTrajeto("concluida") }
                 // Expirou / já aceita por outro / procurando: a oferta não ficou com o motorista.
                 aceitePendente = null
                 limparLeitura()
@@ -1952,127 +1926,6 @@ class BolhaService : Service() {
     }
 
     /** Linha em destaque com o detalhe pequeno embaixo (km e tempo totais do cartão). */
-    // ------------------------------------------------------------------ corrida em andamento
-
-    /** Para o leitor ler com menos frequência (bateria) durante a corrida. */
-    fun emCorridaSemCartao(): Boolean = trajeto != null && cartao == null
-
-    /** Aceitou: começa a medir a corrida (a anterior, se ainda aberta, termina aqui). */
-    @SuppressLint("MissingPermission")
-    private fun iniciarTrajeto(corridaId: String, valor: Long, embarque: String? = null, destino: String? = null, kmOferta: Double? = null) {
-        if (trajeto?.corridaId == corridaId) return
-        trajeto?.let { finalizarTrajeto("concluida") }
-        val agora = SystemClock.elapsedRealtime()
-        trajeto = Trajeto(corridaId, valor, agora, embarque = embarque, destino = destino, kmOferta = kmOferta)
-        if (Localizacao.permitida(this)) {
-            // O Android só entrega a posição em segundo plano a serviço do tipo "localização".
-            localizacaoConcedida()
-            val lm = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            val ouvinte = LocationListener { l: Location ->
-                trajeto = trajeto?.somar(Ponto(l.latitude, l.longitude), if (l.hasAccuracy()) l.accuracy else 99f, SystemClock.elapsedRealtime())
-            }
-            // Bateria: o Aluguei não liga o GPS. Usa só a fonte passiva, que recebe as
-            // posições que o app de corrida já pede (custo zero). Sem elas, a pílula
-            // mostra os km previstos na oferta.
-            var alguma = false
-            try {
-                if (lm?.allProviders?.contains(LocationManager.PASSIVE_PROVIDER) == true) {
-                    lm.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 3_000L, 15f, ouvinte, Looper.getMainLooper())
-                    alguma = true
-                }
-            } catch (e: RuntimeException) {
-                // sem permissão ou fonte indisponível
-            }
-            if (alguma) ouvinteGps = ouvinte
-        }
-        mostrarPilulaTrajeto()
-        principal.removeCallbacks(tiqueTrajeto)
-        principal.postDelayed(tiqueTrajeto, 15_000)
-    }
-
-    /** Fecha a corrida: guarda km e tempo reais na fila ("descartada" não guarda). */
-    private fun finalizarTrajeto(status: String, silencioso: Boolean = false) {
-        val t = trajeto ?: return
-        trajeto = null
-        principal.removeCallbacks(tiqueTrajeto)
-        ouvinteGps?.let { o -> runCatching { (getSystemService(Context.LOCATION_SERVICE) as? LocationManager)?.removeUpdates(o) } }
-        ouvinteGps = null
-        remover(pilulaTrajeto)
-        pilulaTrajeto = null
-        textoTrajeto = null
-        if (status == "descartada") return
-        val fim = SystemClock.elapsedRealtime()
-        // O relógio do trajeto é o do aparelho ligado (elapsedRealtime); a fila guarda horário de verdade.
-        val desvio = System.currentTimeMillis() - fim
-        Armazenamento.adicionarFinalizada(this, t.copy(inicioMs = t.inicioMs + desvio), fim + desvio, status)
-        if (silencioso) return
-        runCatching { PlantaoPlugin.emitirEstado(this) }
-        aviso("Corrida salva: ${t.resumo(fim)}${t.porKmReal()?.let { " · ${Formato.brl(it)}/km" } ?: ""}")
-    }
-
-    private fun atualizarPilulaTrajeto() {
-        val t = trajeto ?: return
-        val agora = SystemClock.elapsedRealtime()
-        textoTrajeto?.text = "● ${t.resumo(agora)}${t.porKmReal()?.let { " · ${Formato.brl(it)}/km" } ?: ""}"
-    }
-
-    /** Pílula pequena no topo: "● 12 min · 4,3 km · R$ 2,80/km", Finalizar e ✕ (não fiz). */
-    private fun mostrarPilulaTrajeto() {
-        remover(pilulaTrajeto)
-        val pal = paleta()
-        val txt = texto("", 12f, pal.texto, true).apply { maxLines = 1 }
-        val v = LinearLayout(ui).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = fundoArredondado(pal.fundo, 99, pal.borda)
-            elevation = dp(3).toFloat()
-            setPadding(dp(12), dp(4), dp(4), dp(4))
-            addView(txt)
-            // Navegação depois de aceitar: ícones de traço para o embarque e o destino.
-            listOfNotNull(
-                trajeto?.embarque?.let { Triple(R.drawable.ic_traco_pin, it, "Ir ao embarque") },
-                trajeto?.destino?.let { Triple(R.drawable.ic_traco_bandeira, it, "Ir ao destino") },
-            ).forEach { (res, endereco, descricao) ->
-                addView(
-                    FrameLayout(ui).apply {
-                        background = circulo(comAlfa(pal.destaque, 0x1F))
-                        contentDescription = descricao
-                        isClickable = true
-                        setOnClickListener { abrirNavegacao(endereco) }
-                        addView(iconeTraco(res, pal.destaque, 16), FrameLayout.LayoutParams(dp(16), dp(16), Gravity.CENTER))
-                    },
-                    LinearLayout.LayoutParams(dp(30), dp(30)).apply { marginStart = dp(8) },
-                )
-            }
-            addView(
-                texto("Finalizar", 12f, BRANCO, true).apply {
-                    background = fundoArredondado(VERDE, 99)
-                    setPadding(dp(10), dp(4), dp(10), dp(4))
-                    isClickable = true
-                    setOnClickListener { finalizarTrajeto("concluida") }
-                },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) },
-            )
-            addView(
-                texto("✕", 13f, pal.secundario, true).apply {
-                    gravity = Gravity.CENTER
-                    contentDescription = "Não fiz esta corrida"
-                    isClickable = true
-                    setOnClickListener { finalizarTrajeto("descartada") }
-                },
-                LinearLayout.LayoutParams(dp(28), dp(24)),
-            )
-        }
-        val p = parametros(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = alturaBarraStatus() + dp(2)
-        }
-        if (!adicionar(v, p)) return
-        pilulaTrajeto = v
-        textoTrajeto = txt
-        atualizarPilulaTrajeto()
-    }
-
     // ------------------------------------------------------------------ cartão: peças
 
     /** Bloco do "Detalhes" do cartão na tela (para abrir e fechar animado) e o botão dele. */
@@ -2771,7 +2624,6 @@ class BolhaService : Service() {
             recusada = (ofertaAberta?.takeIf { it.app == o.app } ?: o).chaveOriginal()
         }
         PlantaoPlugin.emitirDecisao(corrida.id, decisao, origem, valorFinal)
-        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) iniciarTrajeto(corrida.id, Aceite.valorFinal(o), o.embarque, o.destino, o.kmCorrida + (o.kmBusca ?: 0.0))
         if (cartaoCorrida?.id == corrida.id) fecharCartao()
         if (decisao == CorridaAvaliada.ACEITEI && mostrarMensagem) mostrarCopiarMensagem(o)
     }

@@ -63,9 +63,10 @@ class LeitorCorridasService : AccessibilityService() {
         private const val MAXIMO_TEXTOS = 250
         private const val PEDIDO_VALE_MS = 120_000L
         /** Intervalo mínimo entre duas leituras da tela (o mapa gera eventos sem parar). */
+        /** Oferta, lista de pedidos ou cartão aberto: lê rápido. */
         private const val INTERVALO_LEITURA_MS = 1_000L
-        /** Corrida em andamento e nenhum cartão aberto: o mapa muda o tempo todo; lê com calma (bateria). */
-        private const val INTERVALO_EM_CORRIDA_MS = 5_000L
+        /** Mapa, corrida e outras telas (redesenham o tempo todo): lê com calma (bateria). */
+        private const val INTERVALO_CALMO_MS = 2_500L
         /** Dormindo: uma leitura completa de conferência no máximo a cada tanto (tela nova / qualquer evento). */
         private const val CONFERIR_TELA_NOVA_MS = 2_000L
         private const val CONFERIR_SEMPRE_MS = 20_000L
@@ -100,12 +101,19 @@ class LeitorCorridasService : AccessibilityService() {
         }
     }
 
+    /** A última tela lida tinha oferta ou lista de pedidos (lê no ritmo rápido). */
+    private var telaRelevante = true
+
+    private val energia by lazy { getSystemService(POWER_SERVICE) as android.os.PowerManager }
+
     private fun ativo(): Boolean = BolhaService.instancia != null && Armazenamento.ligado(this) && !Armazenamento.pausado(this)
 
     override fun onAccessibilityEvent(evento: AccessibilityEvent?) {
         val e = evento ?: return
         val pacote = e.packageName?.toString() ?: return
         if (pacote !in pacotes) return
+        // Tela apagada: nada para ler (a oferta acende a tela, e aí volta a ler).
+        if (!energia.isInteractive) return
         // Copiloto desligado ou pausado: não lê nada.
         if (!ativo()) {
             principal.removeCallbacks(lerPendente)
@@ -136,7 +144,7 @@ class LeitorCorridasService : AccessibilityService() {
 
         // Junta a rajada de eventos: lê na hora se faz tempo, senão uma vez no fim do intervalo.
         pacotePendente = pacote
-        val intervalo = if (BolhaService.instancia?.emCorridaSemCartao() == true) INTERVALO_EM_CORRIDA_MS else INTERVALO_LEITURA_MS
+        val intervalo = if (telaRelevante || BolhaService.instancia?.temCartaoAberto() == true) INTERVALO_LEITURA_MS else INTERVALO_CALMO_MS
         val espera = intervalo - (SystemClock.elapsedRealtime() - ultimaLeituraEm)
         principal.removeCallbacks(lerPendente)
         if (espera <= 0) lerAgora(pacote) else principal.postDelayed(lerPendente, espera)
@@ -165,6 +173,7 @@ class LeitorCorridasService : AccessibilityService() {
                 }
             }
             val tela = Leitores.ler(app, textos)
+            telaRelevante = tela is TelaLida.ComOferta || tela is TelaLida.Contraproposta || tela == TelaLida.Lista
             bolha.receberTela(app, tela)
         } catch (e: RuntimeException) {
             // Nó que sumiu no meio da leitura etc.: ignora esta tela, a próxima vem em 700 ms.

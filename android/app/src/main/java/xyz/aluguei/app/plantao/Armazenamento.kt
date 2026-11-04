@@ -422,27 +422,9 @@ object Armazenamento {
         return achada
     }
 
-    /** Corridas acompanhadas até o fim (km e tempo medidos), esperando o envio. JSON pronto para o app web. */
+    /** Fila antiga das corridas acompanhadas (o acompanhamento saiu; só esvazia o que sobrou). */
     @Synchronized
     fun finalizadas(ctx: Context): JSONArray = runCatching { JSONArray(prefs(ctx).getString(FINALIZADAS, "[]")) }.getOrDefault(JSONArray())
-
-    @Synchronized
-    fun adicionarFinalizada(ctx: Context, t: Trajeto, fimMs: Long, status: String) {
-        val arr = finalizadas(ctx)
-        arr.put(
-            JSONObject()
-                .put("id", t.corridaId)
-                // Sem GPS na corrida: não grava km (o servidor mostra só o tempo).
-                .put("metros", if (t.leituras < Trajeto.MINIMO_LEITURAS) 0 else jsRound(t.metros))
-                .put("minutos", jsRound(t.minutos(fimMs)))
-                .put("inicio", isoDe(t.inicioMs))
-                .put("fim", isoDe(fimMs))
-                .put("status", status),
-        )
-        val ultimas = JSONArray()
-        for (i in maxOf(0, arr.length() - MAXIMO_FILA) until arr.length()) ultimas.put(arr.get(i))
-        prefs(ctx).edit().putString(FINALIZADAS, ultimas.toString()).apply()
-    }
 
     @Synchronized
     fun confirmarFinalizadas(ctx: Context, ids: Set<String>) {
