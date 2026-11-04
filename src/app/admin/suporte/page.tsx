@@ -13,7 +13,7 @@ export default async function FilaSuporte() {
   const { data } = await supabaseAdmin().from("atendimentos").select("*").order("ultima_mensagem_em", { ascending: false }).limit(100);
   const lista = [...(data ?? [])].sort((a, b) => Number(b.status === "aberto") - Number(a.status === "aberto"));
   return (
-    <main className="mx-auto max-w-3xl px-5 py-8">
+    <main className="mx-auto max-w-3xl">
       <CabecalhoPagina titulo="Suporte" subtitulo={`${lista.filter((a) => a.status === "aberto").length} esperando resposta`} acao={<Link href="/admin/verificacoes" className="text-sm font-semibold text-marca">Verificação de carros</Link>} />
       {!lista.length ? (
         <Vazio icone={LifeBuoy} titulo="Nenhum atendimento">Quando alguém escrever para o suporte, aparece aqui.</Vazio>

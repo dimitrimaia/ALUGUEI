@@ -22,7 +22,7 @@ export default async function AtendimentoEquipe({ params }: { params: Promise<{ 
   ]);
   await admin.from("atendimentos").update({ lido_equipe_em: new Date().toISOString() }).eq("id", id);
   return (
-    <main className="mx-auto grid max-w-5xl gap-4 px-5 py-8 lg:grid-cols-[1fr_18rem]">
+    <main className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[1fr_18rem]">
       <div>
         <CabecalhoPagina voltar={{ href: "/admin/suporte", rotulo: "Fila" }} titulo={a.assunto} />
         <Cartao className="flex h-[calc(100dvh-12rem)] min-h-[24rem] flex-col p-3 sm:p-4">

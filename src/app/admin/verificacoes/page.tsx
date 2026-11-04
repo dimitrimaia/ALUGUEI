@@ -27,7 +27,7 @@ export default async function Verificacoes() {
   );
 
   return (
-    <main className="mx-auto max-w-4xl px-5 py-8">
+    <main className="mx-auto max-w-4xl">
       <CabecalhoPagina titulo="Verificação de carros" subtitulo={`${lista.length} na fila`} />
       {!lista.length && <Vazio icone={BadgeCheck} titulo="Fila vazia">Nenhum CRLV esperando conferência.</Vazio>}
       <div className="flex flex-col gap-4">
