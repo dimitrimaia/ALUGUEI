@@ -1,0 +1,50 @@
+# Migra o Supabase para outro projeto (ex.: outra região). Só roda à mão:
+# GitHub → Actions → "Migrar Supabase" → Run workflow. Passo a passo em
+# docs/migrar-supabase.md. Copia o banco (estrutura, dados e contas) e os arquivos.
+name: Migrar Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Digite MIGRAR para copiar o projeto antigo para o novo (o novo deve estar vazio)'
+        required: true
+
+jobs:
+  migrar:
+    if: github.event.inputs.confirmar == 'MIGRAR'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Copiar o banco (estrutura, dados e contas)
+        env:
+          ORIGEM: ${{ secrets.MIGRAR_ORIGEM_DB_URL }}
+          DESTINO: ${{ secrets.MIGRAR_DESTINO_DB_URL }}
+        run: |
+          if [ -z "$ORIGEM" ] || [ -z "$DESTINO" ]; then echo "Faltam os segredos MIGRAR_ORIGEM_DB_URL e MIGRAR_DESTINO_DB_URL."; exit 1; fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          supabase db dump --db-url "$ORIGEM" -f roles.sql --role-only
+          supabase db dump --db-url "$ORIGEM" -f schema.sql
+          supabase db dump --db-url "$ORIGEM" -f data.sql --use-copy --data-only
+          psql --single-transaction --variable ON_ERROR_STOP=1 \
+            --file roles.sql --file schema.sql \
+            --command 'SET session_replication_role = replica' \
+            --file data.sql --dbname "$DESTINO"
+          echo "Banco copiado."
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Copiar os arquivos (Storage)
+        env:
+          ORIGEM_URL: ${{ secrets.MIGRAR_ORIGEM_URL }}
+          ORIGEM_CHAVE: ${{ secrets.MIGRAR_ORIGEM_CHAVE }}
+          DESTINO_URL: ${{ secrets.MIGRAR_DESTINO_URL }}
+          DESTINO_CHAVE: ${{ secrets.MIGRAR_DESTINO_CHAVE }}
+        run: node scripts/copiar-storage.mjs
