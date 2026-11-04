@@ -1,4 +1,4 @@
-import { AlertTriangle, BadgeCheck, Building2, Car, FileSignature, Gauge, LifeBuoy, Megaphone, ScrollText, ShieldAlert, Users, Wallet } from "lucide-react";
+import { Send, AlertTriangle, BadgeCheck, Building2, Car, FileSignature, Gauge, LifeBuoy, Megaphone, ScrollText, ShieldAlert, Users, Wallet } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { Marca } from "@/components/ui";
@@ -29,6 +29,7 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
     ["/admin/cobrancas", "Cobranças", Wallet],
     ["/admin/verificacoes", "Verificações", BadgeCheck, verificar ?? 0],
     ["/admin/suporte", "Suporte", LifeBuoy, suporte ?? 0],
+    ["/admin/mensagens", "Mensagens", Send],
     ["/admin/acoes", "Ações pendentes", ShieldAlert, acoes ?? 0],
     ["/admin/erros", "Erros do app", AlertTriangle],
     ["/admin/auditoria", "Auditoria", ScrollText],

@@ -194,6 +194,16 @@ export async function consultarCobranca(chaveApi: string, cobrancaId: string) {
   return chamar<CobrancaAsaas>(chaveApi, "GET", `/payments/${cobrancaId}`);
 }
 
+/** Cancela (apaga) uma cobrança ainda não paga. */
+export async function cancelarCobrancaAsaas(chaveApi: string, cobrancaId: string) {
+  return chamar<{ deleted: boolean }>(chaveApi, "DELETE", `/payments/${cobrancaId}`);
+}
+
+/** Estorna uma cobrança paga por Pix (devolve o valor ao pagador). */
+export async function estornarCobrancaAsaas(chaveApi: string, cobrancaId: string, descricao: string) {
+  return chamar<CobrancaAsaas>(chaveApi, "POST", `/payments/${cobrancaId}/refund`, { description: descricao.slice(0, 200) });
+}
+
 /** Baixa manual de um valor recebido por fora (dinheiro ou outro Pix). */
 export async function receberEmDinheiro(chaveApi: string, cobrancaId: string, data: DataISO, valor: Centavos) {
   return chamar<CobrancaAsaas>(chaveApi, "POST", `/payments/${cobrancaId}/receiveInCash`, {

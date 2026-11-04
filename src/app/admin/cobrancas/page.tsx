@@ -34,6 +34,7 @@ export default async function Cobrancas({ searchParams }: { searchParams: Promis
           const atrasada = (c.status === "emitida" || c.status === "vencida") && c.vencimento < dia;
           return {
             chave: c.id,
+            href: `/admin/cobrancas/${c.id}`,
             celulas: [
               c.vencimento,
               <Link key="o" href={`/admin/locadoras/${c.organizacao_id}` as Route} className="text-marca">{orgs?.find((o) => o.id === c.organizacao_id)?.nome ?? "—"}</Link>,

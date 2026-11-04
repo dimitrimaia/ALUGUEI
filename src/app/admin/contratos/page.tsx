@@ -28,8 +28,9 @@ export default async function Contratos({ searchParams }: { searchParams: Promis
           const loc = locs?.find((l) => l.id === k.locatario_id);
           return {
             chave: k.id,
+            href: `/admin/contratos/${k.id}`,
             celulas: [
-              loc?.usuario_id ? <Link key="m" href={`/admin/usuarios/${loc.usuario_id}` as Route} className="font-semibold text-marca">{loc.nome}</Link> : (loc?.nome ?? "—"),
+              loc?.nome ?? "—",
               carros?.find((c) => c.id === k.veiculo_id)?.placa ?? "—",
               <Link key="o" href={`/admin/locadoras/${k.organizacao_id}` as Route} className="text-marca">{orgs?.find((o) => o.id === k.organizacao_id)?.nome ?? "—"}</Link>,
               k.status,

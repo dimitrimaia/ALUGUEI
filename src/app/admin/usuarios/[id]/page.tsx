@@ -1,11 +1,12 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Botao, Cartao, DadoRotulado, Selo } from "@/components/ui";
+import { FormAcao } from "@/components/admin/form-acao";
+import { Botao, Cartao, classeEntrada, DadoRotulado, Selo } from "@/components/ui";
 import { quando, Tabela, TituloAdmin } from "@/components/admin/ui";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { bloquearUsuario, confirmarEmail } from "../../acoes-admin";
+import { bloquearUsuario, confirmarEmail, excluirConta } from "../../acoes-admin";
 
 export const metadata = { title: "Usuário" };
 
@@ -80,6 +81,14 @@ export default async function Usuario({ params }: { params: Promise<{ id: string
               <Botao variante={bloqueado ? "secundario" : "perigo"} className="w-full">{bloqueado ? "Desbloquear conta" : "Bloquear conta"}</Botao>
             </form>
             <p className="text-xs text-suave">Bloquear impede de entrar no app (os dados ficam). Tudo fica na auditoria.</p>
+            <details className="mt-2 rounded-xl border border-perigo/30 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-perigo">Excluir conta (LGPD)</summary>
+              <p className="mt-2 text-xs text-suave">Apaga o login e os dados da conta. Contratos, fotos de vistoria e auditoria ficam guardados (obrigação legal). Não dá se a pessoa tem contrato em andamento ou é dona de locadora.</p>
+              <FormAcao acao={excluirConta.bind(null, id)} className="mt-2 flex flex-col gap-2">
+                <input name="confirmar" placeholder="Digite EXCLUIR" className={classeEntrada} required />
+                <Botao variante="perigo">Excluir de vez</Botao>
+              </FormAcao>
+            </details>
           </Cartao>
         </div>
       </div>
