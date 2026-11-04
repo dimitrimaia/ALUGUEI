@@ -140,6 +140,9 @@ export default async function FichaMotorista({ params }: { params: Promise<{ id:
 
         <Cartao className="flex flex-col gap-2">
           <p className="font-semibold">Documentos</p>
+          <p className="rounded-xl bg-cartao-2 p-3 text-xs text-suave">
+            <strong className="text-texto">Conferir a CNH de graça:</strong> se o motorista mandou o PDF da CNH Digital, abra o PDF e aponte o app oficial <strong className="text-texto">Vio</strong> (do governo, grátis na loja) para o QR Code. Ele mostra os dados direto da base do Detran: confira se nome, foto e validade batem. Foto da CNH física também tem QR Code no modelo novo.
+          </p>
           {links.length ? (
             links.map((d) => (
               <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-borda px-3 py-2.5 font-medium hover:bg-cartao-2">

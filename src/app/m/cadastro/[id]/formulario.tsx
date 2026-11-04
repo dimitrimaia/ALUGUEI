@@ -6,7 +6,7 @@ import { comprimirImagem } from "@/lib/comprimir-imagem";
 import { enviarCadastro, type EstadoCadastro } from "./acoes";
 
 const FOTOS = [
-  { campo: "cnh", rotulo: "Foto da CNH (aberta, frente e verso)", obrigatorio: true },
+  { campo: "cnh", rotulo: "CNH: o PDF da CNH Digital (melhor) ou a foto aberta, frente e verso", obrigatorio: true },
   { campo: "comprovanteEndereco", rotulo: "Comprovante de endereço", obrigatorio: true },
   { campo: "comprovanteApp", rotulo: "Print do seu perfil no Uber ou 99", obrigatorio: true },
   { campo: "identidade", rotulo: "Documento de identidade (opcional, a CNH já vale)", obrigatorio: false },
@@ -119,6 +119,9 @@ export function FormularioCadastro({
 
       <Cartao className="flex flex-col gap-4">
         <p className="font-semibold">Fotos dos documentos</p>
+        <p className="-mt-2 rounded-xl bg-marca-suave p-3 text-xs text-texto">
+          <strong>Aprovação mais rápida:</strong> no app <strong>Carteira Digital de Trânsito</strong>, abra a sua CNH, toque em <strong>Exportar</strong> e envie o PDF aqui. Ele tem um QR Code oficial que o locador confere na hora.
+        </p>
         {FOTOS.map((f) => (
           <Campo key={f.campo} rotulo={f.rotulo} erro={e[f.campo]} dica={fotos[f.campo] ? `Pronto · ${Math.round(fotos[f.campo]!.size / 1024)} KB` : undefined}>
             <input
