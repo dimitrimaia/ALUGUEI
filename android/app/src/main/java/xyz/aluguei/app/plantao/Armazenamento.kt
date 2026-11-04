@@ -432,7 +432,8 @@ object Armazenamento {
         arr.put(
             JSONObject()
                 .put("id", t.corridaId)
-                .put("metros", jsRound(t.metros))
+                // Sem GPS na corrida: não grava km (o servidor mostra só o tempo).
+                .put("metros", if (t.leituras < Trajeto.MINIMO_LEITURAS) 0 else jsRound(t.metros))
                 .put("minutos", jsRound(t.minutos(fimMs)))
                 .put("inicio", isoDe(t.inicioMs))
                 .put("fim", isoDe(fimMs))

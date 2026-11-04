@@ -1959,11 +1959,11 @@ class BolhaService : Service() {
 
     /** Aceitou: começa a medir a corrida (a anterior, se ainda aberta, termina aqui). */
     @SuppressLint("MissingPermission")
-    private fun iniciarTrajeto(corridaId: String, valor: Long, embarque: String? = null, destino: String? = null) {
+    private fun iniciarTrajeto(corridaId: String, valor: Long, embarque: String? = null, destino: String? = null, kmOferta: Double? = null) {
         if (trajeto?.corridaId == corridaId) return
         trajeto?.let { finalizarTrajeto("concluida") }
         val agora = SystemClock.elapsedRealtime()
-        trajeto = Trajeto(corridaId, valor, agora, embarque = embarque, destino = destino)
+        trajeto = Trajeto(corridaId, valor, agora, embarque = embarque, destino = destino, kmOferta = kmOferta)
         if (Localizacao.permitida(this)) {
             // O Android só entrega a posição em segundo plano a serviço do tipo "localização".
             localizacaoConcedida()
@@ -1971,19 +1971,17 @@ class BolhaService : Service() {
             val ouvinte = LocationListener { l: Location ->
                 trajeto = trajeto?.somar(Ponto(l.latitude, l.longitude), if (l.hasAccuracy()) l.accuracy else 99f, SystemClock.elapsedRealtime())
             }
-            // Bateria: uma fonte ativa só (a combinada do Android 12+, senão o GPS), a cada
-            // 5 s e 15 m; mais a passiva, que só aproveita o GPS que o app de corrida já liga.
-            val ativa = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && lm?.allProviders?.contains(LocationManager.FUSED_PROVIDER) == true) LocationManager.FUSED_PROVIDER else LocationManager.GPS_PROVIDER
+            // Bateria: o Aluguei não liga o GPS. Usa só a fonte passiva, que recebe as
+            // posições que o app de corrida já pede (custo zero). Sem elas, a pílula
+            // mostra os km previstos na oferta.
             var alguma = false
-            for ((f, intervalo) in listOf(ativa to 5_000L, LocationManager.PASSIVE_PROVIDER to 3_000L)) {
-                try {
-                    if (lm?.allProviders?.contains(f) == true) {
-                        lm.requestLocationUpdates(f, intervalo, 15f, ouvinte, Looper.getMainLooper())
-                        alguma = true
-                    }
-                } catch (e: RuntimeException) {
-                    // fonte indisponível neste aparelho
+            try {
+                if (lm?.allProviders?.contains(LocationManager.PASSIVE_PROVIDER) == true) {
+                    lm.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 3_000L, 15f, ouvinte, Looper.getMainLooper())
+                    alguma = true
                 }
+            } catch (e: RuntimeException) {
+                // sem permissão ou fonte indisponível
             }
             if (alguma) ouvinteGps = ouvinte
         }
@@ -2773,7 +2771,7 @@ class BolhaService : Service() {
             recusada = (ofertaAberta?.takeIf { it.app == o.app } ?: o).chaveOriginal()
         }
         PlantaoPlugin.emitirDecisao(corrida.id, decisao, origem, valorFinal)
-        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) iniciarTrajeto(corrida.id, Aceite.valorFinal(o), o.embarque, o.destino)
+        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) iniciarTrajeto(corrida.id, Aceite.valorFinal(o), o.embarque, o.destino, o.kmCorrida + (o.kmBusca ?: 0.0))
         if (cartaoCorrida?.id == corrida.id) fecharCartao()
         if (decisao == CorridaAvaliada.ACEITEI && mostrarMensagem) mostrarCopiarMensagem(o)
     }

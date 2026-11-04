@@ -19,8 +19,10 @@ data class Trajeto(
     /** Para os botões de navegação da pílula (o cartão some ao aceitar). */
     val embarque: String? = null,
     val destino: String? = null,
-    /** Quantas posições do GPS chegaram (0 depois de 1 min = sem GPS). */
+    /** Quantas posições do GPS chegaram. */
     val leituras: Int = 0,
+    /** Km previstos na oferta (até o passageiro + viagem), para quando o GPS não chega. */
+    val kmOferta: Double? = null,
 ) {
     val km: Double get() = metros / 1000
 
@@ -42,20 +44,26 @@ data class Trajeto(
         return copy(metros = metros + d, ultimo = p, ultimoMs = ms)
     }
 
-    /** "1h03 · 43,4 km"; sem nenhuma posição depois de 1 minuto: "1h03 · sem GPS". */
+    /** O GPS quase não mandou posição: os km medidos não valem (usa os da oferta). */
+    fun semGps(agoraMs: Long): Boolean = leituras < MINIMO_LEITURAS && agoraMs - inicioMs > 60_000
+
+    /** "1h03 · 43,4 km"; sem GPS: "1h03 · ~18 km (oferta)" ou só o tempo. */
     fun resumo(agoraMs: Long): String {
         val min = minutos(agoraMs).toLong()
         val tempo = if (min >= 60) "${min / 60}h${(min % 60).toString().padStart(2, '0')}" else "$min min"
-        val semGps = leituras == 0 && agoraMs - inicioMs > 60_000
-        return if (semGps) "$tempo · sem GPS" else "$tempo · ${Formato.km(km)} km"
+        if (!semGps(agoraMs)) return "$tempo · ${Formato.km(km)} km"
+        return kmOferta?.let { "$tempo · ~${Formato.km(it)} km (oferta)" } ?: tempo
     }
 
-    /** R$/km de verdade (centavos), com o km medido; null antes de 0,5 km. */
-    fun porKmReal(): Long? = if (km < 0.5) null else (valor / km).roundToLong()
+    /** R$/km de verdade (centavos), com o km medido; null antes de 0,5 km ou sem GPS. */
+    fun porKmReal(): Long? = if (km < 0.5 || leituras < MINIMO_LEITURAS) null else (valor / km).roundToLong()
 
     companion object {
         const val PRECISAO_MAXIMA_M = 50f
         const val PASSO_MINIMO_M = 15.0
+
+        /** Menos posições que isso na corrida: o km medido não vale. */
+        const val MINIMO_LEITURAS = 3
         const val VELOCIDADE_MAXIMA_MS = 50.0
 
         /** Corrida esquecida aberta: fecha sozinha depois disso. */

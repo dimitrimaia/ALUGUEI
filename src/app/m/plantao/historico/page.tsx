@@ -78,6 +78,8 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
                   // Acompanhada pelo GPS até o fim: o que a corrida foi de verdade.
                   const real = c as { metros_reais?: number | null; minutos_reais?: number | null; valor_final_centavos?: number | null };
                   if (real.metros_reais == null) return null;
+                  // Sem GPS na corrida: só o tempo.
+                  if (real.metros_reais === 0) return <p className="text-xs font-semibold text-marca tabular-nums">✓ Feita: {real.minutos_reais} min</p>;
                   const km = real.metros_reais / 1000;
                   const valor = real.valor_final_centavos ?? c.valor_centavos;
                   return <p className="text-xs font-semibold text-marca tabular-nums">✓ Feita: {km.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km · {real.minutos_reais} min{km >= 0.5 ? ` · ${formatarBRL(Math.round(valor / km))}/km real` : ""}</p>;
