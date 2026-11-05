@@ -27,7 +27,7 @@ celular
       └── PlantaoPlugin.kt      a ponte com a tela web (métodos e eventos abaixo)
 ```
 
-- `capacitor.config.ts`: appId `xyz.aluguei.app`, nome "Aluguei", `server.url = https://aluguei.xyz`,
+- `capacitor.config.ts`: appId `aluguei.app` (o código Kotlin segue no pacote `xyz.aluguei.app`), nome "Aluguei", `server.url = https://aluguei.xyz`,
   `androidScheme: https`. O `webDir` é `public-nativo/`, só com a tela "Abrindo o Aluguei…"
   (o Capacitor exige uma pasta; o app de verdade vem do site).
 - Atualizar o site atualiza o app na hora, sem passar pela loja. Só mudanças no código nativo

@@ -6,7 +6,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * Detalhes em docs/app-nativo.md.
  */
 const config: CapacitorConfig = {
-  appId: "xyz.aluguei.app",
+  appId: "aluguei.app",
   appName: "Aluguei",
   // Só a tela de "Abrindo o Aluguei…"; o app de verdade vem de server.url.
   webDir: "public-nativo",

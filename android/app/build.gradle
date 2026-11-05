@@ -2,10 +2,10 @@ apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
-    namespace = "xyz.aluguei.app"
+    namespace = "xyz.aluguei.app"  // pacote do código; o id na loja é o applicationId
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "xyz.aluguei.app"
+        applicationId "aluguei.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Cada build do GitHub Actions é uma versão nova (o atualizador do app compara este número).
