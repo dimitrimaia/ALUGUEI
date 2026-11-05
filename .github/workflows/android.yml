@@ -5,6 +5,12 @@ name: App Android (APK)
 
 on:
   workflow_dispatch:
+    inputs:
+      faixa:
+        description: "Play Store: para onde enviar o AAB (internal = teste interno; production = todos)"
+        type: choice
+        options: [internal, production]
+        default: internal
   push:
     paths: ["android/**", "capacitor.config.ts", ".github/workflows/android.yml"]
 
@@ -91,6 +97,26 @@ jobs:
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: ignore
           retention-days: 30
+      # Envio automático para a Play Store (docs/play-store/PASSO-A-PASSO.md, Parte 8).
+      # Precisa do segredo PLAY_SERVICE_ACCOUNT_JSON. Push: teste interno; Run workflow
+      # com faixa "production": vai para revisão e, aprovado, para todos.
+      - name: Conferir a conta de serviço da Play
+        id: play
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_JSON" ] || ! ls android/app/build/outputs/bundle/release/*.aab >/dev/null 2>&1; then echo "Sem conta de serviço ou sem AAB: envio manual."; exit 0; fi
+          echo "enviar=sim" >> "$GITHUB_OUTPUT"
+      - name: Enviar para a Play Store
+        if: steps.play.outputs.enviar == 'sim' && (github.ref_name == 'main' || github.ref_name == 'claude/confident-bohr-eyt8b0')
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: aluguei.app
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: ${{ inputs.faixa || 'internal' }}
+          status: completed
+          whatsNewDirectory: android/notas-da-versao
       - name: Apagar a chave do runner
         if: always()
         run: rm -f "$RUNNER_TEMP/envio.jks" "$RUNNER_TEMP/apk-direto.jks"

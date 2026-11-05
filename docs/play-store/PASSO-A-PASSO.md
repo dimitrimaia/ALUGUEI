@@ -274,3 +274,25 @@ O e-mail diz o motivo. Os mais comuns:
 - Cada versão nova: Actions → App Android (APK) → baixar o AAB → Produção → Criar versão.
 - Responda as avaliações em **Avaliações**.
 - O link da loja: `https://play.google.com/store/apps/details?id=aluguei.app`.
+
+---
+
+## Parte 8. Envio automático (sem baixar e subir o AAB)
+
+Uma vez só:
+1. **Google Cloud** (console.cloud.google.com), com o mesmo Gmail: crie um projeto
+   "Aluguei Play" → **APIs e serviços → Biblioteca** → ative **Google Play Android Developer API**.
+2. **IAM → Contas de serviço → Criar conta de serviço**: nome `github-play`. Sem papel. Concluir.
+3. Abra a conta criada → **Chaves → Adicionar chave → JSON**. Baixa um arquivo `.json`.
+4. **Play Console → Usuários e permissões → Convidar novos usuários**: o e-mail da conta de
+   serviço (termina em `iam.gserviceaccount.com`). Em **Permissões do app**, adicione o Aluguei
+   com **Administrador (todas as permissões)**, ou pelo menos "Lançar no teste" e
+   "Lançar em produção". Enviar convite.
+5. **GitHub → Settings → Secrets → Actions → New secret**: nome `PLAY_SERVICE_ACCOUNT_JSON`,
+   valor = o conteúdo inteiro do `.json`.
+
+Depois disso:
+- Cada mudança no app Android vai sozinha para o **teste interno**.
+- Para publicar para todos: **Actions → App Android (APK) → Run workflow → faixa: production**.
+  O Google revisa e publica. Quem tem o app recebe a atualização pela própria Play Store.
+- O texto "O que há de novo" fica em `android/notas-da-versao/whatsnew-pt-BR`.
