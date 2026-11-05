@@ -3,7 +3,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { LinkIcon, LoaderCircle } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BotaoLink } from "@/components/ui";
 import { supabaseNavegador } from "@/lib/supabase/navegador";
@@ -22,7 +21,6 @@ function destinoSeguro(v: string | null, padrao: string) {
  * busca), grava a sessão nos cookies e segue para a tela certa.
  */
 export function Confirmar() {
-  const router = useRouter();
   const [erro, setErro] = useState<{ texto: string; recuperacao: boolean } | null>(null);
   const feito = useRef(false);
 
@@ -58,15 +56,14 @@ export function Confirmar() {
             : { error: new Error("sem_dados") };
       if (error) throw new Error(("code" in error && typeof error.code === "string" ? error.code : "") || error.message);
       history.replaceState(null, "", location.pathname); // tira os tokens do histórico
-      router.replace(destino as never);
-      router.refresh();
+      window.location.replace(destino); // página nova do zero, já com a sessão
     })().catch((e: Error) => {
       const texto = MOTIVOS[e.message] ?? (e.message.includes("code verifier") || e.message === "flow_state_not_found"
         ? "Este link foi aberto num navegador diferente do que pediu. Peça um novo link ou entre com o código do e-mail."
         : "Não conseguimos validar este link. Peça um novo.");
       setErro({ texto, recuperacao });
     });
-  }, [router]);
+  }, []);
 
   if (!erro) {
     return (

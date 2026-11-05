@@ -1,7 +1,6 @@
 "use client";
 
 import { Eye, EyeOff, MailCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Aviso, Botao, Campo, classeEntrada } from "@/components/ui";
 import { normalizarCelular } from "@/dominio/cadastro/telefone";
@@ -27,7 +26,6 @@ const ERROS: Record<string, string> = {
 
 /** Entrar com senha, criar conta, entrar com código ou recuperar a senha. */
 export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" }: { destino: string; erroInicial?: string; modoInicial?: Modo }) {
-  const router = useRouter();
   const [modo, setModo] = useState<Modo>(modoInicial);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -59,16 +57,14 @@ export function FormularioEntrar({ destino, erroInicial, modoInicial = "entrar" 
     setCodigo("");
   }
 
-  // Já baixa a página de destino enquanto a pessoa digita: depois de entrar, ela abre mais rápido.
-  useEffect(() => {
-    router.prefetch(destino as never);
-  }, [router, destino]);
-
-  /** Entrou: o botão segue ocupado ("Entrando…") até a página nova abrir. */
+  /**
+   * Entrou: carrega a página nova do zero (não pela navegação interna). Assim o
+   * servidor já recebe o cookie da sessão e não aparece a versão "deslogada" que
+   * ficou guardada, que deixava a tela branca no primeiro login.
+   */
   async function concluir() {
     setOcupado(true);
-    router.replace(destino as never);
-    router.refresh();
+    window.location.replace(destino);
   }
 
   async function entrar(e: React.FormEvent) {

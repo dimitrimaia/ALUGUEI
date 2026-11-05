@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -50,6 +51,9 @@ class MainActivity : BridgeActivity() {
     override fun onPause() {
         super.onPause()
         bridge?.webView?.let { it.onPause(); it.pauseTimers() }
+        // O Android grava os cookies no disco só de tempos em tempos: sem isso, fechar
+        // o app logo depois de entrar perdia a sessão (e a pessoa aparecia deslogada).
+        CookieManager.getInstance().flush()
     }
 
     override fun onResume() {
