@@ -9,10 +9,10 @@ import { buscarEnderecos, planejarViagem } from "@/lib/acoes-viagem";
 import { acaoSegura } from "@/lib/versao";
 import { EntradaReais } from "./entradas";
 
-type Lugar = { nome: string; lat: number; lon: number };
+export type Lugar = { nome: string; lat: number; lon: number };
 
 /** Campo de endereço com sugestões (OpenStreetMap) e, na origem, "usar minha localização". */
-function CampoLugar({ rotulo, icone: Icone, valor, aoEscolher, perto, comLocalizacao = false }: { rotulo: string; icone: typeof MapPin; valor: Lugar | null; aoEscolher: (l: Lugar | null) => void; perto: Lugar | null; comLocalizacao?: boolean }) {
+export function CampoLugar({ rotulo, icone: Icone, valor, aoEscolher, perto, comLocalizacao = false }: { rotulo: string; icone: typeof MapPin; valor: Lugar | null; aoEscolher: (l: Lugar | null) => void; perto: Lugar | null; comLocalizacao?: boolean }) {
   const [texto, setTexto] = useState(valor?.nome ?? "");
   const [sugestoes, setSugestoes] = useState<Lugar[]>([]);
   const [buscando, setBuscando] = useState(false);

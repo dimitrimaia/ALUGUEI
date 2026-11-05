@@ -1,4 +1,4 @@
-import { KeyRound, BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
+import { Map as MapIcon, Route as RotaIcone, KeyRound, BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -18,7 +18,9 @@ import { lembretesDoDia } from "@/dominio/ganhos/aluguel";
 export const metadata = { title: "Plantão" };
 
 const FERRAMENTAS = [
-  { href: "/m/plantao/calculadora", rotulo: "Calculadora", detalhe: "Corrida, viagem e combustível", icone: Calculator },
+  { href: "/m/plantao/calculadora?aba=particular", rotulo: "Corrida particular", detalhe: "Quanto cobrar, com paradas", icone: RotaIcone },
+  { href: "/m/plantao/calculadora?aba=viagem", rotulo: "Viagem", detalhe: "Rota, pedágio e passageiros", icone: MapIcon },
+  { href: "/m/plantao/calculadora", rotulo: "Calculadora", detalhe: "Oferta, entrega e combustível", icone: Calculator },
   { href: "/m/plantao/semaforo", rotulo: "Copiloto", detalhe: "Bolha sobre o inDrive e a Uber", icone: Gauge },
   { href: "/m/plantao/extrato", rotulo: "Extrato", detalhe: "Ganhos e gastos, um a um", icone: BarChart3 },
   { href: "/m/plantao/historico", rotulo: "Ofertas", detalhe: "Aceitas, recusadas e prejuízo evitado", icone: History },

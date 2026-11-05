@@ -11,7 +11,7 @@ export default async function PaginaCalculadora({ searchParams }: { searchParams
   return (
     <div>
       <CabecalhoMotorista titulo="Calculadora" voltar="/m/plantao" />
-      <Calculadora perfil={c.perfil} criterios={c.criterios} abaInicial={aba === "viagem" || aba === "combustivel" || aba === "entrega" ? aba : "corrida"} />
+      <Calculadora perfil={c.perfil} criterios={c.criterios} abaInicial={aba === "viagem" || aba === "combustivel" || aba === "entrega" || aba === "particular" ? aba : "corrida"} />
     </div>
   );
 }

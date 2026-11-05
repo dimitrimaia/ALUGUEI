@@ -77,8 +77,15 @@ export type RotaCompleta = { km: number; minutos: number; linha: { lat: number; 
 
 /** Rota de carro com a linha do caminho (para achar os pedágios). Null se o OSRM não respondeu. */
 export async function rotaComLinha(a: { lat: number; lon: number }, b: { lat: number; lon: number }): Promise<RotaCompleta | null> {
+  return rotaPorPontos([a, b]);
+}
+
+/** Rota passando pelos pontos na ordem (saída, paradas, destino). */
+export async function rotaPorPontos(pontos: { lat: number; lon: number }[]): Promise<RotaCompleta | null> {
+  if (pontos.length < 2) return null;
+  const caminho = pontos.map((p) => `${p.lon},${p.lat}`).join(";");
   try {
-    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=simplified&geometries=geojson`, { headers: { "user-agent": AGENTE }, signal: AbortSignal.timeout(8000), next: { revalidate: 86_400 } });
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${caminho}?overview=simplified&geometries=geojson`, { headers: { "user-agent": AGENTE }, signal: AbortSignal.timeout(8000), next: { revalidate: 86_400 } });
     if (!r.ok) return null;
     const corpo = (await r.json()) as { routes?: { distance: number; duration: number; geometry: { coordinates: [number, number][] } }[] };
     const rota = corpo.routes?.[0];

@@ -29,6 +29,15 @@ export default async function Verificacoes() {
   return (
     <main className="mx-auto max-w-4xl">
       <CabecalhoPagina titulo="Verificação de carros" subtitulo={`${lista.length} na fila`} />
+      <div className="mb-4 rounded-[1.1rem] border border-borda bg-cartao p-4 text-sm shadow-cartao">
+        <p className="font-semibold">Como conferir (grátis e oficial)</p>
+        <ol className="mt-1 list-decimal pl-5 text-suave">
+          <li>Abra o CRLV. No <strong className="text-texto">CRLV digital (PDF)</strong>, aponte o app <strong className="text-texto">Vio</strong> (do governo) para o QR Code: ele mostra os dados direto do Detran.</li>
+          <li>Placa, RENAVAM, modelo, ano e cor do QR Code têm que bater com o cadastro.</li>
+          <li>O <strong className="text-texto">proprietário</strong> tem que ser o locador (mesmo CPF/CNPJ) ou alguém que ele comprove que autoriza.</li>
+          <li>Foto de CRLV impresso ou sem QR Code: peça o PDF digital antes de aprovar.</li>
+        </ol>
+      </div>
       {!lista.length && <Vazio icone={BadgeCheck} titulo="Fila vazia">Nenhum CRLV esperando conferência.</Vazio>}
       <div className="flex flex-col gap-4">
         {lista.map((v) => {

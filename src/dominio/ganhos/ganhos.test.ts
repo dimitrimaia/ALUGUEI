@@ -5,7 +5,7 @@ import { aluguelMensal, CRITERIOS_PADRAO, normalizarCriterios, normalizarPerfil,
 import { lerOferta } from "./oferta";
 import { distanciaReta, estimarParticular, paraSlug, rotaEstimada, TABELA_PADRAO } from "./particular";
 import { ganhosDoCopiloto, progressoMeta, resumir } from "./plantao";
-import { calcularViagem, compararCombustivel } from "./viagem";
+import { calcularViagem, precoCorridaParticular, compararCombustivel } from "./viagem";
 
 // Perfil redondo para conferir à mão: gasolina R$ 6,00 a 12 km/l = 50 c/km;
 // desgaste R$ 1.000 a cada 10.000 km = 10 c/km; aluguel R$ 2.600/mês em 26 dias × 10 h = R$ 10/h.
@@ -186,5 +186,25 @@ describe("ganhos das corridas do Copiloto", () => {
   it("não conta em dobro o que já foi lançado à mão", () => {
     const g = ganhosDoCopiloto([{ app: "indrive", valor: 2500, quando: "2026-10-28T12:00:00Z" }, { app: "uber", valor: 1500, quando: "2026-10-28T13:00:00Z" }], [{ dia: "2026-10-28", plataforma: "indrive" }]);
     expect(g.map((x) => x.plataforma)).toEqual(["uber"]);
+  });
+});
+
+describe("corrida particular", () => {
+  const t = taxas(PERFIL_PADRAO);
+  const c = { ...CRITERIOS_PADRAO, minimoPorKm: 200, minimoPorHora: 4000 };
+  it("cobra o menor valor verde pela régua e soma os pedágios", () => {
+    const r = precoCorridaParticular({ km: 20, minutos: 30, pedagios: 0, volta: false }, t, c);
+    expect(avaliarCorrida({ valor: r.valor, kmCorrida: 20, minutosCorrida: 30 }, t, c).sinal).toBe("verde");
+    expect(avaliarCorrida({ valor: r.valor - 100, kmCorrida: 20, minutosCorrida: 30 }, t, c).sinal).not.toBe("verde");
+    const comPedagio = precoCorridaParticular({ km: 20, minutos: 30, pedagios: 1280, volta: false }, t, c);
+    expect(comPedagio.valor).toBe(r.valor + 1280);
+  });
+
+  it("com a volta custa mais e divide por passageiro arredondando para cima", () => {
+    const ida = precoCorridaParticular({ km: 20, minutos: 30, pedagios: 0, volta: false }, t, c);
+    const comVolta = precoCorridaParticular({ km: 20, minutos: 30, pedagios: 0, volta: true }, t, c);
+    expect(comVolta.valor).toBeGreaterThan(ida.valor);
+    expect(comVolta.porPessoa(3) * 3).toBeGreaterThanOrEqual(comVolta.valor);
+    expect(comVolta.porPessoa(1)).toBe(comVolta.valor);
   });
 });

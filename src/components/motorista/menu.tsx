@@ -20,7 +20,7 @@ export function RegistrarMenuMotorista() {
           { href: "/m/plantao", rotulo: "Plantão", icone: Gauge, tambem: ["/m/plantao/ganho", "/m/plantao/despesa", "/m/plantao/custos", "/m/plantao/extrato", "/m/plantao/relatorios"] },
           { href: "/m/plantao/semaforo", rotulo: "Copiloto", icone: Navigation },
           { href: "/m/plantao/configuracoes", rotulo: "Ajustes do Copiloto", icone: Settings2, tambem: ["/m/plantao/regua", "/m/plantao/copiloto"] },
-          { href: "/m/plantao/calculadora", rotulo: "Calculadora", icone: Calculator },
+          { href: "/m/plantao/calculadora?aba=particular", rotulo: "Calculadora e corridas", icone: Calculator, tambem: ["/m/plantao/calculadora"] },
           { href: "/m/caronas", rotulo: "Caronas", icone: Users },
           { href: "/m/clientes", rotulo: "Meus clientes", icone: Link2 },
         ],

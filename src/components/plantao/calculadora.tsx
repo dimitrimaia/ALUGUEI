@@ -9,26 +9,28 @@ import { type Criterios, type PerfilCusto, taxas } from "@/dominio/ganhos/custos
 import { lerOferta } from "@/dominio/ganhos/oferta";
 import { calcularViagem, compararCombustivel } from "@/dominio/ganhos/viagem";
 import { contribuicaoMaxima } from "@/dominio/ganhos/carona";
+import { CorridaParticular } from "./corrida-particular";
 import { PlanejarViagem } from "./planejar-viagem";
 import { registrarCorridas } from "@/lib/acoes-plantao";
 import { EntradaNumero, EntradaReais, Rotulo } from "./entradas";
 import { CartaoSemaforo } from "./semaforo-cartao";
 
-const ABAS = { corrida: "Corrida", entrega: "Entrega", viagem: "Viagem", combustivel: "Combustível" } as const;
+const ABAS = { corrida: "Oferta", particular: "Particular", viagem: "Viagem", entrega: "Entrega", combustivel: "Combustível" } as const;
 type Aba = keyof typeof ABAS;
 
 export function Calculadora({ perfil, criterios, abaInicial = "corrida" }: { perfil: PerfilCusto; criterios: Criterios; abaInicial?: Aba }) {
   const [aba, setAba] = useState<Aba>(abaInicial);
   return (
     <div className="flex flex-col gap-4">
-      <div role="tablist" className="grid grid-cols-4 gap-1 rounded-2xl bg-cartao-2 p-1">
+      <div role="tablist" className="grid grid-cols-5 gap-1 rounded-2xl bg-cartao-2 p-1">
         {(Object.keys(ABAS) as Aba[]).map((k) => (
-          <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)} className={`h-10 rounded-xl text-[0.8rem] font-semibold transition-colors ${aba === k ? "bg-cartao text-texto shadow-cartao" : "text-suave"}`}>
+          <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)} className={`h-10 rounded-xl text-[0.72rem] font-semibold transition-colors ${aba === k ? "bg-cartao text-texto shadow-cartao" : "text-suave"}`}>
             {ABAS[k]}
           </button>
         ))}
       </div>
       {aba === "corrida" && <AbaCorrida perfil={perfil} criterios={criterios} />}
+      {aba === "particular" && <CorridaParticular perfil={perfil} criterios={criterios} />}
       {aba === "entrega" && <AbaEntrega perfil={perfil} criterios={criterios} />}
       {aba === "viagem" && <AbaViagem perfil={perfil} />}
       {aba === "combustivel" && <AbaCombustivel perfil={perfil} />}
