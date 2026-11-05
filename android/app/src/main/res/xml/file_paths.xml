@@ -4,4 +4,6 @@
     <cache-path name="my_cache_images" path="." />
     <!-- APK baixado pelo "Atualizar o Copiloto" (Atualizacao.kt). -->
     <external-files-path name="atualizacao" path="atualizacao/" />
+    <!-- Vídeos da câmera de segurança no Android 9 ou antes (GerenciadorGravacoes.kt). -->
+    <external-files-path name="gravacoes" path="Movies/" />
 </paths>

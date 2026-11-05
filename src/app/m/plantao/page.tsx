@@ -1,4 +1,4 @@
-import { Map as MapIcon, Route as RotaIcone, KeyRound, BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
+import { Map as MapIcon, Route as RotaIcone, KeyRound, BarChart3, History, PiggyBank, Calculator, Car, ChevronRight, Film, Fuel, Gauge, Link2, Plus, Receipt, Settings2, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
@@ -27,6 +27,7 @@ const FERRAMENTAS = [
   { href: "/m/plantao/financas", rotulo: "Finanças", detalhe: "Meta do mês e reserva", icone: PiggyBank },
   { href: "/m/caronas", rotulo: "Caronas", detalhe: "Divida o custo da viagem", icone: Users },
   { href: "/m/clientes", rotulo: "Meus clientes", detalhe: "Seu link de corridas", icone: Link2 },
+  { href: "/m/plantao/gravacoes", rotulo: "Gravações", detalhe: "Vídeos da câmera de segurança", icone: Film },
   { href: "/m/plantao/aluguel", rotulo: "Carro alugado", detalhe: "Vistoria, km do mês e prazo", icone: KeyRound },
   { href: "/m/plantao/custos", rotulo: "Custos do carro", detalhe: "Base do lucro real", icone: Settings2 },
 ] as const;

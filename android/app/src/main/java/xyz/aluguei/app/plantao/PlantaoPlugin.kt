@@ -277,6 +277,43 @@ class PlantaoPlugin : Plugin() {
         call.resolve(estadoCamera(ctx))
     }
 
+    // ------------------------------------------------------------------ gravações da câmera
+
+    /** Lista com miniatura e duração (lê os arquivos: roda fora da thread principal). */
+    @PluginMethod
+    fun gravacoes(call: PluginCall) {
+        Thread {
+            val lista = JSArray()
+            GerenciadorGravacoes.listar(ctx).forEach { g ->
+                lista.put(JSObject().apply {
+                    put("id", g.id)
+                    put("bytes", g.bytes)
+                    put("criadoEm", Armazenamento.isoDe(g.criadoEm))
+                    put("duracaoSeg", g.duracaoSeg ?: JSONObject.NULL)
+                    put("miniatura", g.miniatura ?: JSONObject.NULL)
+                    put("emGravacao", g.emGravacao)
+                })
+            }
+            call.resolve(JSObject().put("gravacoes", lista).put("camera", estadoCamera(ctx)))
+        }.start()
+    }
+
+    @PluginMethod
+    fun abrirGravacao(call: PluginCall) {
+        call.resolve(JSObject().put("ok", GerenciadorGravacoes.abrir(ctx, call.getString("id") ?: "")))
+    }
+
+    @PluginMethod
+    fun compartilharGravacao(call: PluginCall) {
+        call.resolve(JSObject().put("ok", GerenciadorGravacoes.compartilhar(ctx, call.getString("id") ?: "")))
+    }
+
+    @PluginMethod
+    fun apagarGravacao(call: PluginCall) {
+        val id = call.getString("id") ?: ""
+        Thread { call.resolve(JSObject().put("ok", GerenciadorGravacoes.apagar(ctx, id))) }.start()
+    }
+
     // ------------------------------------------------------------------ permissões (com volta automática)
 
     @PluginMethod

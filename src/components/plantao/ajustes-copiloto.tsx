@@ -2,7 +2,9 @@
 
 import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
-import { ArrowDown, ArrowUp, Home, LocateFixed, MessageSquareText, Plus, Save, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Film, Home, LocateFixed, MessageSquareText, Plus, Save, Search, X } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { Aviso, Botao, Cartao, classeAreaTexto } from "@/components/ui";
@@ -247,6 +249,7 @@ function SegurancaCorrida({ p, mudar, nativo }: { p: PreferenciasCopiloto; mudar
           <p className="text-xs text-suave">A gravação funciona no app do Aluguei para Android.</p>
         )}
         {camera?.gravando && <p className="text-xs text-ok">Gravando{camera.arquivos ? ` · ${camera.arquivos} arquivos` : ""}{camera.usadoMb ? ` · ${camera.usadoMb} MB` : ""}. Também dá para parar pela notificação ou pelo menu da bolha.</p>}
+        {nativo && <Link href={"/m/plantao/gravacoes" as Route} className="flex items-center gap-2 text-sm font-semibold text-marca"><Film size={16} /> Ver gravações{camera?.arquivos ? ` (${camera.arquivos})` : ""}</Link>}
         {erro && <p className="text-sm text-perigo">{erro}</p>}
       </div>
     </Bloco>

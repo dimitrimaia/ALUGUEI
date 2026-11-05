@@ -28,6 +28,7 @@ export type CorridaNativa = {
   momento: string;
 };
 
+export type GravacaoNativa = { id: string; bytes: number; criadoEm: string; duracaoSeg: number | null; miniatura: string | null; emGravacao: boolean };
 export type EstadoCamera = { gravando: boolean; desde?: string | null; arquivos?: number; usadoMb?: number };
 type RespostaPermissao = { tipo: string; concedida: boolean; aberto: boolean };
 type Ouvinte = { remove: () => Promise<void> | void };
@@ -40,6 +41,11 @@ type PluginPlantao = {
   cameraIniciar(): Promise<EstadoCamera>;
   cameraParar(): Promise<EstadoCamera>;
   cameraEstado(): Promise<EstadoCamera>;
+  /** Vídeos da câmera de segurança (APK novo; nos antigos, não existe). */
+  gravacoes?(): Promise<{ gravacoes: GravacaoNativa[]; camera: EstadoCamera }>;
+  abrirGravacao?(o: { id: string }): Promise<{ ok: boolean }>;
+  compartilharGravacao?(o: { id: string }): Promise<{ ok: boolean }>;
+  apagarGravacao?(o: { id: string }): Promise<{ ok: boolean }>;
   /** Perfil de régua escolhido na bolha e ainda não salvo na conta. */
   perfilPendente(): Promise<{ perfil: { nome: string; criterios: unknown } | null }>;
   limparPerfilPendente(): Promise<void>;
