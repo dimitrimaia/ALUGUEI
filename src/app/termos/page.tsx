@@ -17,6 +17,7 @@ export default function Termos() {
         <li>Você precisa ter 18 anos ou mais e dar informações verdadeiras.</li>
         <li>A conta é pessoal; cuide da sua senha e dos códigos de acesso.</li>
         <li>Podemos bloquear contas com fraude, documentos falsos ou uso que prejudique outras pessoas.</li>
+        <li>Viu golpe, assédio ou anúncio falso? Use o botão <strong>Denunciar</strong> na conversa ou no anúncio. A equipe analisa cada denúncia.</li>
       </ul>
       <h2>Copiloto</h2>
       <ul>

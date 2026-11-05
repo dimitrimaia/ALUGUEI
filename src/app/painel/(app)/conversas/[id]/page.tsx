@@ -2,6 +2,7 @@ import { Phone, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Chat } from "@/components/chat";
+import { BotaoDenunciar } from "@/components/denunciar";
 import { BotaoAcao } from "@/components/painel/botao-acao";
 import { CabecalhoPagina, Cartao, DadoRotulado, Placa } from "@/components/ui";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
@@ -32,6 +33,7 @@ export default async function Conversa({ params }: { params: Promise<{ id: strin
           <Chat conversaId={id} papel="locador" iniciais={mensagens ?? []} />
         </Cartao>
         <div className="flex flex-col gap-4">
+          <BotaoDenunciar alvo="conversa" id={id} rotulo="Denunciar este motorista" className="self-start" />
           <Cartao>
             {v && <div className="mb-3 flex items-center gap-3"><Placa placa={v.placa} tamanho="sm" /><span className="text-sm font-semibold">{v.modelo}</span></div>}
             {anuncio && (

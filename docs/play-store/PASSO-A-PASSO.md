@@ -83,6 +83,11 @@ Português: entre com o e-mail e a senha acima, escolha "Motorista". Para testar
 - Violência, medo, sexualidade, linguagem, drogas, jogos de azar: **Não** em tudo
 - Os usuários podem interagir ou trocar conteúdo (mensagens)? **Sim**
 - Compartilha a localização atual do usuário com outros usuários? **Não**
+- Bloquear usuários ou conteúdo? **Não** (só a equipe bloqueia, pelo painel)
+- Denunciar usuários ou conteúdo? **Sim** (botão Denunciar na conversa e no anúncio)
+- Moderação de conversas por chat? **Sim**
+- Interações limitadas a amigos convidados? **Não**
+- Conteúdo online (destaca conteúdo de fora da instalação)? **Sim** (anúncios de carros)
 - Permite compras de produtos digitais? **Não**
 - É um navegador da Web ou mecanismo de pesquisa? **Não**
 - Salvar → **Enviar**.

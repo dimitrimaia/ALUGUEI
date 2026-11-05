@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Chat } from "@/components/chat";
+import { BotaoDenunciar } from "@/components/denunciar";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { marcarLida, participacao } from "@/lib/conversas";
@@ -27,6 +28,7 @@ export default async function ConversaMotorista({ params }: { params: Promise<{ 
       <div className="-mt-3 rounded-xl border border-borda bg-cartao px-3 py-2 text-xs">
         <span className="font-semibold">{v?.modelo}</span>
         {anuncio && <span className="text-suave"> · {formatarBRL(anuncio.aluguel_semanal_centavos)}/semana · {anuncio.cidade}/{anuncio.uf}</span>}
+        <BotaoDenunciar alvo="conversa" id={id} className="float-right" />
       </div>
       <Chat conversaId={id} papel="motorista" iniciais={mensagens ?? []} />
     </div>

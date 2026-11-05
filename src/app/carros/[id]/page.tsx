@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CabecalhoPublico } from "@/components/site/cabecalho-publico";
 import { BotaoLink, Cartao, DadoRotulado } from "@/components/ui";
+import { BotaoDenunciar } from "@/components/denunciar";
 import { placaParcial } from "@/dominio/marketplace/cidade";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { anuncioPublico } from "@/lib/marketplace";
@@ -60,6 +61,7 @@ export default async function Anuncio({ params, searchParams }: { params: Promis
           {a.verificado && <p className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-ok-suave px-2.5 py-1 text-xs font-semibold text-ok"><BadgeCheck size={14} /> Documento do carro verificado pelo Aluguei</p>}
 
           {a.descricao && <p className="mt-5 text-[0.95rem] leading-relaxed whitespace-pre-line">{a.descricao}</p>}
+          {usuario && !meu && <BotaoDenunciar alvo="anuncio" id={a.id} rotulo="Denunciar anúncio" className="mt-5" />}
         </div>
 
         <aside className="mt-6 flex flex-col gap-4 lg:mt-0">
