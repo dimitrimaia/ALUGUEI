@@ -1,5 +1,7 @@
 # Publicar na Play Store (quando for a hora)
 
+> Guia completo, com textos e imagens: [play-store/PASSO-A-PASSO.md](play-store/PASSO-A-PASSO.md).
+
 Tudo já está preparado no código. Faltam só os passos que dependem de você.
 
 ## Por que vale a pena

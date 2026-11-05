@@ -59,7 +59,10 @@ android {
             else if (assinar) signingConfig signingConfigs.release
         }
         release {
+            // Play Store: a chave de envio própria, ou, sem ela, a mesma do APK direto
+            // (o Google re-assina com a chave dele; a de envio só prova que é você).
             if (assinar) signingConfig signingConfigs.release
+            else if (assinarApk) signingConfig signingConfigs.direto
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

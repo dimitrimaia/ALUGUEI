@@ -77,12 +77,13 @@ jobs:
       # assinado (docs/play-store.md). Sem os segredos, este passo não faz nada.
       - name: AAB assinado para a Play Store
         env:
+          ALUGUEI_APK_SENHA: ${{ secrets.ALUGUEI_APK_SENHA }}
           ALUGUEI_KEYSTORE_SENHA: ${{ secrets.ALUGUEI_KEYSTORE_SENHA }}
           ALUGUEI_CHAVE_ALIAS: ${{ secrets.ALUGUEI_CHAVE_ALIAS }}
           ALUGUEI_CHAVE_SENHA: ${{ secrets.ALUGUEI_CHAVE_SENHA }}
         working-directory: android
         run: |
-          if [ -z "$ALUGUEI_KEYSTORE_ARQUIVO" ]; then echo "Sem chave de envio: pulando o AAB da Play Store."; exit 0; fi
+          if [ -z "$ALUGUEI_KEYSTORE_ARQUIVO" ] && [ -z "$ALUGUEI_APK_KEYSTORE_ARQUIVO" ]; then echo "Sem chave: pulando o AAB da Play Store."; exit 0; fi
           ./gradlew bundleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
