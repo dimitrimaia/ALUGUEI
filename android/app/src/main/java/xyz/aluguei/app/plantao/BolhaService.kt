@@ -121,6 +121,8 @@ class BolhaService : Service() {
         private const val MINI_MS = 8_000L
         /** inDrive: tela sem oferta por este tempo = a oferta sumiu. */
         private const val SUMICO_MS = 1_500L
+        /** Cronômetro esquecido aberto: fecha sozinho. */
+        private const val DURACAO_MAXIMA_CORRIDA_MS = 2 * 60 * 60_000L
         private const val FUSO = "America/Sao_Paulo"
         /** Posição (y) salva das peças do estilo "bordas". */
         private const val CHAVE_BORDAS = "bordas"
@@ -194,6 +196,27 @@ class BolhaService : Service() {
     private fun removerCartoesMenos(manter: View?) {
         janelasCartao.filter { it !== manter }.forEach { remover(it) }
         janelasCartao.retainAll { it === manter }
+    }
+
+    /**
+     * Cronômetro da corrida aceita (só o tempo, sem GPS: não gasta bateria). A
+     * pílula no topo mostra os minutos e os atalhos para o embarque e o destino.
+     */
+    private var corridaDesde: Long? = null
+    private var corridaEmbarque: String? = null
+    private var corridaDestino: String? = null
+    private var pilulaCorrida: View? = null
+    private var textoCorrida: TextView? = null
+    private val tiqueCorrida = object : Runnable {
+        override fun run() {
+            val desde = corridaDesde ?: return
+            if (SystemClock.elapsedRealtime() - desde > DURACAO_MAXIMA_CORRIDA_MS) {
+                fecharCronometro()
+                return
+            }
+            atualizarCronometro()
+            principal.postDelayed(this, 30_000)
+        }
     }
 
     /** Cartão completo aberto no "▾ Detalhes" (cada oferta nova começa no resumo). */
@@ -395,6 +418,8 @@ class BolhaService : Service() {
     override fun onDestroy() {
         principal.removeCallbacksAndMessages(null)
         removerCartoesMenos(null)
+        remover(pilulaCorrida)
+        pilulaCorrida = null
         if (desbloqueioRegistrado) {
             try {
                 unregisterReceiver(desbloqueio)
@@ -1122,6 +1147,7 @@ class BolhaService : Service() {
         if (pausar) {
             fecharCartao()
             fecharMini()
+            fecharCronometro()
             limparLeitura()
             rotuloDiag?.text = "pausado"
         } else {
@@ -1578,7 +1604,7 @@ class BolhaService : Service() {
                     principal.postDelayed(conferirSumico, SUMICO_MS)
                 }
             }
-            is TelaLida.Concluida -> Unit
+            is TelaLida.Concluida -> if (app == "indrive") fecharCronometro()
             TelaLida.Lista, TelaLida.Fim -> {
                 // Expirou / já aceita por outro / procurando: a oferta não ficou com o motorista.
                 aceitePendente = null
@@ -1926,6 +1952,77 @@ class BolhaService : Service() {
     }
 
     /** Linha em destaque com o detalhe pequeno embaixo (km e tempo totais do cartão). */
+    // ------------------------------------------------------------------ cronômetro da corrida
+
+    private fun iniciarCronometro(embarque: String?, destino: String?) {
+        fecharCronometro()
+        corridaDesde = SystemClock.elapsedRealtime()
+        corridaEmbarque = embarque
+        corridaDestino = destino
+        mostrarPilulaCorrida()
+        principal.postDelayed(tiqueCorrida, 30_000)
+    }
+
+    private fun fecharCronometro() {
+        principal.removeCallbacks(tiqueCorrida)
+        corridaDesde = null
+        remover(pilulaCorrida)
+        pilulaCorrida = null
+        textoCorrida = null
+    }
+
+    private fun atualizarCronometro() {
+        val desde = corridaDesde ?: return
+        val min = (SystemClock.elapsedRealtime() - desde) / 60_000
+        textoCorrida?.text = "● " + if (min >= 60) "${min / 60}h${(min % 60).toString().padStart(2, '0')}" else "$min min"
+    }
+
+    /** Pílula pequena no topo: "● 12 min", embarque, destino e ✕. */
+    private fun mostrarPilulaCorrida() {
+        val pal = paleta()
+        val txt = texto("", 12f, pal.texto, true).apply { maxLines = 1 }
+        val v = LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = fundoArredondado(pal.fundo, 99, pal.borda)
+            elevation = dp(3).toFloat()
+            setPadding(dp(12), dp(4), dp(4), dp(4))
+            addView(txt)
+            listOfNotNull(
+                corridaEmbarque?.let { Triple(R.drawable.ic_traco_pin, it, "Ir ao embarque") },
+                corridaDestino?.let { Triple(R.drawable.ic_traco_bandeira, it, "Ir ao destino") },
+            ).forEach { (res, endereco, descricao) ->
+                addView(
+                    FrameLayout(ui).apply {
+                        background = circulo(comAlfa(pal.destaque, 0x1F))
+                        contentDescription = descricao
+                        isClickable = true
+                        setOnClickListener { abrirNavegacao(endereco) }
+                        addView(iconeTraco(res, pal.destaque, 16), FrameLayout.LayoutParams(dp(16), dp(16), Gravity.CENTER))
+                    },
+                    LinearLayout.LayoutParams(dp(30), dp(30)).apply { marginStart = dp(8) },
+                )
+            }
+            addView(
+                texto("✕", 13f, pal.secundario, true).apply {
+                    gravity = Gravity.CENTER
+                    contentDescription = "Fechar o cronômetro"
+                    isClickable = true
+                    setOnClickListener { fecharCronometro() }
+                },
+                LinearLayout.LayoutParams(dp(30), dp(26)).apply { marginStart = dp(4) },
+            )
+        }
+        val p = parametros(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = alturaBarraStatus() + dp(2)
+        }
+        if (!adicionar(v, p)) return
+        pilulaCorrida = v
+        textoCorrida = txt
+        atualizarCronometro()
+    }
+
     // ------------------------------------------------------------------ cartão: peças
 
     /** Bloco do "Detalhes" do cartão na tela (para abrir e fechar animado) e o botão dele. */
@@ -2624,6 +2721,7 @@ class BolhaService : Service() {
             recusada = (ofertaAberta?.takeIf { it.app == o.app } ?: o).chaveOriginal()
         }
         PlantaoPlugin.emitirDecisao(corrida.id, decisao, origem, valorFinal)
+        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) iniciarCronometro(o.embarque, o.destino)
         if (cartaoCorrida?.id == corrida.id) fecharCartao()
         if (decisao == CorridaAvaliada.ACEITEI && mostrarMensagem) mostrarCopiarMensagem(o)
     }

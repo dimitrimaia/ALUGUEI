@@ -42,6 +42,21 @@ class MainActivity : BridgeActivity() {
         principal.postDelayed({ fecharAbertura() }, 8_000)
     }
 
+    /**
+     * Bateria: com o app fora da tela, a página do site para de rodar (animações,
+     * relógios, consultas). A bolha e o leitor do Copiloto são nativos e seguem
+     * funcionando; ao voltar, a página continua de onde estava.
+     */
+    override fun onPause() {
+        super.onPause()
+        bridge?.webView?.let { it.onPause(); it.pauseTimers() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        bridge?.webView?.let { it.resumeTimers(); it.onResume() }
+    }
+
     /** Fecha a abertura, mas só depois de a animação de entrada aparecer inteira (1,2 s). */
     private fun fecharAbertura() {
         val v = abertura ?: return
