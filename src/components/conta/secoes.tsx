@@ -303,7 +303,7 @@ export function SecaoConta({
               <span className="flex-1"><span className="block text-sm font-semibold">Pedir a exclusão da conta</span><span className="block text-xs text-suave">Respondemos em até 15 dias. Contratos ativos precisam ser encerrados antes.</span></span>
             </a>
           </Grupo>
-          <Aviso tom="neutro">Dúvidas sobre os seus dados: <a className="font-semibold text-marca" href={`mailto:${SUPORTE}`}>{SUPORTE}</a></Aviso>
+          <Aviso tom="neutro">Dúvidas sobre os seus dados: <a className="font-semibold text-marca" href={`mailto:${SUPORTE}`}>{SUPORTE}</a>. Leia a <a className="font-semibold text-marca" href="/privacidade">política de privacidade</a> e os <a className="font-semibold text-marca" href="/termos">termos de uso</a>.</Aviso>
         </div>
       );
 

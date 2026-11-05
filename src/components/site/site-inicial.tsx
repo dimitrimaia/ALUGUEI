@@ -98,6 +98,11 @@ export function SiteInicial({ locador, motorista, logado }: { locador: ReactNode
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center">
           <Marca className="text-base" />
           <p className="text-xs text-suave">© {new Date().getFullYear()} Aluguei · Locação de carros para motoristas de aplicativo</p>
+          <nav className="flex gap-4 text-xs font-semibold text-suave">
+            <a href="/privacidade">Privacidade</a>
+            <a href="/termos">Termos de uso</a>
+            <a href="/excluir-conta">Excluir a conta</a>
+          </nav>
         </div>
       </footer>
 
