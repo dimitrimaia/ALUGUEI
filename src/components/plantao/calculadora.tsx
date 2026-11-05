@@ -15,7 +15,7 @@ import { registrarCorridas } from "@/lib/acoes-plantao";
 import { EntradaNumero, EntradaReais, Rotulo } from "./entradas";
 import { CartaoSemaforo } from "./semaforo-cartao";
 
-const ABAS = { corrida: "Oferta", particular: "Particular", viagem: "Viagem", entrega: "Entrega", combustivel: "Combustível" } as const;
+const ABAS = { corrida: "Oferta", particular: "Particular", viagem: "Viagem", entrega: "Entrega", combustivel: "Abastecer" } as const;
 type Aba = keyof typeof ABAS;
 
 export function Calculadora({ perfil, criterios, abaInicial = "corrida" }: { perfil: PerfilCusto; criterios: Criterios; abaInicial?: Aba }) {
