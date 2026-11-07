@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type DataISO, data, diasEntre, somarDias, somarMeses } from "../datas/data";
+import { type DataISO, type DiaDaSemana, data, diasEntre, proximoDiaDaSemana, somarDias, somarMeses } from "../datas/data";
 import { arredondar, type Centavos } from "../dinheiro/centavos";
 
 /**
@@ -24,6 +24,8 @@ export type AluguelExterno = {
   /** Prazo mínimo (sair antes dele tem multa). 0 = sem prazo mínimo. */
   prazoMinimoDias: number;
   valorSemanal: Centavos;
+  /** Dia da semana em que o aluguel vence (0 = domingo … 6 = sábado). null = o mesmo dia do início. */
+  diaPagamento: DiaDaSemana | null;
   /** Multa por sair antes do prazo, sobre as semanas que faltam. */
   multaRescisaoBps: number;
   /** Outra multa fixa que o contrato prevê por descumprimento (pode somar). */
@@ -71,6 +73,7 @@ const esquema = z.object({
   inicio: dataISO,
   prazoMinimoDias: z.number().int().min(0).max(3650).catch(0),
   valorSemanal: centavos,
+  diaPagamento: z.number().int().min(0).max(6).nullable().catch(null).transform((d) => d as DiaDaSemana | null),
   multaRescisaoBps: z.number().int().min(0).max(10_000).catch(0),
   multaDescumprimento: centavos.catch(0),
   avisoSaidaDias: z.number().int().min(0).max(90).catch(0),
@@ -105,8 +108,10 @@ export function normalizarAluguel(entrada: unknown): AluguelExterno | null {
   return a;
 }
 
-/** Próximo pagamento semanal (pré-pago, no mesmo dia da semana do início). Hoje conta. */
+/** Próximo pagamento semanal (pré-pago, no dia combinado ou no mesmo dia da semana do início). Hoje conta. */
 export function proximoPagamento(a: AluguelExterno, hoje: DataISO): DataISO {
+  // Dia combinado com a locadora (ex.: toda segunda), mesmo que tenha pegado o carro em outro dia.
+  if (a.diaPagamento != null) return proximoDiaDaSemana(hoje < a.inicio ? a.inicio : hoje, a.diaPagamento);
   if (hoje <= a.inicio) return a.inicio;
   const resto = diasEntre(a.inicio, hoje) % 7;
   return resto === 0 ? hoje : somarDias(hoje, 7 - resto);

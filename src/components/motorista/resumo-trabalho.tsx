@@ -7,7 +7,7 @@ import { taxas } from "@/dominio/ganhos/custos";
 import { NOME_PLATAFORMA, resumir } from "@/dominio/ganhos/plantao";
 import { configPlantao, dadosDoPeriodo, intervaloExtrato, paraDominio } from "@/lib/plantao";
 
-const FILTROS = { hoje: "Hoje", semana: "7 dias", mes: "Mês", trinta: "30 dias", perso: "Período" } as const;
+const FILTROS = { hoje: "Hoje", ontem: "Ontem", semana: "7 dias", mes: "Mês", trinta: "30 dias", perso: "Período" } as const;
 export type FiltroResumo = keyof typeof FILTROS;
 
 function lerData(s: string | undefined): DataISO | null {
@@ -41,16 +41,16 @@ export async function ResumoTrabalho({ usuarioId, filtro, de, ate }: { usuarioId
   const r = resumir(d.ganhos, d.despesas, d.jornadas, taxas(config.perfil), i.dias, new Date());
   const gastos = r.despesas + r.fixosDoPeriodo + r.combustivelEstimado;
   const link = (f: FiltroResumo) => (f === "perso" ? `/m?resumo=perso&de=${i.de}&ate=${i.ate}` : `/m?resumo=${f}`) as Route;
-  const extrato = (filtro === "hoje" || filtro === "semana" || filtro === "mes" || filtro === "trinta" ? `/m/plantao/extrato?periodo=${filtro}` : "/m/plantao/extrato") as Route;
+  const extrato = (filtro === "hoje" || filtro === "ontem" || filtro === "semana" || filtro === "mes" || filtro === "trinta" ? `/m/plantao/extrato?periodo=${filtro}` : "/m/plantao/extrato") as Route;
   return (
     <section className="flex flex-col gap-3 rounded-[1.1rem] border border-borda bg-cartao p-4 shadow-cartao">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-bold">Seu trabalho</h2>
         <span className="text-xs text-suave">{i.de === i.ate ? formatarData(i.de) : `${formatarData(i.de).slice(0, 5)} a ${formatarData(i.ate).slice(0, 5)}`}</span>
       </div>
-      <nav aria-label="Período" className="grid grid-cols-5 gap-1 rounded-xl bg-cartao-2 p-1">
+      <nav aria-label="Período" className="grid grid-cols-6 gap-0.5 rounded-xl bg-cartao-2 p-1">
         {(Object.keys(FILTROS) as FiltroResumo[]).map((f) => (
-          <Link key={f} href={link(f)} scroll={false} aria-current={f === filtro ? "page" : undefined} className={`grid h-8 place-items-center rounded-lg text-[0.72rem] font-semibold ${f === filtro ? "bg-cartao text-texto shadow-cartao" : "text-suave"}`}>{FILTROS[f]}</Link>
+          <Link key={f} href={link(f)} scroll={false} aria-current={f === filtro ? "page" : undefined} className={`grid h-8 place-items-center rounded-lg text-[0.68rem] font-semibold ${f === filtro ? "bg-cartao text-texto shadow-cartao" : "text-suave"}`}>{FILTROS[f]}</Link>
         ))}
       </nav>
       {filtro === "perso" && (

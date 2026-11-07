@@ -35,6 +35,15 @@ describe("aluguel fora do Aluguei", () => {
     expect(proximoPagamento(base, data("2026-11-01"))).toBe("2026-11-07");
   });
 
+  it("pagamento no dia combinado (toda segunda), mesmo pegando o carro num sábado", () => {
+    const segunda = normalizarAluguel({ ...base, diaPagamento: 1 })!;
+    expect(segunda.diaPagamento).toBe(1);
+    expect(proximoPagamento(segunda, data("2026-10-20"))).toBe("2026-10-26"); // antes do início: 1ª segunda depois dele
+    expect(proximoPagamento(segunda, data("2026-11-02"))).toBe("2026-11-02"); // hoje é segunda: vence hoje
+    expect(proximoPagamento(segunda, data("2026-11-03"))).toBe("2026-11-09");
+    expect(normalizarAluguel({ ...base, diaPagamento: 9 })!.diaPagamento).toBeNull();
+  });
+
   it("vistoria a cada 15 dias desde a última", () => {
     expect(proximaVistoria(base)).toBe("2026-11-08");
     expect(proximaVistoria({ ...base, ultimaVistoria: data("2026-11-09") })).toBe("2026-11-24");

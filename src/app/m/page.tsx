@@ -34,7 +34,7 @@ function etapaAtual(cadastro: Linha<"locatarios">, contrato?: Linha<"contratos">
 export default async function Motorista({ searchParams }: { searchParams: Promise<{ checkin?: string; resumo?: string; de?: string; ate?: string }> }) {
   const q = await searchParams;
   const checkinEnviado = q.checkin === "ok";
-  const filtroResumo: FiltroResumo = (["hoje", "semana", "mes", "trinta", "perso"] as const).find((f) => f === q.resumo) ?? "semana";
+  const filtroResumo: FiltroResumo = (["hoje", "ontem", "semana", "mes", "trinta", "perso"] as const).find((f) => f === q.resumo) ?? "semana";
   const usuario = await exigirUsuario("/m");
   const [cadastros, contratos, perfil, conversas, locadora] = await Promise.all([
     cadastrosDoMotorista(usuario.id),

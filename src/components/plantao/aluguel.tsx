@@ -30,7 +30,7 @@ function useAcao() {
 type Form = Omit<AluguelExterno, "leituras" | "perguntas" | "inicio" | "ultimaVistoria" | "devolucao"> & { inicio: string; ultimaVistoria: string | null };
 
 const VAZIO: Form = {
-  locadora: "", telefoneLocadora: "", numeroContrato: "", modelo: "", placa: "", inicio: "", prazoMinimoDias: 0, valorSemanal: 0, multaRescisaoBps: 0, multaDescumprimento: 0, avisoSaidaDias: 7,
+  locadora: "", telefoneLocadora: "", numeroContrato: "", modelo: "", placa: "", inicio: "", prazoMinimoDias: 0, valorSemanal: 0, diaPagamento: null, multaRescisaoBps: 0, multaDescumprimento: 0, avisoSaidaDias: 7,
   kmLimiteMensal: 0, valorKmExcedente: 0, kmInicial: null, caucao: 0, devolucaoCaucaoDias: 30, vistoriaCadaDias: 0, ultimaVistoria: null, trocaOleoCadaKm: null, ultimaTrocaOleoKm: null,
   franquiaRoubo: 0, franquiaColisao: 0, franquiaTerceiros: 0, acrescimoMultaBps: 0, valorPromissoria: null, observacoes: "",
 };
@@ -79,6 +79,12 @@ export function EditorAluguel({ inicial, aoSalvar }: { inicial: AluguelExterno |
           <Rotulo texto="Pegou o carro em"><input type="date" className={campo} value={f.inicio} onChange={(e) => m({ inicio: e.target.value })} /></Rotulo>
           {din("valorSemanal", "Aluguel por semana")}
         </div>
+        <Rotulo texto="O aluguel vence toda">
+          <select className={campo} value={f.diaPagamento ?? ""} onChange={(e) => m({ diaPagamento: e.target.value === "" ? null : (Number(e.target.value) as Form["diaPagamento"]) })}>
+            <option value="">Mesmo dia da semana em que pegou o carro</option>
+            {["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"].map((d, i) => <option key={d} value={i}>{d}</option>)}
+          </select>
+        </Rotulo>
         <div className="grid grid-cols-2 gap-2">
           {num("prazoMinimoDias", "Prazo mínimo", "dias")}
           {num("avisoSaidaDias", "Aviso para sair", "dias")}
