@@ -48,7 +48,7 @@ export default async function MeuCarroAlugado() {
 
   return (
     <div className="flex flex-col gap-4">
-      <CabecalhoMotorista titulo="Meu carro alugado" voltar="/m/plantao" acao={<Link href={"/m/plantao/aluguel/editar" as Route} aria-label="Editar condições" className="grid size-10 place-items-center rounded-xl text-marca"><Pencil size={18} /></Link>} />
+      <CabecalhoMotorista titulo="Meu carro alugado" voltar="/m/plantao" acao={<Link href={"/m/plantao/aluguel/editar" as Route} className="flex h-9 items-center gap-1.5 rounded-xl border border-borda bg-cartao px-3 text-sm font-semibold text-marca"><Pencil size={15} /> Editar</Link>} />
 
       <Cartao className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
@@ -70,7 +70,7 @@ export default async function MeuCarroAlugado() {
       {!a.devolucao && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <Bloco icone={Wallet} titulo="Próximo aluguel" valor={`${dataBR(pagamento)} · ${brl(a.valorSemanal)}`} detalhe={`Vence ${emDias(diasEntre(dia, pagamento))}. Atraso pode bloquear o carro.`} tom={diasEntre(dia, pagamento) <= 1 ? "alerta" : "marca"} />
+            <Bloco icone={Wallet} titulo="Próximo aluguel" valor={`${dataBR(pagamento)} · ${brl(a.valorSemanal)}`} detalhe={`Vence ${emDias(diasEntre(dia, pagamento))}. Dia errado? Toque em Editar e escolha o dia do vencimento.`} tom={diasEntre(dia, pagamento) <= 1 ? "alerta" : "marca"} />
             {vistoria && <Bloco icone={ClipboardCheck} titulo="Próxima vistoria" valor={dataBR(vistoria)} detalhe={`${emDias(diasEntre(dia, vistoria)).replace(/^./, (c) => c.toUpperCase())} · a cada ${a.vistoriaCadaDias} dias`} tom={diasEntre(dia, vistoria) < 0 ? "perigo" : diasEntre(dia, vistoria) <= 2 ? "alerta" : "marca"} />}
             {fim && <Bloco icone={CalendarClock} titulo="Prazo mínimo" valor={sair.dentroDoPrazo ? `Até ${dataBR(fim)}` : "Cumprido"} detalhe={sair.dentroDoPrazo ? `Dia ${diasEntre(a.inicio, dia) + 1} de ${a.prazoMinimoDias}` : `Para sair, avise com ${a.avisoSaidaDias} dias.`} />}
             <Bloco icone={LogOut} titulo="Sair hoje custa" valor={sair.multa ? brl(sair.multa) : "Sem multa"} detalhe={sair.dentroDoPrazo ? `${a.multaRescisaoBps / 100}% de ${sair.semanasRestantes} semana${sair.semanasRestantes > 1 ? "s" : ""}${sair.multaExtraPossivel ? `; pode somar ${brl(sair.multaExtraPossivel)}` : ""}` : `Aviso de ${a.avisoSaidaDias} dias`} tom={sair.multa ? "alerta" : "marca"} />
