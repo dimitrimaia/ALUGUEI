@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { avaliarCorrida, precoIdeal } from "./corrida";
-import { bateLista, CRITERIOS_PADRAO, type Criterios, criteriosNoHorario, normalizarCriterios, type PerfilCusto, taxas } from "./custos";
+import { bateLista, CRITERIOS_PADRAO, type Criterios, criteriosDoApp, criteriosNoHorario, normalizarCriterios, type PerfilCusto, REGUA_APP_VAZIA, taxas } from "./custos";
 
 // Mesmo perfil redondo de ganhos.test.ts: 60 c/km de variável e R$ 10/h de fixo.
 const perfil: PerfilCusto = { combustivel: "gasolina", consumo: 12, precoCombustivel: 600, desgaste: [{ nome: "Manutenção", valor: 100000, cadaKm: 10000 }], fixosMensais: [{ nome: "Aluguel", valor: 260000 }], diasPorMes: 26, horasPorDia: 10 };
@@ -80,5 +80,20 @@ describe("preferências do Copiloto", () => {
   it("mensagem pronta para o passageiro", () => {
     expect(montarMensagem("{saudacao}, {nome}! Chego em {tempo}.", { hora: 15, nome: "Filipe", minutos: 4 })).toBe("Boa tarde, Filipe! Chego em 4 min.");
     expect(montarMensagem("{saudacao}, {nome}! Chego em {tempo}.", { hora: 2 })).toBe("Boa noite, tudo bem? Chego em poucos minutos.");
+  });
+});
+
+describe("régua por aplicativo", () => {
+  it("lê só os apps conhecidos e só os campos preenchidos", () => {
+    const c = normalizarCriterios({ minimoPorKm: 200, porApp: { uber: { minimoPorKm: 180, valorMinimo: null }, indrive: { minimoPorKm: "x" }, outro: { minimoPorKm: 1 } } });
+    expect(c.porApp).toEqual({ uber: { ...REGUA_APP_VAZIA, minimoPorKm: 180 } });
+    expect(normalizarCriterios({}).porApp).toEqual({});
+  });
+
+  it("a régua do app vale por cima da geral; sem régua do app, vale a geral", () => {
+    const c = normalizarCriterios({ minimoPorKm: 200, minimoPorHora: 4000, valorMinimo: 800, porApp: { "99": { minimoPorKm: 150, valorMinimo: 0 } } });
+    expect(criteriosDoApp(c, "99")).toMatchObject({ minimoPorKm: 150, minimoPorHora: 4000, valorMinimo: 0 });
+    expect(criteriosDoApp(c, "uber")).toBe(c);
+    expect(criteriosDoApp(c, null)).toBe(c);
   });
 });

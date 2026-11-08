@@ -7,7 +7,7 @@ import { COR_SINAL } from "@/components/plantao/semaforo-cartao";
 import { Cartao, Vazio } from "@/components/ui";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
 import { avaliarCorrida } from "@/dominio/ganhos/corrida";
-import { taxas } from "@/dominio/ganhos/custos";
+import { criteriosDoApp, taxas } from "@/dominio/ganhos/custos";
 import { configPlantao, dadosDoPeriodo, intervaloExtrato, type PeriodoExtrato, PERIODOS_EXTRATO } from "@/lib/plantao";
 import { exigirUsuario } from "@/lib/sessao";
 
@@ -28,7 +28,7 @@ export default async function HistoricoOfertas({ searchParams }: { searchParams:
   const t = taxas(config.perfil);
   const todas = dados.corridas.map((c) => ({
     ...c,
-    a: avaliarCorrida({ valor: (c as { valor_final_centavos?: number | null }).valor_final_centavos ?? c.valor_centavos, kmCorrida: c.metros_corrida / 1000, minutosCorrida: c.minutos_corrida, kmBusca: c.metros_busca != null ? c.metros_busca / 1000 : null, minutosBusca: c.minutos_busca }, t, config.criterios),
+    a: avaliarCorrida({ valor: (c as { valor_final_centavos?: number | null }).valor_final_centavos ?? c.valor_centavos, kmCorrida: c.metros_corrida / 1000, minutosCorrida: c.minutos_corrida, kmBusca: c.metros_busca != null ? c.metros_busca / 1000 : null, minutosBusca: c.minutos_busca }, t, criteriosDoApp(config.criterios, c.app)),
   }));
   const semResposta = (c: { decisao: string | null }) => c.decisao !== "aceitei" && c.decisao !== "recusei";
   const lista = todas.filter((c) => filtro === "todas" || (filtro === "aceitas" ? c.decisao === "aceitei" : filtro === "recusadas" ? c.decisao === "recusei" : semResposta(c)));

@@ -54,6 +54,29 @@ data class FaixaHorario(
  * do "bom" é boa (verde) e no meio é para avaliar (amarelo). Com o "bom" em 0,
  * vale a régua simples: o mínimo é o verde e até 15% abaixo dele é amarelo.
  */
+/** Ajustes da régua para um app só; null = usa o valor da régua geral. */
+data class ReguaApp(
+    val minimoPorKm: Long? = null,
+    val minimoPorHora: Long? = null,
+    val bomPorKm: Long? = null,
+    val bomPorHora: Long? = null,
+    val valorMinimo: Long? = null,
+    val buscaMaximaKm: Double? = null,
+)
+
+/** Critérios que valem para uma oferta deste app (a régua do app por cima da geral). */
+fun Criterios.paraApp(app: String?): Criterios {
+    val r = porApp[app ?: return this] ?: return this
+    return copy(
+        minimoPorKm = r.minimoPorKm ?: minimoPorKm,
+        minimoPorHora = r.minimoPorHora ?: minimoPorHora,
+        bomPorKm = r.bomPorKm ?: bomPorKm,
+        bomPorHora = r.bomPorHora ?: bomPorHora,
+        valorMinimo = r.valorMinimo ?: valorMinimo,
+        buscaMaximaKm = r.buscaMaximaKm ?: buscaMaximaKm,
+    )
+}
+
 data class Criterios(
     /** Mínimo por km rodado (contando o caminho até o passageiro), em centavos. */
     val minimoPorKm: Long,
@@ -87,6 +110,8 @@ data class Criterios(
     val porHorario: List<FaixaHorario> = emptyList(),
     /** Contar o custo de voltar para a base (casa) no lucro. */
     val contarVolta: Boolean = false,
+    /** Régua própria de um app (uber, 99, indrive, 37city): o que estiver preenchido vale no lugar da geral. */
+    val porApp: Map<String, ReguaApp> = emptyMap(),
 )
 
 /** Mesmo PERFIL_PADRAO de custos.ts. */

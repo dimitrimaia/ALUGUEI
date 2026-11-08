@@ -2,12 +2,12 @@
 
 import { avisar } from "@/components/toast";
 import { acaoSegura } from "@/lib/versao";
-import { Bookmark, Clock, MapPin, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
+import { AppWindow, Bookmark, Clock, MapPin, MapPinOff, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState, useTransition } from "react";
 import { Aviso, Botao, Cartao } from "@/components/ui";
 import { formatarBRL } from "@/dominio/dinheiro/centavos";
-import { type Criterios, type FaixaHorario, normalizarCriterios } from "@/dominio/ganhos/custos";
+import { APPS_REGUA, type AppRegua, type Criterios, type FaixaHorario, NOME_APP_REGUA, normalizarCriterios, REGUA_APP_VAZIA, type ReguaApp } from "@/dominio/ganhos/custos";
 import { salvarPerfisRegua, salvarReguaCompleta } from "@/lib/acoes-plantao";
 import { EntradaNumero, EntradaReais } from "./entradas";
 
@@ -165,6 +165,8 @@ export function EditorRegua({ inicial, perfisIniciais }: { inicial: Criterios; p
         )}
       </Cartao>
 
+      <ReguaPorApp c={c} aoMudar={(porApp) => mudar({ porApp })} />
+
       <Lista titulo="Lugares a evitar" icone={<MapPinOff size={18} className="text-perigo" />} texto="Rua, bairro ou palavra. Se o embarque ou o destino tiver isso, a oferta fica vermelha. O botão “Evitar este lugar” da bolha também adiciona aqui." lista={c.evitar} aoMudar={(evitar) => mudar({ evitar })} tom="perigo" exemplo="Ex.: Morro do Papagaio" />
       <Lista titulo="Destinos desejados" icone={<MapPin size={18} className="text-ok" />} texto="Lugares para onde você gosta de ir (perto de casa, aeroporto). A oferta ganha um selo verde." lista={c.destinosDesejados} aoMudar={(destinosDesejados) => mudar({ destinosDesejados })} tom="ok" exemplo="Ex.: Contagem" />
 
@@ -230,6 +232,58 @@ function Perfis({ atual, iniciais, aoUsar }: { atual: Criterios; iniciais: { nom
         </div>
       )}
       {aviso && <p className="text-sm text-suave">{aviso}</p>}
+    </Cartao>
+  );
+}
+
+/** Régua própria por aplicativo (opcional): campo vazio = usa a régua geral. */
+function ReguaPorApp({ c, aoMudar }: { c: Criterios; aoMudar: (p: Criterios["porApp"]) => void }) {
+  const [aberto, setAberto] = useState<AppRegua | null>(null);
+  const mudarApp = (app: AppRegua, x: Partial<ReguaApp>) => {
+    const novo = { ...(c.porApp[app] ?? REGUA_APP_VAZIA), ...x };
+    const resto = { ...c.porApp };
+    if (Object.values(novo).every((v) => v === null)) delete resto[app];
+    else resto[app] = novo;
+    aoMudar(resto);
+  };
+  const campo = (app: AppRegua, chave: Exclude<keyof ReguaApp, "buscaMaximaKm">, rotulo: string, geral: number) => (
+    <label className="flex flex-col gap-1 text-xs font-semibold">
+      {rotulo}
+      <EntradaReais rotulo={`${NOME_APP_REGUA[app]}: ${rotulo}`} valor={c.porApp[app]?.[chave] ?? null} placeholder={geral ? `Geral: ${formatarBRL(geral)}` : "Geral: sem"} aoMudar={(v) => mudarApp(app, { [chave]: v })} />
+    </label>
+  );
+  return (
+    <Cartao className="flex flex-col gap-3">
+      <div>
+        <h2 className="flex items-center gap-2 font-bold"><AppWindow size={18} /> Régua por aplicativo</h2>
+        <p className="text-xs text-suave">Opcional. Ex.: aceitar menos por km no inDrive e mais na Uber. Deixe em branco para usar a régua geral.</p>
+      </div>
+      <div className="grid grid-cols-4 gap-1 rounded-xl bg-cartao-2 p-1">
+        {APPS_REGUA.map((app) => (
+          <button key={app} type="button" onClick={() => setAberto(aberto === app ? null : app)} aria-pressed={aberto === app} className={`relative h-9 rounded-lg text-xs font-semibold ${aberto === app ? "bg-cartao shadow-cartao" : "text-suave"}`}>
+            {NOME_APP_REGUA[app]}
+            {c.porApp[app] && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-marca" aria-label="tem régua própria" />}
+          </button>
+        ))}
+      </div>
+      {aberto && (
+        <div key={aberto} className="flex flex-col gap-2 rounded-xl bg-cartao-2 p-3">
+          <div className="grid grid-cols-2 gap-2">
+            {campo(aberto, "minimoPorKm", "Mínimo por km", c.minimoPorKm)}
+            {campo(aberto, "minimoPorHora", "Mínimo por hora", c.minimoPorHora)}
+            {campo(aberto, "bomPorKm", "Boa por km a partir de", c.bomPorKm)}
+            {campo(aberto, "bomPorHora", "Boa por hora a partir de", c.bomPorHora)}
+            {campo(aberto, "valorMinimo", "Valor mínimo", c.valorMinimo)}
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Busca máxima (km)
+              <EntradaNumero rotulo={`${NOME_APP_REGUA[aberto]}: busca máxima`} valor={c.porApp[aberto]?.buscaMaximaKm ?? null} placeholder={c.buscaMaximaKm ? `Geral: ${c.buscaMaximaKm}` : "Geral: sem"} aoMudar={(v) => mudarApp(aberto, { buscaMaximaKm: v })} />
+            </label>
+          </div>
+          {c.porApp[aberto] && (
+            <button type="button" onClick={() => { const resto = { ...c.porApp }; delete resto[aberto]; aoMudar(resto); }} className="self-start text-xs font-semibold text-perigo">Usar a régua geral no {NOME_APP_REGUA[aberto]}</button>
+          )}
+        </div>
+      )}
     </Cartao>
   );
 }

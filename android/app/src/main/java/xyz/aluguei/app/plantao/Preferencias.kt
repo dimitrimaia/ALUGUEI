@@ -316,6 +316,26 @@ object NormalizarCriterios {
             destinosDesejados = lista(o.opt("destinosDesejados")),
             porHorario = faixas(o.opt("porHorario")),
             contarVolta = Json.booleano(o, "contarVolta") ?: false,
+            porApp = porApp(o.opt("porApp")),
         )
     }
+
+    /** Igual ao porApp do TS: só os apps conhecidos; campo inválido ou vazio = usa a régua geral. */
+    private fun porApp(v: Any?): Map<String, ReguaApp> {
+        val o = v as? JSONObject ?: return emptyMap()
+        return APPS_REGUA.mapNotNull { app ->
+            val r = o.opt(app) as? JSONObject ?: return@mapNotNull null
+            val regua = ReguaApp(
+                minimoPorKm = reais(r, "minimoPorKm"),
+                minimoPorHora = reais(r, "minimoPorHora"),
+                bomPorKm = reais(r, "bomPorKm"),
+                bomPorHora = reais(r, "bomPorHora"),
+                valorMinimo = reais(r, "valorMinimo"),
+                buscaMaximaKm = Json.numero(r, "buscaMaximaKm", 0.0, 100.0),
+            )
+            if (regua == ReguaApp()) null else app to regua
+        }.toMap()
+    }
+
+    val APPS_REGUA = listOf("uber", "99", "indrive", "37city")
 }

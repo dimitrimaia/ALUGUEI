@@ -76,7 +76,31 @@ export type Criterios = {
   porHorario: FaixaHorario[];
   /** Contar o custo de voltar para a base (casa) no lucro. */
   contarVolta: boolean;
+  /** Régua própria de cada app (opcional): o que estiver preenchido vale no lugar da geral. */
+  porApp: Partial<Record<AppRegua, ReguaApp>>;
 };
+
+export const APPS_REGUA = ["uber", "99", "indrive", "37city"] as const;
+export type AppRegua = (typeof APPS_REGUA)[number];
+export const NOME_APP_REGUA: Record<AppRegua, string> = { uber: "Uber", "99": "99", indrive: "inDrive", "37city": "37 City" };
+/** null = usa o valor da régua geral. */
+export type ReguaApp = { minimoPorKm: Centavos | null; minimoPorHora: Centavos | null; bomPorKm: Centavos | null; bomPorHora: Centavos | null; valorMinimo: Centavos | null; buscaMaximaKm: number | null };
+export const REGUA_APP_VAZIA: ReguaApp = { minimoPorKm: null, minimoPorHora: null, bomPorKm: null, bomPorHora: null, valorMinimo: null, buscaMaximaKm: null };
+
+/** Critérios que valem para uma oferta deste app (a régua do app por cima da geral). Igual ao paraApp do Android. */
+export function criteriosDoApp(c: Criterios, app: string | null | undefined): Criterios {
+  const r = app ? c.porApp[app as AppRegua] : undefined;
+  if (!r) return c;
+  return {
+    ...c,
+    minimoPorKm: r.minimoPorKm ?? c.minimoPorKm,
+    minimoPorHora: r.minimoPorHora ?? c.minimoPorHora,
+    bomPorKm: r.bomPorKm ?? c.bomPorKm,
+    bomPorHora: r.bomPorHora ?? c.bomPorHora,
+    valorMinimo: r.valorMinimo ?? c.valorMinimo,
+    buscaMaximaKm: r.buscaMaximaKm ?? c.buscaMaximaKm,
+  };
+}
 
 export const PERFIL_PADRAO: PerfilCusto = {
   combustivel: "gasolina",
@@ -111,6 +135,7 @@ export const CRITERIOS_PADRAO: Criterios = {
   destinosDesejados: [],
   porHorario: [],
   contarVolta: false,
+  porApp: {},
 };
 
 const reais = z.coerce.number().int().min(0).max(100_000_000);
@@ -150,6 +175,22 @@ const esquemaCriterios = z.object({
     .max(6)
     .catch([]),
   contarVolta: z.boolean().catch(false),
+  porApp: z
+    .record(z.string(), z.unknown())
+    .catch({})
+    .transform((o) => {
+      const opc = (esq: z.ZodType<number>) => esq.nullable().catch(null);
+      const regua = z.object({
+        minimoPorKm: opc(reais), minimoPorHora: opc(reais), bomPorKm: opc(reais), bomPorHora: opc(reais), valorMinimo: opc(reais),
+        buscaMaximaKm: opc(z.coerce.number().min(0).max(100)),
+      });
+      const saida: Partial<Record<AppRegua, ReguaApp>> = {};
+      for (const app of APPS_REGUA) {
+        const r = regua.safeParse(o[app] ?? null);
+        if (r.success && Object.values(r.data).some((v) => v !== null)) saida[app] = r.data;
+      }
+      return saida;
+    }),
 });
 
 /** Lê o que veio do banco ou do formulário; o que estiver inválido volta ao padrão. */

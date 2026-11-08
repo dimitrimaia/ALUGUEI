@@ -486,7 +486,7 @@ class BolhaService : Service() {
      */
     private fun notificarOferta(o: OfertaDetalhada, r: Copiloto.Resultado, corridaId: String) {
         val sugestao = if (o.app == "indrive" && o.suaOferta == null && o.valorFinal == null && r.lugarEvitado == null) {
-            Copiloto.sugerir(o, taxas(Armazenamento.perfil(this)), reguaAgora().criterios, r.avaliacao.sinal)
+            Copiloto.sugerir(o, taxas(Armazenamento.perfil(this)), reguaAgora().criterios.paraApp(o.app), r.avaliacao.sinal)
         } else {
             null
         }
@@ -1452,7 +1452,7 @@ class BolhaService : Service() {
                 numeros.setTextColor(pal.secundario)
                 return
             }
-            val a = Copiloto.avaliar(o, taxas(Armazenamento.perfil(this)), reguaAgora().criterios).avaliacao
+            val a = Copiloto.avaliar(o, taxas(Armazenamento.perfil(this)), reguaAgora().criterios.paraApp(o.app)).avaliacao
             val cor = corDoSinal(a.sinal)
             selo.text = seloDoSinal(a.sinal)
             selo.background = fundoArredondado(cor, 99)
@@ -1738,7 +1738,7 @@ class BolhaService : Service() {
     }
 
     private fun avaliar(o: OfertaDetalhada, c: Criterios = reguaAgora().criterios): Copiloto.Resultado =
-        Copiloto.avaliar(o, taxas(Armazenamento.perfil(this)), c, Armazenamento.lugaresAdicionados(this))
+        Copiloto.avaliar(o, taxas(Armazenamento.perfil(this)), c.paraApp(o.app), Armazenamento.lugaresAdicionados(this))
 
     /**
      * Uma oferta chegou (do plugin "simular" ou digitada): avalia, guarda na fila,
@@ -2180,7 +2180,7 @@ class BolhaService : Service() {
         }
         alerta?.let { (t, c) -> addView(texto(t, 12f, c, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END }, margem(6)) }
         val sugestao = if (o.app == "indrive" && origem == "leitura" && o.suaOferta == null && r.lugarEvitado == null) {
-            Copiloto.sugerir(o, taxas(Armazenamento.perfil(this@BolhaService)), reguaAgora().criterios, a.sinal)
+            Copiloto.sugerir(o, taxas(Armazenamento.perfil(this@BolhaService)), reguaAgora().criterios.paraApp(o.app), a.sinal)
         } else {
             null
         }
