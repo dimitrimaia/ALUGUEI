@@ -129,7 +129,7 @@ export default async function ExtratoPlantao({ searchParams }: { searchParams: P
                         <p className="truncate text-xs text-suave">{new Date(l.quando).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}{l.detalhe ? ` · ${l.detalhe}` : ""}</p>
                       </div>
                       <span className={`text-sm font-bold tabular-nums ${l.valor >= 0 ? "text-ok" : ""}`}>{l.valor >= 0 ? "+" : "−"}{formatarBRL(Math.abs(l.valor))}</span>
-                      {/* Corridas do Copiloto: corrija no Histórico de ofertas (não são um lançamento). */}
+                      {/* Corridas do Copiloto: corrija em Minhas corridas (não são um lançamento). */}
                       {l.automatico ? <Link href="/m/plantao/historico" className="text-xs font-semibold text-marca">Ofertas</Link> : <BotaoExcluir tipo={l.tipo} id={l.id} />}
                     </div>
                   ))}

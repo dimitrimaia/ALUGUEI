@@ -1,25 +1,29 @@
 "use client";
 
-import { avisar } from "@/components/toast";
-import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useOptimistic, useTransition } from "react";
+import { avisar } from "@/components/toast";
 import { corrigirDecisao } from "@/lib/acoes-plantao";
 
-/** Aceitei/Recusei tocável no histórico: corrige o que o Copiloto registrou. */
+/**
+ * "Fiz" / "Não fiz" de cada corrida: corrige o que o Copiloto registrou.
+ * Só as marcadas como "Fiz" entram no ganho do dia.
+ */
 export function DecisaoOferta({ id, decisao }: { id: string; decisao: string | null }) {
   const [, iniciar] = useTransition();
   const [atual, mudar] = useOptimistic(decisao);
   const definir = (d: "aceitei" | "recusei") =>
     iniciar(async () => {
-      const nova = atual === d ? null : d;
-      mudar(nova);
-      await corrigirDecisao(id, nova);
-      avisar(nova === "aceitei" ? "Marcada como corrida que você pegou" : nova === "recusei" ? "Marcada como não pegou" : "Marcação tirada");
+      if (atual === d) return;
+      mudar(d);
+      await corrigirDecisao(id, d);
+      avisar(d === "aceitei" ? "Corrida feita: entra no seu ganho" : "Corrida não feita: saiu do seu ganho");
     });
+  const base = "flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-colors";
   return (
-    <div className="flex shrink-0 gap-1">
-      <button type="button" aria-label="Marcar como aceita" aria-pressed={atual === "aceitei"} onClick={() => definir("aceitei")} className={`grid size-9 place-items-center rounded-full ${atual === "aceitei" ? "bg-ok-suave text-ok" : "text-suave/60 hover:bg-cartao-2"}`}><ThumbsUp size={16} /></button>
-      <button type="button" aria-label="Marcar como recusada" aria-pressed={atual === "recusei"} onClick={() => definir("recusei")} className={`grid size-9 place-items-center rounded-full ${atual === "recusei" ? "bg-cartao-2 text-texto" : "text-suave/60 hover:bg-cartao-2"}`}><ThumbsDown size={16} /></button>
+    <div className="flex shrink-0 gap-1" role="group" aria-label="Você fez esta corrida?">
+      <button type="button" aria-pressed={atual === "aceitei"} onClick={() => definir("aceitei")} className={`${base} ${atual === "aceitei" ? "bg-ok text-white" : "border border-borda text-suave"}`}><Check size={14} /> Fiz</button>
+      <button type="button" aria-pressed={atual === "recusei"} onClick={() => definir("recusei")} className={`${base} ${atual === "recusei" ? "bg-texto text-fundo" : "border border-borda text-suave"}`}><X size={14} /> Não fiz</button>
     </div>
   );
 }

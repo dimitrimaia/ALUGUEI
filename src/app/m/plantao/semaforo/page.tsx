@@ -20,7 +20,7 @@ export default async function Semaforo() {
         {[
           { href: "/m/plantao/regua", rotulo: "Régua", texto: "O que é corrida boa", icone: SlidersHorizontal },
           { href: "/m/plantao/configuracoes", rotulo: "Ajustes", texto: "Tudo do Copiloto", icone: Wrench },
-          { href: "/m/plantao/historico", rotulo: "Ofertas", texto: "O que passou", icone: History },
+          { href: "/m/plantao/historico", rotulo: "Minhas corridas", texto: "Fiz e não fiz", icone: History },
         ].map(({ href, rotulo, texto, icone: Icone }) => (
           <Link key={href} href={href as Route} className="flex flex-col gap-2 rounded-[1.1rem] border border-borda bg-cartao p-3 shadow-cartao transition-transform active:scale-[0.97]">
             <span className="flex items-center justify-between"><span className="grid size-9 place-items-center rounded-xl bg-marca-suave text-marca"><Icone size={18} /></span><ChevronRight size={15} className="text-suave" /></span>

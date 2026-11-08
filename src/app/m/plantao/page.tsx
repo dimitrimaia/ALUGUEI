@@ -23,7 +23,7 @@ const FERRAMENTAS = [
   { href: "/m/plantao/calculadora", rotulo: "Calculadora", detalhe: "Oferta, entrega e combustível", icone: Calculator },
   { href: "/m/plantao/semaforo", rotulo: "Copiloto", detalhe: "Bolha sobre o inDrive e a Uber", icone: Gauge },
   { href: "/m/plantao/extrato", rotulo: "Extrato", detalhe: "Ganhos e gastos, um a um", icone: BarChart3 },
-  { href: "/m/plantao/historico", rotulo: "Ofertas", detalhe: "Aceitas, recusadas e prejuízo evitado", icone: History },
+  { href: "/m/plantao/historico", rotulo: "Minhas corridas", detalhe: "Fiz, não fiz e prejuízo evitado", icone: History },
   { href: "/m/plantao/financas", rotulo: "Finanças", detalhe: "Meta do mês e reserva", icone: PiggyBank },
   { href: "/m/caronas", rotulo: "Caronas", detalhe: "Divida o custo da viagem", icone: Users },
   { href: "/m/clientes", rotulo: "Meus clientes", detalhe: "Seu link de corridas", icone: Link2 },
