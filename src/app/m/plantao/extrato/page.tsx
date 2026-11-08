@@ -130,7 +130,7 @@ export default async function ExtratoPlantao({ searchParams }: { searchParams: P
                       </div>
                       <span className={`text-sm font-bold tabular-nums ${l.valor >= 0 ? "text-ok" : ""}`}>{l.valor >= 0 ? "+" : "−"}{formatarBRL(Math.abs(l.valor))}</span>
                       {/* Corridas do Copiloto: corrija em Minhas corridas (não são um lançamento). */}
-                      {l.automatico ? <Link href="/m/plantao/historico" className="text-xs font-semibold text-marca">Ofertas</Link> : <BotaoExcluir tipo={l.tipo} id={l.id} />}
+                      {l.automatico ? <Link href="/m/plantao/historico" className="text-xs font-semibold text-marca">Corrigir</Link> : <BotaoExcluir tipo={l.tipo} id={l.id} />}
                     </div>
                   ))}
                 </div>
