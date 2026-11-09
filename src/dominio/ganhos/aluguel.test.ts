@@ -44,6 +44,13 @@ describe("aluguel fora do Aluguei", () => {
     expect(normalizarAluguel({ ...base, diaPagamento: 9 })!.diaPagamento).toBeNull();
   });
 
+  it("primeiro pagamento depois de diárias grátis: a cada 7 dias a partir dele", () => {
+    const gratis = normalizarAluguel({ ...base, primeiroPagamento: "2026-10-26" })!; // pegou sábado 24, 2 dias grátis
+    expect(proximoPagamento(gratis, data("2026-10-24"))).toBe("2026-10-26");
+    expect(proximoPagamento(gratis, data("2026-11-02"))).toBe("2026-11-02");
+    expect(proximoPagamento(gratis, data("2026-11-03"))).toBe("2026-11-09");
+  });
+
   it("vistoria a cada 15 dias desde a última", () => {
     expect(proximaVistoria(base)).toBe("2026-11-08");
     expect(proximaVistoria({ ...base, ultimaVistoria: data("2026-11-09") })).toBe("2026-11-24");
