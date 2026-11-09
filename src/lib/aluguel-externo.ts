@@ -5,21 +5,43 @@ import { type AluguelExterno, type LeituraKm, normalizarAluguel } from "@/domini
 import { supabaseAdmin } from "./supabase/admin";
 
 /**
- * Carro alugado fora do Aluguei. Fica nos dados da conta (user_metadata.aluguel),
- * como as preferências: é da própria pessoa, sem tabela nem migração.
+ * Carros alugados fora do Aluguei. Ficam nos dados da conta (user_metadata.alugueis),
+ * como as preferências: são da própria pessoa, sem tabela nem migração. O antigo
+ * campo único (user_metadata.aluguel) é lido como o primeiro carro da lista.
  */
 
-export const aluguelExterno = cache(async (usuarioId: string): Promise<AluguelExterno | null> => {
+export type AluguelSalvo = AluguelExterno & { id: string };
+
+function lerLista(meta: Record<string, unknown> | undefined): AluguelSalvo[] {
+  const brutos: unknown[] = Array.isArray(meta?.alugueis) ? (meta.alugueis as unknown[]) : meta?.aluguel ? [{ ...(meta.aluguel as object), id: "principal" }] : [];
+  return brutos
+    .map((b) => {
+      const id = typeof (b as { id?: unknown })?.id === "string" ? (b as { id: string }).id : null;
+      const a = normalizarAluguel(b);
+      return id && a ? { ...a, id } : null;
+    })
+    .filter((a): a is AluguelSalvo => a !== null)
+    // Em uso primeiro; depois os mais recentes.
+    .sort((x, y) => Number(Boolean(x.devolucao)) - Number(Boolean(y.devolucao)) || y.inicio.localeCompare(x.inicio));
+}
+
+export const alugueisExternos = cache(async (usuarioId: string): Promise<AluguelSalvo[]> => {
   const { data: u } = await supabaseAdmin().auth.admin.getUserById(usuarioId);
-  return normalizarAluguel((u.user?.user_metadata as Record<string, unknown> | undefined)?.aluguel);
+  return lerLista(u.user?.user_metadata as Record<string, unknown> | undefined);
 });
 
-/** Grava (ou apaga, com null) mantendo o resto dos dados da conta. */
-export async function gravarAluguel(usuarioId: string, aluguel: AluguelExterno | null): Promise<void> {
+/** Um carro pelo id; sem id, o carro em uso agora (o que entra no Plantão e nos lembretes). */
+export async function aluguelExterno(usuarioId: string, id?: string): Promise<AluguelSalvo | null> {
+  const lista = await alugueisExternos(usuarioId);
+  return (id ? lista.find((a) => a.id === id) : lista.find((a) => !a.devolucao)) ?? null;
+}
+
+/** Grava a lista inteira mantendo o resto dos dados da conta (e aposenta o campo antigo). */
+export async function gravarAlugueis(usuarioId: string, lista: AluguelSalvo[]): Promise<void> {
   const admin = supabaseAdmin();
   const { data: u, error } = await admin.auth.admin.getUserById(usuarioId);
   if (error || !u.user) throw new Error("Conta não encontrada");
-  const meta = { ...(u.user.user_metadata ?? {}), aluguel };
+  const meta = { ...(u.user.user_metadata ?? {}), alugueis: lista, aluguel: null };
   const { error: e2 } = await admin.auth.admin.updateUserById(usuarioId, { user_metadata: meta });
   if (e2) throw e2;
 }

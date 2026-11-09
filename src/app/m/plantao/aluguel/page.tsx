@@ -1,132 +1,86 @@
-import { CalendarClock, ClipboardCheck, Droplets, LogOut, MessageCircle, Pencil, ShieldAlert, Wallet } from "lucide-react";
+import { CalendarClock, ChevronRight, KeyRound, Plus } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CabecalhoMotorista } from "@/components/motorista/cabecalho";
-import { AcoesAluguel, PerguntasLocadora } from "@/components/plantao/aluguel";
-import { Aviso, Cartao, Placa } from "@/components/ui";
-import { type DataISO, diasEntre, formatarData, hoje, somarDias } from "@/dominio/datas/data";
-import { type Centavos, formatarBRL } from "@/dominio/dinheiro/centavos";
-import { custoParaSair, fimPrazoMinimo, kmDoCiclo, lembretesDoDia, proximaVistoria, proximoPagamento, trocaDeOleo } from "@/dominio/ganhos/aluguel";
-import { aluguelExterno, leiturasDeKm } from "@/lib/aluguel-externo";
+import { BotaoLink, Cartao, Placa } from "@/components/ui";
+import { diasEntre, formatarData, hoje } from "@/dominio/datas/data";
+import { formatarBRL } from "@/dominio/dinheiro/centavos";
+import { proximoPagamento } from "@/dominio/ganhos/aluguel";
+import { alugueisExternos } from "@/lib/aluguel-externo";
 import { exigirUsuario } from "@/lib/sessao";
 
-export const metadata = { title: "Meu carro alugado" };
+export const metadata = { title: "Carros alugados" };
 
-const km = (n: number) => n.toLocaleString("pt-BR");
-const emDias = (d: number) => (d === 0 ? "hoje" : d === 1 ? "amanhã" : d < 0 ? `há ${-d} dia${d < -1 ? "s" : ""}` : `em ${d} dias`);
+const emDias = (d: number) => (d === 0 ? "hoje" : d === 1 ? "amanhã" : `em ${d} dias`);
 
-function Bloco({ icone: Icone, titulo, valor, detalhe, tom = "marca" }: { icone: typeof Wallet; titulo: string; valor: string; detalhe?: string; tom?: "marca" | "alerta" | "perigo" }) {
-  const cor = { marca: "bg-marca-suave text-marca", alerta: "bg-alerta/15 text-alerta", perigo: "bg-perigo/15 text-perigo" }[tom];
-  return (
-    <Cartao className="flex flex-col gap-2 p-3">
-      <span className={`grid size-9 place-items-center rounded-xl ${cor}`}><Icone size={18} /></span>
-      <span className="text-[0.7rem] font-semibold tracking-wide text-suave uppercase">{titulo}</span>
-      <span className="text-base leading-tight font-bold">{valor}</span>
-      {detalhe && <span className="text-xs leading-tight text-suave">{detalhe}</span>}
-    </Cartao>
-  );
-}
-
-/** Painel do carro alugado fora do Aluguei: o que o contrato cobra e quando. */
-export default async function MeuCarroAlugado() {
+/** Os carros alugados fora do Aluguei: o que está em uso e os que já foram devolvidos. */
+export default async function CarrosAlugados() {
   const usuario = await exigirUsuario("/m/plantao/aluguel");
-  const a = await aluguelExterno(usuario.id);
-  if (!a) redirect("/m/plantao/aluguel/editar");
+  const lista = await alugueisExternos(usuario.id);
+  if (!lista.length) redirect("/m/plantao/aluguel/novo");
   const dia = hoje();
-  const leituras = await leiturasDeKm(usuario.id, a);
-  const lembretes = lembretesDoDia(a, dia, leituras);
-  const pagamento = proximoPagamento(a, dia);
-  const vistoria = proximaVistoria(a);
-  const fim = fimPrazoMinimo(a);
-  const sair = custoParaSair(a, dia);
-  const k = kmDoCiclo(a, leituras, dia);
-  const oleo = trocaDeOleo(a, k.kmAtual);
-  const whatsapp = a.telefoneLocadora.replace(/\D/g, "");
-  const dataBR = (d: DataISO) => formatarData(d).slice(0, 5);
-  const brl = (c: Centavos) => formatarBRL(c).replace(",00", "");
+  const emUso = lista.filter((a) => !a.devolucao);
+  const devolvidos = lista.filter((a) => a.devolucao);
 
   return (
     <div className="flex flex-col gap-4">
-      <CabecalhoMotorista titulo="Meu carro alugado" voltar="/m/plantao" acao={<Link href={"/m/plantao/aluguel/editar" as Route} className="flex h-9 items-center gap-1.5 rounded-xl border border-borda bg-cartao px-3 text-sm font-semibold text-marca"><Pencil size={15} /> Editar</Link>} />
+      <CabecalhoMotorista titulo="Carros alugados" voltar="/m/plantao" acao={<BotaoLink href={"/m/plantao/aluguel/novo" as Route} variante="secundario" tamanho="sm"><Plus size={15} /> Novo</BotaoLink>} />
 
-      <Cartao className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-bold">{a.modelo || "Carro alugado"}</p>
-          <p className="truncate text-sm text-suave">{a.locadora}{a.numeroContrato && ` · ${a.numeroContrato}`}</p>
-          <p className="text-xs text-suave">Desde {formatarData(a.inicio)} · {brl(a.valorSemanal)} por semana</p>
-        </div>
-        {a.placa && <Placa placa={a.placa} tamanho="sm" />}
-      </Cartao>
-
-      {a.devolucao ? (
-        <Aviso tom="ok" titulo={`Carro devolvido em ${formatarData(a.devolucao)}`}>
-          {a.caucao > 0 ? `A ${a.locadora} tem até ${formatarData(somarDias(a.devolucao, a.devolucaoCaucaoDias))} para devolver a caução de ${brl(a.caucao)} e a nota promissória.` : "Os lembretes pararam."}
-        </Aviso>
-      ) : (
-        lembretes.map((l) => <Aviso key={l.chave} tom={l.nivel === "info" ? "info" : l.nivel} titulo={l.titulo}>{l.texto}</Aviso>)
-      )}
-
-      {!a.devolucao && (
-        <>
-          <div className="grid grid-cols-2 gap-2">
-            <Bloco icone={Wallet} titulo="Próximo aluguel" valor={`${dataBR(pagamento)} · ${brl(a.valorSemanal)}`} detalhe={`Vence ${emDias(diasEntre(dia, pagamento))}. Dia errado? Toque em Editar e escolha o dia do vencimento.`} tom={diasEntre(dia, pagamento) <= 1 ? "alerta" : "marca"} />
-            {vistoria && <Bloco icone={ClipboardCheck} titulo="Próxima vistoria" valor={dataBR(vistoria)} detalhe={`${emDias(diasEntre(dia, vistoria)).replace(/^./, (c) => c.toUpperCase())} · a cada ${a.vistoriaCadaDias} dias`} tom={diasEntre(dia, vistoria) < 0 ? "perigo" : diasEntre(dia, vistoria) <= 2 ? "alerta" : "marca"} />}
-            {fim && <Bloco icone={CalendarClock} titulo="Prazo mínimo" valor={sair.dentroDoPrazo ? `Até ${dataBR(fim)}` : "Cumprido"} detalhe={sair.dentroDoPrazo ? `Dia ${diasEntre(a.inicio, dia) + 1} de ${a.prazoMinimoDias}` : `Para sair, avise com ${a.avisoSaidaDias} dias.`} />}
-            <Bloco icone={LogOut} titulo="Sair hoje custa" valor={sair.multa ? brl(sair.multa) : "Sem multa"} detalhe={sair.dentroDoPrazo ? `${a.multaRescisaoBps / 100}% de ${sair.semanasRestantes} semana${sair.semanasRestantes > 1 ? "s" : ""}${sair.multaExtraPossivel ? `; pode somar ${brl(sair.multaExtraPossivel)}` : ""}` : `Aviso de ${a.avisoSaidaDias} dias`} tom={sair.multa ? "alerta" : "marca"} />
-          </div>
-
-          {k.limite > 0 && (
-            <Cartao className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between">
-                <h2 className="font-bold">Km do mês</h2>
-                <span className="text-xs text-suave">{dataBR(k.de)} a {dataBR(k.ate)}</span>
+      {emUso.map((a) => {
+        const pag = proximoPagamento(a, dia);
+        const faltam = diasEntre(dia, pag);
+        return (
+          <Link key={a.id} href={`/m/plantao/aluguel/${a.id}` as Route} className="fundo-marca relative flex flex-col gap-4 overflow-hidden rounded-[1.4rem] p-5 text-white shadow-flutuante">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2 py-0.5 text-[0.7rem] font-semibold"><span className="size-1.5 rounded-full bg-[#4ade80]" /> Em uso</span>
+                <p className="mt-2 truncate text-xl font-bold">{a.modelo || "Carro alugado"}</p>
+                <p className="truncate text-sm text-white/75">{a.locadora} · desde {formatarData(a.inicio)}</p>
               </div>
-              <div className="flex items-baseline gap-1.5"><span className="text-2xl font-bold tabular-nums">{km(k.rodados)}</span><span className="text-sm text-suave">de {km(k.limite)} km</span></div>
-              <div className="relative h-2.5 overflow-hidden rounded-full bg-cartao-2">
-                <div className={`h-full rounded-full ${k.rodados > k.limite ? "bg-perigo" : k.projecao > k.limite ? "bg-alerta" : "bg-ok"}`} style={{ width: `${Math.min(100, (k.rodados * 100) / k.limite)}%` }} />
+              {a.placa && <Placa placa={a.placa} tamanho="sm" />}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-white/12 p-3 ring-1 ring-white/15">
+                <p className="text-[0.7rem] text-white/70">Próximo aluguel</p>
+                <p className="font-bold tabular-nums">{formatarData(pag).slice(0, 5)} · {formatarBRL(a.valorSemanal).replace(",00", "")}</p>
+                <p className={`text-xs ${faltam <= 1 ? "font-semibold text-[#ffd27a]" : "text-white/70"}`}>Vence {emDias(faltam)}</p>
               </div>
-              <p className="text-xs text-suave">
-                {k.kmAtual === null
-                  ? "Anote o km do painel abaixo (ou no início e no fim do plantão) para acompanhar."
-                  : k.custoExcedenteProjetado
-                    ? `No ritmo de agora: ${km(k.projecao)} km no mês, ≈ ${brl(k.custoExcedenteProjetado)} de km excedente (${brl(a.valorKmExcedente)}/km). Até ${km(k.porDiaRestante ?? 0)} km por dia fica dentro.`
-                    : `No ritmo de agora: ${km(k.projecao)} km no mês, dentro do limite. Pode rodar até ${km(k.porDiaRestante ?? 0)} km por dia.`}
-              </p>
-            </Cartao>
-          )}
+              <div className="flex items-center justify-between rounded-xl bg-white/12 p-3 ring-1 ring-white/15">
+                <span className="text-sm font-semibold">Ver tudo</span>
+                <ChevronRight size={18} />
+              </div>
+            </div>
+          </Link>
+        );
+      })}
 
-          {oleo && (
-            <Bloco icone={Droplets} titulo="Troca de óleo" valor={oleo.faltam > 0 ? `Faltam ${km(oleo.faltam)} km` : `Passou ${km(-oleo.faltam)} km`} detalhe={`Próxima com ${km(oleo.proximaKm)} km no painel. Combine com a locadora antes.`} tom={oleo.faltam <= 0 ? "perigo" : oleo.faltam <= 500 ? "alerta" : "marca"} />
-          )}
-
-          <AcoesAluguel devolvido={a.devolucao} temVistoria={a.vistoriaCadaDias > 0} temOleo={Boolean(a.trocaOleoCadaKm)} />
-        </>
+      {!emUso.length && (
+        <Cartao className="flex flex-col items-center gap-2 py-6 text-center">
+          <KeyRound size={22} className="text-marca" />
+          <p className="font-semibold">Nenhum carro em uso</p>
+          <p className="text-sm text-suave">Alugou outro carro? Cadastre para o app avisar pagamento, vistoria e km.</p>
+          <BotaoLink href={"/m/plantao/aluguel/novo" as Route} className="mt-1"><Plus size={16} /> Cadastrar carro</BotaoLink>
+        </Cartao>
       )}
 
-      {a.devolucao && <AcoesAluguel devolvido={a.devolucao} temVistoria={false} temOleo={false} />}
-
-      <Cartao className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-2 font-bold"><ShieldAlert size={18} className="text-marca" /> Proteção e garantias</h2>
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-          {a.franquiaRoubo > 0 && (<><dt className="text-suave">Franquia roubo/perda</dt><dd className="text-right font-semibold">{brl(a.franquiaRoubo)}</dd></>)}
-          {a.franquiaColisao > 0 && (<><dt className="text-suave">Franquia batida</dt><dd className="text-right font-semibold">{brl(a.franquiaColisao)}</dd></>)}
-          {a.franquiaTerceiros > 0 && (<><dt className="text-suave">Carro de terceiro</dt><dd className="text-right font-semibold">{brl(a.franquiaTerceiros)}</dd></>)}
-          {a.caucao > 0 && (<><dt className="text-suave">Caução</dt><dd className="text-right font-semibold">{brl(a.caucao)}</dd></>)}
-          <dt className="text-suave">Nota promissória</dt><dd className={`text-right font-semibold ${a.valorPromissoria === null ? "text-alerta" : ""}`}>{a.valorPromissoria === null ? "Em branco" : brl(a.valorPromissoria)}</dd>
-          {a.acrescimoMultaBps > 0 && (<><dt className="text-suave">Multa de trânsito</dt><dd className="text-right font-semibold">+{a.acrescimoMultaBps / 100}%</dd></>)}
-        </dl>
-        <p className="text-xs text-suave">Para não perder a proteção: respeite a velocidade, não rode na reserva, avise a locadora na hora de qualquer batida (com B.O.) e não faça acordo sem ela.</p>
-        {a.observacoes && <p className="rounded-xl bg-cartao-2 p-3 text-xs whitespace-pre-line">{a.observacoes}</p>}
-      </Cartao>
-
-      <PerguntasLocadora inicial={a.perguntas} />
-
-      {whatsapp && (
-        <a href={`https://wa.me/${whatsapp.length <= 11 ? `55${whatsapp}` : whatsapp}`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-xl border border-borda-forte bg-cartao py-3 text-sm font-semibold">
-          <MessageCircle size={17} /> Falar com a {a.locadora}
-        </a>
+      {devolvidos.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-bold text-suave">Já devolvidos</h2>
+          {devolvidos.map((a) => (
+            <Link key={a.id} href={`/m/plantao/aluguel/${a.id}` as Route} className="flex items-center gap-3 rounded-[1.1rem] border border-borda bg-cartao p-3 shadow-cartao">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-cartao-2 text-suave"><CalendarClock size={18} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{a.modelo || "Carro alugado"} · {a.locadora}</span>
+                <span className="block text-xs text-suave">{formatarData(a.inicio)} a {formatarData(a.devolucao!)}</span>
+              </span>
+              <ChevronRight size={17} className="text-suave" />
+            </Link>
+          ))}
+        </section>
       )}
+
+      <p className="text-center text-xs text-suave">Só o carro em uso entra no Plantão (aluguel descontado do lucro) e nos lembretes.</p>
     </div>
   );
 }

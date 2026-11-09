@@ -32,7 +32,7 @@ export const listarUsuarios = cache(async (): Promise<UsuarioAdmin[]> => {
         ultimoLogin: u.last_sign_in_at ?? null,
         emailConfirmado: Boolean(u.email_confirmed_at),
         bloqueado: Boolean(u.banned_until && new Date(u.banned_until) > new Date()),
-        temAluguelExterno: Boolean(meta.aluguel),
+        temAluguelExterno: Boolean(meta.aluguel) || (Array.isArray(meta.alugueis) && meta.alugueis.length > 0),
       });
     }
     if (data.users.length < 1000) break;
