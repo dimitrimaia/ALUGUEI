@@ -166,7 +166,7 @@ textarea {
 
 /* Espaço para a barra inferior fixa no celular, respeitando o recorte da tela. */
 .pb-barra {
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
 }
 
 /* Fundo de destaque da marca: azul profundo com brilho. */

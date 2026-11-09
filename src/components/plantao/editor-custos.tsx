@@ -130,7 +130,7 @@ export function EditorCustos({ inicial, metaInicial, aluguelSemanal }: { inicial
             } else if (r.erro) avisar(r.erro, "erro");
           })
         }
-        className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] w-full"
+        className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] w-full lg:bottom-6"
       >
         {salvando ? "Salvando…" : "Salvar custos"}
       </Botao>

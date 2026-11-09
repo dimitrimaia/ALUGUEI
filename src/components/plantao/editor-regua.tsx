@@ -176,7 +176,7 @@ export function EditorRegua({ inicial, perfisIniciais }: { inicial: Criterios; p
         tamanho="lg"
         icone={Save}
         disabled={salvando}
-        className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] w-full"
+        className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] w-full lg:bottom-6"
         onClick={() =>
           iniciar(async () => {
             const r = await acaoSegura(() => salvarReguaCompleta(c));

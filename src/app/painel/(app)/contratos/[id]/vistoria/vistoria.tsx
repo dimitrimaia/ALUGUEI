@@ -223,7 +223,7 @@ export function VistoriaEntrega({
 
       {erro && <Aviso tom="perigo">{erro}</Aviso>}
 
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 lg:bottom-4">
+      <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-4">
         <Botao tamanho="lg" className="w-full shadow-flutuante" onClick={concluir} disabled={concluindo || enviando || faltam > 0} icone={concluindo ? Loader2 : Check}>
           {concluindo ? "Salvando…" : enviando ? "Enviando fotos…" : faltam > 0 ? `Faltam ${faltam} item(ns)` : "Concluir vistoria"}
         </Botao>
