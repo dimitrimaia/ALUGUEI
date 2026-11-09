@@ -32,9 +32,9 @@ function BotaoMenu() {
 }
 
 function BotaoConversas() {
-  const { naoLidas } = useConta();
+  const { naoLidas, modo } = useConta();
   return (
-    <Link href="/painel/conversas" aria-label="Conversas" className="relative grid size-10 place-items-center rounded-full hover:bg-cartao-2">
+    <Link href={modo === "locador" ? "/painel/conversas" : "/m/conversas"} aria-label="Conversas" className="relative grid size-10 place-items-center rounded-full hover:bg-cartao-2">
       <MessageCircle size={21} />
       {naoLidas > 0 && <span className="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-[#ffb020] px-1 text-[0.6rem] font-bold text-[#3a2500] ring-2 ring-cartao">{naoLidas}</span>}
     </Link>
@@ -56,7 +56,7 @@ export function BarraTopo({ voltar, titulo, className = "" }: { voltar?: string;
   const { modo } = useConta();
   return (
     <>
-      <header className={`fixed inset-x-0 top-0 z-30 border-b border-borda bg-cartao/90 pt-[env(safe-area-inset-top)] backdrop-blur ${className}`}>
+      <header className={`fixed inset-x-0 top-0 z-30 border-b border-borda bg-cartao/90 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden ${className}`}>
         <div className="mx-auto flex h-14 max-w-[42rem] items-center gap-1 px-2">
           {voltar ? (
             <>
@@ -66,13 +66,20 @@ export function BarraTopo({ voltar, titulo, className = "" }: { voltar?: string;
           ) : (
             <Link href={modo === "locador" ? "/painel" : "/m"} className="flex-1 pl-2" aria-label="Início do app"><Marca /></Link>
           )}
-          {/* No modo locador o rodapé não tem espaço para Conversas (tem o +), então ela fica aqui. */}
+          {/* O rodapé tem o botão do meio (+ ou Copiloto), então Conversas fica aqui nos dois modos. */}
           <BotaoAvisos />
-          {modo === "locador" && <BotaoConversas />}
+          <BotaoConversas />
           <BotaoMenu />
         </div>
       </header>
-      <div className={`${ALTURA_TOPO} ${className}`} aria-hidden />
+      <div className={`${ALTURA_TOPO} lg:hidden ${className}`} aria-hidden />
+      {/* Computador: a lateral e a barra de cima já têm logo, avisos e menu; aqui fica só voltar + título. */}
+      {voltar && (
+        <div className={`hidden items-center gap-2 pt-8 pb-2 lg:flex ${className}`}>
+          <BotaoVoltar destino={voltar} className="grid size-10 shrink-0 place-items-center rounded-full border border-borda bg-cartao hover:bg-cartao-2" />
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">{titulo}</h1>
+        </div>
+      )}
     </>
   );
 }
@@ -114,11 +121,14 @@ function ItemAba({ aba, atual }: { aba: Aba; atual: boolean }) {
   );
 }
 
-/** Botão + do meio (locador): mesmo tamanho de toque das abas, destacado. */
-export function BotaoCentral({ aoTocar }: { aoTocar: () => void }) {
+/** Botão do meio, destacado: + no locador, Copiloto no motorista. Mesmo desenho nos dois modos. */
+export function BotaoCentral({ aoTocar, icone: Icone = Plus, rotulo = "Novo", ativo = false }: { aoTocar: () => void; icone?: LucideIcon; rotulo?: string; ativo?: boolean }) {
   return (
-    <button onClick={aoTocar} aria-label="Criar novo" className="-mt-5 grid size-13 place-items-center rounded-2xl bg-gradient-to-br from-[#3b74ff] to-[#1641b8] text-white shadow-marca ring-4 ring-cartao">
-      <Plus size={24} aria-hidden />
+    <button onClick={aoTocar} aria-label={rotulo} className="flex flex-col items-center gap-1 pb-1.5 text-[0.66rem] font-semibold text-marca select-none">
+      <span className={`-mt-5 grid size-13 place-items-center rounded-2xl bg-gradient-to-br from-[#3b74ff] to-[#1641b8] text-white shadow-marca ring-4 transition-transform active:scale-95 ${ativo ? "ring-marca-suave" : "ring-cartao"}`}>
+        <Icone size={24} aria-hidden />
+      </span>
+      {rotulo}
     </button>
   );
 }

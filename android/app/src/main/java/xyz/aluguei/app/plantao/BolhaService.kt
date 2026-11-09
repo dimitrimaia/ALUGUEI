@@ -234,6 +234,9 @@ class BolhaService : Service() {
     private var mini: View? = null
     /** Corrida da pergunta "Você aceitou?" aberta no mini cartão (o aceite automático fecha). */
     private var perguntaId: String? = null
+
+    /** Última oferta registrada (id e quando), para a tela "corrida concluída" marcar como feita. */
+    private var ultimaSemResposta: Pair<String, Long>? = null
     /** Campo "valor final" (lápis do cartão ou "Fiz com outro valor"). */
     private var campoValor: View? = null
     private val fecharMiniNoTempo = Runnable { fecharMini() }
@@ -1604,7 +1607,10 @@ class BolhaService : Service() {
                     principal.postDelayed(conferirSumico, SUMICO_MS)
                 }
             }
-            is TelaLida.Concluida -> if (app == "indrive") fecharCronometro()
+            is TelaLida.Concluida -> if (app == "indrive") {
+                fecharCronometro()
+                concluirAutomatico(app, tela.gatilho)
+            }
             TelaLida.Lista, TelaLida.Fim -> {
                 // Expirou / já aceita por outro / procurando: a oferta não ficou com o motorista.
                 aceitePendente = null
@@ -1650,6 +1656,24 @@ class BolhaService : Service() {
         decidir(corrida, CorridaAvaliada.ACEITEI, o, origem = Aceite.ORIGEM_AUTOMATICA)
         rotuloDiag?.text = "inDrive: aceita automaticamente · \"$gatilho\" · ${Copiloto.reais(Aceite.valorFinal(o))}"
         return true
+    }
+
+    /**
+     * Tela de fim de corrida ("corrida concluída", avaliar o passageiro): a última
+     * oferta que ficou sem resposta foi feita. Marca como aceita sozinho, sem perguntar.
+     */
+    private fun concluirAutomatico(app: String, gatilho: String) {
+        val (id, em) = ultimaSemResposta ?: return
+        if (SystemClock.elapsedRealtime() - em > DURACAO_MAXIMA_CORRIDA_MS) return
+        val corrida = Armazenamento.corridas(this).firstOrNull { it.id == id } ?: return
+        if (corrida.app != app || corrida.decisao != CorridaAvaliada.SEM_RESPOSTA) return
+        ultimaSemResposta = null
+        if (perguntaId == id) fecharMini()
+        val valor = corrida.suaOferta ?: corrida.valor
+        Armazenamento.atualizarDecisao(this, id, CorridaAvaliada.ACEITEI, Aceite.ORIGEM_AUTOMATICA, valor)
+        Armazenamento.registrarAceiteNoResumo(this, valor, corrida.lucro)
+        PlantaoPlugin.emitirDecisao(id, CorridaAvaliada.ACEITEI, Aceite.ORIGEM_AUTOMATICA, valor)
+        rotuloDiag?.text = "inDrive: corrida concluída · \"$gatilho\" · marcada como feita"
     }
 
     /** Guarda (ou renova) a oferta do inDrive para o aceite automático. */
@@ -1760,6 +1784,7 @@ class BolhaService : Service() {
         val app = if (origem == "digitada" && o.app == "outra") null else o.app
         val corrida = CorridaAvaliada.nova(o, r.avaliacao, origem, app, regua.faixa, custoDaVolta(o))
         Armazenamento.adicionar(this, corrida)
+        ultimaSemResposta = corrida.id to SystemClock.elapsedRealtime()
         Armazenamento.registrarOfertaNoResumo(this)
         if (mostrar) {
             mostrarCartao(o, r, corrida, origem, volta = volta, faixa = regua.faixa)

@@ -23,7 +23,7 @@ export default async function ConversaMotorista({ params }: { params: Promise<{ 
 
   return (
     // Tela cheia e fixa: só a lista de mensagens rola, e o campo fica colado embaixo.
-    <div className="fixed inset-0 z-30 mx-auto flex max-w-[30rem] flex-col bg-fundo px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="fixed inset-0 z-30 mx-auto flex max-w-[30rem] flex-col bg-fundo px-4 lg:top-16 lg:left-[17rem] lg:max-w-none lg:px-[max(2.5rem,calc((100vw-17rem-50rem)/2))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <CabecalhoMotorista titulo={org?.nome ?? "Conversa"} voltar="/m/conversas" />
       <div className="-mt-3 rounded-xl border border-borda bg-cartao px-3 py-2 text-xs">
         <span className="font-semibold">{v?.modelo}</span>

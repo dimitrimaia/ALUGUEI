@@ -16,7 +16,7 @@ export default async function AtendimentoMotorista({ params }: { params: Promise
   await admin.from("atendimentos").update({ lido_usuario_em: new Date().toISOString() }).eq("id", id);
   return (
     // Tela cheia, como a conversa com o locador.
-    <div className="fixed inset-0 z-30 mx-auto flex max-w-[30rem] flex-col bg-fundo px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="fixed inset-0 z-30 mx-auto flex max-w-[30rem] flex-col bg-fundo px-4 lg:top-16 lg:left-[17rem] lg:max-w-none lg:px-[max(2.5rem,calc((100vw-17rem-50rem)/2))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <CabecalhoMotorista titulo={`Suporte · ${acesso.atendimento.assunto}`} voltar="/m/suporte" />
       <ChatSuporte atendimentoId={id} iniciais={mensagens ?? []} assistente={agenteLigado() && !humanoAssumiu(mensagens ?? [])} />
     </div>

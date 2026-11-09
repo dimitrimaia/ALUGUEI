@@ -11,3 +11,4 @@ next-env.d.ts
 # Builds locais do app
 *.aab
 *.apk
+AGENTS.md

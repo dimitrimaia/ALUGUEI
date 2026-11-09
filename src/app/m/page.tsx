@@ -73,9 +73,11 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
 
       <div>
         <p className="text-sm text-suave">Olá{nome ? `, ${nome}` : ""} 👋</p>
-        <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight">{ativo ? "Seu aluguel em dia" : principal && principal.status !== "recusado" ? "Acompanhe seu aluguel" : "Encontre seu carro"}</h1>
+        <h1 className="text-[1.4rem] leading-tight font-bold tracking-tight lg:text-[2rem]">{ativo ? "Seu aluguel em dia" : principal && principal.status !== "recusado" ? "Acompanhe seu aluguel" : "Encontre seu carro"}</h1>
       </div>
 
+      {/* Computador: o trabalho e o aluguel lado a lado. */}
+      <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] lg:items-start">
       <ResumoTrabalho usuarioId={usuario.id} filtro={filtroResumo} de={q.de} ate={q.ate} />
 
       {ativo ? (
@@ -123,8 +125,9 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
           </div>
         </form>
       )}
+      </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         {checkinEnviado && <Aviso tom="ok" titulo="Check-in enviado">Obrigado! O locador recebe as fotos e o km agora.</Aviso>}
 
         {proximoCheckin && (situacao === "aberto" || situacao === "atrasado") && (
