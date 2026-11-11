@@ -4,10 +4,26 @@ import { Accessibility, BatteryCharging, Bell, Check, ChevronRight, Hand, Layers
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Aviso, Botao, Cartao, Selo } from "@/components/ui";
-import { type EstadoNativo, plantaoNativo, plataforma, soltarOuvinte } from "@/lib/nativo";
+import { ACEITE_COPILOTO, type EstadoNativo, plantaoNativo, plataforma, soltarOuvinte } from "@/lib/nativo";
 
 // v2: texto novo da declaração (revisão da Play). Quem aceitou a antiga vê de novo.
-const CHAVE_ACEITE = "aluguei_semaforo_aceite_v2";
+const CHAVE_ACEITE = ACEITE_COPILOTO;
+/** Passos opcionais que a pessoa pulou: não pergunta de novo (dá para ativar depois). */
+const CHAVE_PULADOS = "aluguei_semaforo_pulados_v1";
+
+function lerPulados(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CHAVE_PULADOS) ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function gravarPulados(l: string[]) {
+  try {
+    localStorage.setItem(CHAVE_PULADOS, JSON.stringify(l));
+  } catch {}
+}
 
 /**
  * Declaração em destaque (Google Play, política da API de acessibilidade, e LGPD):
@@ -128,6 +144,7 @@ export function AtivarSemaforo() {
     try {
       setAceite(localStorage.getItem(CHAVE_ACEITE) === "1");
     } catch {}
+    setPulados(lerPulados());
     const p = plantaoNativo();
     if (!p) return;
     atualizar();
@@ -182,6 +199,9 @@ export function AtivarSemaforo() {
 
   const feito = (k: Passo["chave"]) => (k === "notificacoes" ? estado.notificacoes : k === "sobreposicao" ? estado.sobreposicao : k === "acessibilidade" ? estado.acessibilidade : estado.semOtimizacaoBateria || bateriaPedida);
   const atual = PASSOS.find((s) => !feito(s.chave) && !pulados.includes(s.chave));
+  const pular = (k: string) => setPulados((x) => { const n = [...new Set([...x, k])]; gravarPulados(n); return n; });
+  const retomar = (k: Passo["chave"]) => { setPulados((x) => { const n = x.filter((y) => y !== k); gravarPulados(n); return n; }); pedir(k); };
+  const opcionaisDesligados = PASSOS.filter((s) => s.opcional && pulados.includes(s.chave) && !feito(s.chave));
   const pedir = async (k: Passo["chave"]) => {
     setErro(null);
     try {
@@ -221,7 +241,7 @@ export function AtivarSemaforo() {
                     {s.tutorial.map((t, j) => <li key={j} className="flex gap-2"><span className="grid size-5 shrink-0 place-items-center rounded-full bg-marca text-[0.65rem] font-bold text-white">{j + 1}</span>{t}</li>)}
                   </ol>
                   <Botao tamanho="lg" icone={Icone} onClick={() => pedir(s.chave)} className="w-full">{s.chave === "acessibilidade" ? "Abrir Acessibilidade" : s.chave === "sobreposicao" ? "Abrir a permissão" : "Permitir"}</Botao>
-                  {s.opcional && <button type="button" onClick={() => setPulados((x) => [...x, s.chave])} className="text-sm font-semibold text-suave">{s.chave === "acessibilidade" ? "Usar só a digitação rápida" : "Pular"}</button>}
+                  {s.opcional && <button type="button" onClick={() => pular(s.chave)} className="text-sm font-semibold text-suave">{s.chave === "acessibilidade" ? "Usar só a digitação rápida" : "Pular e não perguntar de novo"}</button>}
                 </div>
               )}
             </li>
@@ -263,6 +283,16 @@ export function AtivarSemaforo() {
             </Botao>
           )}
           {!estado.sobreposicao && <Aviso>A permissão "Mostrar sobre outros apps" está desligada. Sem ela a bolha não aparece.</Aviso>}
+          {opcionaisDesligados.length > 0 && (
+            <div className="flex flex-col gap-1.5 border-t border-borda pt-3">
+              <p className="text-xs font-semibold text-suave">Opcional, desligado por você</p>
+              {opcionaisDesligados.map((s) => (
+                <button key={s.chave} type="button" onClick={() => retomar(s.chave)} className="flex items-center gap-2 text-left text-sm font-semibold text-marca">
+                  <s.icone size={16} /> {s.chave === "acessibilidade" ? "Ligar a leitura automática das ofertas" : `Ativar: ${s.titulo.toLowerCase()}`}
+                </button>
+              ))}
+            </div>
+          )}
         </Cartao>
       )}
       <ComoFunciona />

@@ -109,7 +109,7 @@ export function BarraLateral({ inicio, conta, detalhe, secoes, destaque }: { ini
 }
 
 /** Botão de ação do modo com o menu que abre embaixo (computador). */
-function MenuAcoes({ rotulo, icone: Icone, acoes }: { rotulo: string; icone: LucideIcon; acoes: readonly Acao[] }) {
+function MenuAcoes({ rotulo, icone: Icone, acoes, extra }: { rotulo: string; icone: LucideIcon; acoes: readonly Acao[]; extra?: ReactNode }) {
   const caminho = usePathname();
   const [aberto, setAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -126,6 +126,7 @@ function MenuAcoes({ rotulo, icone: Icone, acoes }: { rotulo: string; icone: Luc
       </button>
       {aberto && (
         <div className="animar-entrada absolute right-0 z-40 mt-2 w-80 rounded-2xl border border-borda bg-cartao p-2 shadow-flutuante">
+          {extra}
           {acoes.map(({ href, rotulo: r, detalhe, icone: I }) => (
             <Link key={href} href={href as Route} className="flex items-center gap-3 rounded-xl p-3 hover:bg-cartao-2">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-marca-suave text-marca"><I size={20} aria-hidden /></span>
@@ -142,7 +143,7 @@ function MenuAcoes({ rotulo, icone: Icone, acoes }: { rotulo: string; icone: Luc
 }
 
 /** Barra superior do computador, à direita da lateral (fixa: o conteúdo começa com lg:pt-24). */
-export function TopoDesktop({ conta, acao }: { conta: string; acao: { rotulo: string; icone: LucideIcon; acoes: readonly Acao[] } }) {
+export function TopoDesktop({ conta, acao }: { conta: string; acao: { rotulo: string; icone: LucideIcon; acoes: readonly Acao[]; extra?: ReactNode } }) {
   const { perfil, notificacoes } = useConta();
   return (
     <>
