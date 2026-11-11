@@ -6,30 +6,67 @@ import { useCallback, useEffect, useState } from "react";
 import { Aviso, Botao, Cartao, Selo } from "@/components/ui";
 import { type EstadoNativo, plantaoNativo, plataforma, soltarOuvinte } from "@/lib/nativo";
 
-const CHAVE_ACEITE = "aluguei_semaforo_aceite_v1";
+// v2: texto novo da declaração (revisão da Play). Quem aceitou a antiga vê de novo.
+const CHAVE_ACEITE = "aluguei_semaforo_aceite_v2";
 
-/** O que o motorista precisa saber ANTES de ligar (exigido pela Google Play e pela LGPD). */
+/**
+ * Declaração em destaque (Google Play, política da API de acessibilidade, e LGPD):
+ * aparece ANTES de pedir a permissão e diz quais dados o serviço lê, para quê,
+ * onde ficam e com quem são compartilhados. Mantenha igual à Segurança dos dados
+ * da Play e à política de privacidade (src/app/privacidade).
+ */
 function Termo({ aoAceitar }: { aoAceitar: () => void }) {
   const [marcado, setMarcado] = useState(false);
+  const item = "flex gap-2.5 text-sm leading-snug";
   return (
-    <Cartao className="flex flex-col gap-3">
+    <Cartao className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <span className="grid size-9 place-items-center rounded-xl bg-alerta-suave text-alerta"><ShieldAlert size={19} /></span>
-        <h2 className="font-bold">Antes de ligar, leia com atenção</h2>
+        <h2 className="font-bold leading-tight">O Copiloto usa o serviço de acessibilidade do Android</h2>
       </div>
-      <ul className="flex list-disc flex-col gap-2 pl-5 text-sm text-texto/90">
-        <li><strong>O que faz:</strong> quando chega uma oferta na Uber, na 99 ou na inDrive, o Aluguei lê na tela só o valor, os km e os minutos da oferta, calcula se vale a pena e mostra o resultado numa bolha por cima do app.</li>
-        <li><strong>Para isso usa o serviço de acessibilidade do Android</strong>, que permite ler o texto que aparece na tela. Ele só funciona dentro desses apps de corrida e só com o plantão ligado.</li>
-        <li><strong>O que guardamos:</strong> só os números de cada oferta (valor, distância, tempo e o resultado), para os seus relatórios. Nunca guardamos a tela, nomes, endereços ou mensagens. Nada é vendido nem compartilhado.</li>
-        <li><strong>Não aceita nem recusa corridas por você.</strong> Quem decide e toca no app é sempre você.</li>
-        <li><strong>Riscos:</strong> Uber e 99 não autorizam apps de terceiros lendo a tela delas; em casos raros isso pode gerar advertência na conta. Eles também mudam a tela de vez em quando, e a leitura pode falhar até atualizarmos. Se preferir, use só a <strong>digitação rápida</strong> na bolha, sem acessibilidade.</li>
-        <li>Você pode desligar quando quiser: na notificação "Plantão ligado", arrastando a bolha até o X, ou aqui.</li>
-      </ul>
-      <label className="flex items-start gap-3 rounded-xl bg-cartao-2 p-3 text-sm font-medium">
+      <p className="text-sm">
+        Para mostrar se uma corrida compensa, o Aluguei usa a API de acessibilidade (AccessibilityService) para <strong>ler o texto da tela somente nos apps de corrida Uber, 99, inDrive e 37 City</strong>, e só enquanto o Copiloto estiver ligado. Ele não é um recurso de acessibilidade.
+      </p>
+
+      <div className="flex flex-col gap-2 rounded-xl bg-cartao-2 p-3">
+        <p className="text-xs font-bold tracking-wide text-suave uppercase">Dados que o Copiloto coleta da tela</p>
+        <ul className="flex flex-col gap-2">
+          <li className={item}><span aria-hidden>•</span><span><strong>Dados da oferta:</strong> valor da corrida, distância e tempo até o passageiro e da viagem.</span></li>
+          <li className={item}><span aria-hidden>•</span><span><strong>Nome do passageiro</strong>, quando o app de corrida mostra.</span></li>
+          <li className={item}><span aria-hidden>•</span><span><strong>Endereços</strong> de embarque, paradas e destino.</span></li>
+          <li className={item}><span aria-hidden>•</span><span><strong>Outras informações pessoais do passageiro:</strong> nota, número de corridas, forma de pagamento e se a corrida tem parada.</span></li>
+          <li className={item}><span aria-hidden>•</span><span><strong>Outras ações suas no app de corrida:</strong> se você aceitou ou recusou a oferta, a contraproposta que fez e quando a corrida começou e terminou.</span></li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-bold tracking-wide text-suave uppercase">Para que usamos</p>
+        <ul className="flex flex-col gap-2">
+          <li className={item}><span aria-hidden>•</span><span>Calcular na hora o lucro, o R$ por km e o R$ por hora da oferta e mostrar o resultado no cartão por cima da tela.</span></li>
+          <li className={item}><span aria-hidden>•</span><span>Avisar quando o embarque ou o destino é um lugar que você marcou para evitar, ou um alerta de segurança da comunidade.</span></li>
+          <li className={item}><span aria-hidden>•</span><span>Registrar no seu histórico as corridas que você fez e as que recusou, com ganhos e relatórios.</span></li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-bold tracking-wide text-suave uppercase">Onde ficam e com quem compartilhamos</p>
+        <ul className="flex flex-col gap-2">
+          <li className={item}><span aria-hidden>•</span><span>Os dados ficam no seu celular e na sua conta do Aluguei, com acesso cifrado, e só você vê. Você pode apagar em Conta → Privacidade.</span></li>
+          <li className={item}><span aria-hidden>•</span><span><strong>Não vendemos nem compartilhamos com terceiros.</strong> Só os lugares que você marcar como "evitar" entram, sem o seu nome, nos alertas da comunidade.</span></li>
+          <li className={item}><span aria-hidden>•</span><span>O Copiloto não lê outros apps nem senhas, não grava a imagem da tela e <strong>nunca toca, aceita ou recusa corridas por você</strong>.</span></li>
+        </ul>
+      </div>
+
+      <p className="text-xs text-suave">Você pode desligar quando quiser: na notificação "Copiloto ligado", arrastando a bolha até o X, aqui ou nas configurações de acessibilidade do Android. Sem a acessibilidade, a bolha funciona com digitação rápida. Mais detalhes na <Link href="/privacidade" className="font-semibold text-marca">política de privacidade</Link>.</p>
+
+      <label className="flex items-start gap-3 rounded-xl border border-borda p-3 text-sm font-medium">
         <input type="checkbox" checked={marcado} onChange={(e) => setMarcado(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--marca)]" />
-        Li e entendi. Quero usar o Copiloto.
+        Concordo que o Aluguei colete e use esses dados da tela dos apps de corrida para as finalidades acima.
       </label>
-      <Botao tamanho="lg" disabled={!marcado} onClick={aoAceitar} className="w-full">Continuar</Botao>
+      <div className="grid grid-cols-2 gap-2">
+        <Link href="/m/plantao" className="grid h-12 place-items-center rounded-xl border border-borda text-sm font-semibold">Não concordo</Link>
+        <Botao tamanho="lg" disabled={!marcado} onClick={aoAceitar}>Concordo e continuar</Botao>
+      </div>
     </Cartao>
   );
 }

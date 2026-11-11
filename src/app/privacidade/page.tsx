@@ -4,7 +4,7 @@ export const metadata = { title: "Política de privacidade", description: "Como 
 
 export default function Privacidade() {
   return (
-    <PaginaLegal titulo="Política de privacidade" atualizada="05/11/2026">
+    <PaginaLegal titulo="Política de privacidade" atualizada="11/11/2026">
       <p>Esta política explica quais dados o Aluguei (site aluguei.xyz e app para Android) usa, para quê e quais são os seus direitos pela Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
 
       <h2>Quem é o controlador</h2>
@@ -22,7 +22,7 @@ export default function Privacidade() {
       </ul>
 
       <h2>O Copiloto e a acessibilidade</h2>
-      <p>No Android, o Copiloto usa o serviço de acessibilidade <strong>apenas para ler, na tela dos apps de corrida suportados (Uber, 99, inDrive e 37 City), os dados da oferta</strong>: valor, distâncias, tempos e, quando aparecem, nome e nota do passageiro, pagamento e endereços. Com isso ele mostra se a corrida compensa pelos custos do seu carro.</p>
+      <p>No Android, o Copiloto usa o serviço de acessibilidade <strong>apenas para ler, na tela dos apps de corrida suportados (Uber, 99, inDrive e 37 City), os dados da oferta</strong>: valor, distâncias e tempos; nome do passageiro, quando aparece; endereços de embarque, paradas e destino; outras informações do passageiro (nota, número de corridas, forma de pagamento); e as suas ações na oferta (se aceitou ou recusou, a contraproposta e quando a corrida começou e terminou). Com isso ele mostra se a corrida compensa pelos custos do seu carro, avisa lugares a evitar e registra o seu histórico.</p>
       <ul>
         <li>Ele não lê outros apps, não guarda a imagem da tela e <strong>nunca toca, aceita, recusa ou oferece tarifa por você</strong>.</li>
         <li>Só funciona com o Copiloto ligado; você desliga quando quiser no app ou nas configurações do Android.</li>
