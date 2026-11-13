@@ -57,10 +57,12 @@ class LeitorCorridasService : AccessibilityService() {
         /** O print das ofertas funciona neste Android? (takeScreenshot é do Android 11+.) */
         val printDisponivel: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
-        private const val MAXIMO_NOS = 500
-        private const val MAXIMO_PROFUNDIDADE = 30
-        private const val MAXIMO_CARACTERES = 6000
-        private const val MAXIMO_TEXTOS = 250
+        // A tela da Uber tem o mapa (ruas, bairros, botões) antes do cartão da oferta:
+        // com 500 nós a leitura parava no mapa e não chegava à oferta.
+        private const val MAXIMO_NOS = 3000
+        private const val MAXIMO_PROFUNDIDADE = 80
+        private const val MAXIMO_CARACTERES = 20000
+        private const val MAXIMO_TEXTOS = 800
         private const val PEDIDO_VALE_MS = 120_000L
         /** Intervalo mínimo entre duas leituras da tela (o mapa gera eventos sem parar). */
         /** Oferta, lista de pedidos ou cartão aberto: lê rápido. */
