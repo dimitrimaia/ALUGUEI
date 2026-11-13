@@ -104,6 +104,10 @@ class LeitorCorridasService : AccessibilityService() {
     /** A última tela lida tinha oferta ou lista de pedidos (lê no ritmo rápido). */
     private var telaRelevante = true
 
+    /** Janela e nó do último evento (para achar a oferta que flutua sobre outro app). */
+    private var janelaDoEvento = -1
+    private var fonteDoEvento: AccessibilityNodeInfo? = null
+
     private val energia by lazy { getSystemService(POWER_SERVICE) as android.os.PowerManager }
 
     private fun ativo(): Boolean = BolhaService.instancia != null && Armazenamento.ligado(this) && !Armazenamento.pausado(this)
@@ -144,6 +148,10 @@ class LeitorCorridasService : AccessibilityService() {
 
         // Junta a rajada de eventos: lê na hora se faz tempo, senão uma vez no fim do intervalo.
         pacotePendente = pacote
+        // Janela de onde veio o evento: a oferta flutuante da Uber (por cima de outro app)
+        // nem sempre aparece na lista de janelas; com o id dela dá para achar a raiz.
+        janelaDoEvento = e.windowId
+        fonteDoEvento = try { e.source } catch (x: RuntimeException) { null }
         val intervalo = if (telaRelevante || BolhaService.instancia?.temCartaoAberto() == true) INTERVALO_LEITURA_MS else INTERVALO_CALMO_MS
         val espera = intervalo - (SystemClock.elapsedRealtime() - ultimaLeituraEm)
         principal.removeCallbacks(lerPendente)
@@ -189,12 +197,24 @@ class LeitorCorridasService : AccessibilityService() {
     private fun raizDo(pacote: String): AccessibilityNodeInfo? {
         rootInActiveWindow?.takeIf { it.packageName?.toString() == pacote }?.let { return it }
         return try {
-            windows.asSequence()
-                .mapNotNull { j -> j.root }
-                .firstOrNull { it.packageName?.toString() == pacote }
+            val lista = windows
+            // 1) A janela do próprio evento (ex.: oferta flutuante da Uber sobre o WhatsApp).
+            lista.firstOrNull { it.id == janelaDoEvento }?.root?.takeIf { it.packageName?.toString() == pacote }
+                // 2) Qualquer janela do app de corrida, da de cima para a de baixo.
+                ?: lista.asSequence().mapNotNull { j -> j.root }.firstOrNull { it.packageName?.toString() == pacote }
+                // 3) Subindo a partir do nó que mudou, até a raiz da janela dele.
+                ?: fonteDoEvento?.let { raizSubindo(it) }?.takeIf { it.packageName?.toString() == pacote }
         } catch (e: RuntimeException) {
             null
         }
+    }
+
+    private fun raizSubindo(no: AccessibilityNodeInfo): AccessibilityNodeInfo {
+        no.window?.root?.let { return it }
+        var atual = no
+        var passos = 0
+        while (passos++ < 60) atual = atual.parent ?: break
+        return atual
     }
 
     private fun definirDormindo(valor: Boolean) {
