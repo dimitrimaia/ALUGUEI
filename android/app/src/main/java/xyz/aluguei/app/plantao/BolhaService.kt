@@ -2149,11 +2149,6 @@ class BolhaService : Service() {
             addView(texto(Copiloto.reais(Aceite.valorFinal(o)), 20f, pal.texto, true).apply { maxLines = 1 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
             addView(selo(seloDoSinal(a.sinal), cor), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
             addView(View(ui), LinearLayout.LayoutParams(0, 1, 1f))
-            // Detalhes/Resumo: sempre no mesmo lugar; troca o texto e o ícone ao abrir e fechar.
-            addView(pilulaIcone("Detalhes", R.drawable.ic_traco_expandir, pal.destaque, false, "Mostrar ou esconder os detalhes") { alternarDetalhes(!cartaoDetalhes) }.also {
-                pilulaDetalhes = it
-                rotularDetalhes()
-            })
             addView(
                 texto("✕", 15f, pal.secundario, true).apply {
                     gravity = Gravity.CENTER
@@ -2195,6 +2190,9 @@ class BolhaService : Service() {
             colunas.forEach { addView(it, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)) }
         }, margem(8))
 
+        // Volta para casa: na parte de cima, sempre à vista (é o que mais muda a conta).
+        if (o.destino != null) addView(linhaVolta(o, volta, dados, pal), margem(8))
+
         // Alerta (risco, comunidade ou motivo) e a dica de preço: iguais nos dois modos.
         val comunidade = alertaComunidade(o)
         val alerta: Pair<String, Int>? = when {
@@ -2235,23 +2233,10 @@ class BolhaService : Service() {
             val positivos = a.destaques.map { "Destino desejado: $it" } + listOfNotNull(if (volta is EstadoVolta.Pronta && volta.levaParaCasa) "Te leva para casa" else null)
             if (positivos.isNotEmpty()) addView(texto(positivos.joinToString(" · "), 12f, VERDE, true).apply { maxLines = 1 }, margem(4))
             if (r.risco) addView(faixaRisco(o, pal), margem(6))
-            // Chip da volta (só muda o cálculo deste cartão) e o lápis do valor.
+            // Lápis do valor (simular ou corrigir).
             addView(LinearLayout(ui).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                if (o.destino != null) {
-                    val ligada = criteriosDoCartao().contarVolta
-                    val rotulo = when {
-                        !ligada -> "Contar Volta para Casa"
-                        volta == EstadoVolta.Calculando -> "Contar Volta · Calculando…"
-                        volta is EstadoVolta.Pronta -> "Contar Volta · ${jsRound(volta.km)} km" + (dados.custoVolta?.let { " · Custa ${Copiloto.reais(jsRound(it / 100.0) * 100)}" } ?: "")
-                        else -> "Contar Volta · Indisponível"
-                    }
-                    addView(
-                        pilulaIcone(rotulo, R.drawable.ic_traco_carro, pal.destaque, ligada, if (ligada) "Parar de contar a volta para casa" else "Contar a volta para casa") { alternarVoltaCartao() },
-                        LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(6) },
-                    )
-                }
                 addView(pilulaIcone(Copiloto.reais(Aceite.valorFinal(o)), R.drawable.ic_traco_lapis, pal.destaque, false, "Simular ou corrigir o valor") { editarValorFinal() })
             }, margem(8))
         }
@@ -2270,6 +2255,76 @@ class BolhaService : Service() {
             ),
             margem(8),
         )
+        addView(alcaDetalhes(pal), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(22)))
+    }
+
+    /**
+     * Alça do cartão (como a barrinha do iPhone): puxe para baixo (ou toque) para ver
+     * os detalhes; puxe para cima para voltar ao resumo.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun alcaDetalhes(pal: Paleta): View = FrameLayout(ui).apply {
+        contentDescription = "Puxe para ver os detalhes da corrida"
+        val barra = View(ui).apply { background = fundoArredondado(comAlfa(pal.secundario, 0x88), 99) }
+        addView(barra, FrameLayout.LayoutParams(dp(38), dp(4), Gravity.CENTER))
+        var y0 = 0f
+        var arrastou = false
+        setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { y0 = e.rawY; arrastou = false; barra.animate().scaleX(1.25f).setDuration(120).start(); true }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = e.rawY - y0
+                    if (!arrastou && dy > dp(18)) { arrastou = true; alternarDetalhes(true) }
+                    if (!arrastou && dy < -dp(18)) { arrastou = true; alternarDetalhes(false) }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    barra.animate().scaleX(1f).setDuration(120).start()
+                    if (!arrastou && e.actionMasked == MotionEvent.ACTION_UP) { v.performClick(); alternarDetalhes(!cartaoDetalhes) }
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    /**
+     * Linha da volta para casa: ícone da casa, km e custo da volta, e um interruptor
+     * "Contar" que liga ou desliga a volta no lucro deste cartão.
+     */
+    private fun linhaVolta(o: OfertaDetalhada, volta: EstadoVolta, dados: Cartao.Dados, pal: Paleta): View = LinearLayout(ui).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        val ligada = criteriosDoCartao().contarVolta
+        background = fundoArredondado(if (ligada) comAlfa(pal.destaque, 0x1F) else comAlfa(pal.secundario, 0x14), 12)
+        setPadding(dp(10), dp(7), dp(8), dp(7))
+        addView(iconeTraco(R.drawable.ic_traco_casa, if (ligada) pal.destaque else pal.secundario, 16))
+        val (titulo, sub) = when {
+            volta is EstadoVolta.Pronta && volta.levaParaCasa -> "Te leva para casa" to "Sem volta"
+            volta is EstadoVolta.Pronta -> "Volta ${jsRound(volta.km)} km" to (dados.custoVolta?.let { "custa ${Copiloto.reais(jsRound(it / 100.0) * 100)}" } ?: "")
+            volta == EstadoVolta.Calculando -> "Volta para casa" to "calculando…"
+            !ligada -> "Volta para casa" to "fora da conta"
+            else -> "Volta para casa" to "indisponível"
+        }
+        addView(LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(texto(titulo, 12.5f, pal.texto, true).apply { maxLines = 1 })
+            if (sub.isNotEmpty()) addView(texto(" · $sub", 12f, pal.secundario).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(7) })
+        // Interruptor "Contar": trilho e bolinha, como um switch.
+        addView(LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(texto("Contar", 11.5f, if (ligada) pal.destaque else pal.secundario, true), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) })
+            addView(FrameLayout(ui).apply {
+                background = fundoArredondado(if (ligada) pal.destaque else comAlfa(pal.secundario, 0x55), 99)
+                addView(View(ui).apply { background = fundoArredondado(BRANCO, 99) }, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.CENTER_VERTICAL or if (ligada) Gravity.END else Gravity.START).apply { setMargins(dp(2), 0, dp(2), 0) })
+            }, LinearLayout.LayoutParams(dp(32), dp(18)))
+        })
+        contentDescription = if (ligada) "Parar de contar a volta para casa" else "Contar a volta para casa no lucro"
+        isClickable = true
+        setOnClickListener { alternarVoltaCartao() }
     }
 
     /**

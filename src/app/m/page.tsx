@@ -2,6 +2,9 @@ import { Building2, CalendarClock, Camera, ChevronRight, Receipt, Check, Clipboa
 import type { Route } from "next";
 import Link from "next/link";
 import { type FiltroResumo, ResumoTrabalho } from "@/components/motorista/resumo-trabalho";
+import { FaixaModoPiloto } from "@/components/motorista/modo-piloto";
+import { usoCopiloto } from "@/lib/uso-copiloto";
+import { supabaseAdmin as admin2 } from "@/lib/supabase/admin";
 import { ListaConversas } from "@/components/motorista/lista-conversas";
 import { CabecalhoInicio } from "@/components/motorista/cabecalho";
 import { BotaoEmergencia } from "@/components/motorista/emergencia";
@@ -36,6 +39,12 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
   const checkinEnviado = q.checkin === "ok";
   const filtroResumo: FiltroResumo = (["hoje", "ontem", "semana", "mes", "trinta", "perso"] as const).find((f) => f === q.resumo) ?? "semana";
   const usuario = await exigirUsuario("/m");
+  // Modo piloto: quem já usa o Plantão/Copiloto conta como "sim" mesmo sem ter respondido.
+  const [uso, { count: corridasRegistradas }] = await Promise.all([
+    usoCopiloto(usuario.id),
+    admin2().from("corridas_avaliadas").select("id", { count: "exact", head: true }).eq("usuario_id", usuario.id).limit(1),
+  ]);
+  const piloto = uso === "sim" || (uso === null && (corridasRegistradas ?? 0) > 0);
   const [cadastros, contratos, perfil, conversas, locadora] = await Promise.all([
     cadastrosDoMotorista(usuario.id),
     contratosDoMotorista(usuario.id),
@@ -78,7 +87,7 @@ export default async function Motorista({ searchParams }: { searchParams: Promis
 
       {/* Computador: o trabalho e o aluguel lado a lado. */}
       <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] lg:items-start">
-      <ResumoTrabalho usuarioId={usuario.id} filtro={filtroResumo} de={q.de} ate={q.ate} />
+      {piloto ? <ResumoTrabalho usuarioId={usuario.id} filtro={filtroResumo} de={q.de} ate={q.ate} /> : <FaixaModoPiloto pergunta={uso === null} />}
 
       {ativo ? (
         <section className="fundo-marca relative overflow-hidden rounded-[1.4rem] p-5 shadow-flutuante">

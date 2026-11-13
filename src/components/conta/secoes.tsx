@@ -79,7 +79,7 @@ const ICONE_ESTADO = { ok: CheckCircle2, andamento: Hourglass, pendente: CircleD
 const COR_ESTADO = { ok: "text-ok", andamento: "text-alerta", pendente: "text-suave" } as const;
 
 /** Tela inicial de Conta: cartão do perfil, verificação e a lista de configurações. */
-export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: PerfilConta; base: string; verificacao: ItemVerificacao[]; locadora: { nome: string; papel: "dono" | "operador" } | null }) {
+export function IndiceConta({ perfil, base, verificacao, locadora, extraTrabalho }: { perfil: PerfilConta; base: string; verificacao: ItemVerificacao[]; locadora: { nome: string; papel: "dono" | "operador" } | null; extraTrabalho?: React.ReactNode }) {
   const feitos = verificacao.filter((v) => v.estado === "ok").length;
   const nomeTema = TEMAS.find((t) => t.id === perfil.preferencias.tema)?.rotulo;
   return (
@@ -122,6 +122,7 @@ export function IndiceConta({ perfil, base, verificacao, locadora }: { perfil: P
 
       {base === "/m/conta" && (
         <Grupo titulo="Trabalho">
+          {extraTrabalho}
           <Linha href="/m/plantao/configuracoes" icone={Settings2} titulo="Configurações do Copiloto" detalhe="Régua, cartão, avisos, base, câmera" />
           <Linha href="/m/plantao/custos" icone={Car} titulo="Custos do carro" detalhe="Para calcular o lucro de cada corrida" />
         </Grupo>
