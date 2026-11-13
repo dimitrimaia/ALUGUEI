@@ -117,6 +117,9 @@ jobs:
           track: ${{ inputs.faixa || 'internal' }}
           status: completed
           whatsNewDirectory: android/notas-da-versao
+          # Com mudanças pendentes no Console (declarações, ficha), o Google não aceita
+          # mandar para revisão pela API: a versão entra e o envio fica para o Console.
+          changesNotSentForReview: true
       - name: Apagar a chave do runner
         if: always()
         run: rm -f "$RUNNER_TEMP/envio.jks" "$RUNNER_TEMP/apk-direto.jks"
