@@ -611,6 +611,19 @@ class PlantaoPlugin : Plugin() {
             call.resolve(JSObject().put("permissao", false).put("baixando", false))
             return
         }
-        call.resolve(JSObject().put("permissao", true).put("baixando", Atualizacao.baixarEInstalar(ctx, url)))
+        // Baixa aqui e abre o instalador pela tela do app (o Android novo bloqueia abrir
+        // o instalador de um processo em segundo plano, como o fim do DownloadManager).
+        Atualizacao.baixar(ctx, url) { apk ->
+            principal.post {
+                if (apk == null) {
+                    emitir("atualizacao", JSObject().put("erro", "Não consegui baixar a atualização. Confira a internet e tente de novo."))
+                    return@post
+                }
+                val tela = activity?.takeIf { !it.isFinishing }
+                runCatching { Atualizacao.abrirInstalador(tela ?: ctx, apk) }
+                    .onFailure { emitir("atualizacao", JSObject().put("erro", "Baixou, mas o Android não abriu o instalador.")) }
+            }
+        }
+        call.resolve(JSObject().put("permissao", true).put("baixando", true))
     }
 }
