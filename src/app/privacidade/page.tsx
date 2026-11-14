@@ -24,7 +24,8 @@ export default function Privacidade() {
       <h2>O Copiloto e a acessibilidade</h2>
       <p>No Android, o Copiloto usa o serviço de acessibilidade <strong>apenas para ler, na tela dos apps de corrida suportados (Uber, 99, inDrive e 37 City), os dados da oferta</strong>: valor, distâncias e tempos; nome do passageiro, quando aparece; endereços de embarque, paradas e destino; outras informações do passageiro (nota, número de corridas, forma de pagamento); e as suas ações na oferta (se aceitou ou recusou, a contraproposta e quando a corrida começou e terminou). Com isso ele mostra se a corrida compensa pelos custos do seu carro, avisa lugares a evitar e registra o seu histórico.</p>
       <ul>
-        <li>Ele não lê outros apps, não guarda a imagem da tela e <strong>nunca toca, aceita, recusa ou oferece tarifa por você</strong>.</li>
+        <li>Na Uber, que esconde o texto da oferta, o Copiloto lê a imagem da tela para achar esses mesmos dados. A leitura é feita no próprio celular e a imagem fica só na memória: não é guardada nem enviada.</li>
+        <li>Ele não lê outros apps e <strong>nunca toca, aceita, recusa ou oferece tarifa por você</strong>.</li>
         <li>Só funciona com o Copiloto ligado; você desliga quando quiser no app ou nas configurações do Android.</li>
         <li>Os números das ofertas vão para a sua conta, para o histórico e as estatísticas.</li>
       </ul>

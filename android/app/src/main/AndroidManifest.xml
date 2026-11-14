@@ -68,6 +68,11 @@
             android:exported="false"
             android:foregroundServiceType="camera|microphone" />
 
+        <!-- Baixa o modelo de leitura de imagem (ML Kit) junto com a instalação. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

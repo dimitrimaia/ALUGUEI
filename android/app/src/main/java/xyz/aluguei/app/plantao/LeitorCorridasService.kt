@@ -59,6 +59,7 @@ class LeitorCorridasService : AccessibilityService() {
 
         // A tela da Uber tem o mapa (ruas, bairros, botões) antes do cartão da oferta:
         // com 500 nós a leitura parava no mapa e não chegava à oferta.
+        private const val INTERVALO_IMAGEM_MS = 1_500L
         private const val MAXIMO_NOS = 3000
         private const val MAXIMO_PROFUNDIDADE = 80
         private const val MAXIMO_CARACTERES = 20000
@@ -157,6 +158,7 @@ class LeitorCorridasService : AccessibilityService() {
         // Janela de onde veio o evento: a oferta flutuante da Uber (por cima de outro app)
         // nem sempre aparece na lista de janelas; com o id dela dá para achar a raiz.
         janelaDoEvento = e.windowId
+        if (e.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || e.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) telaNovaEm = SystemClock.elapsedRealtime()
         guardarTextoDoEvento(pacote, e)
         fonteDoEvento = try { e.source } catch (x: RuntimeException) { null }
         val intervalo = if (telaRelevante || BolhaService.instancia?.temCartaoAberto() == true) INTERVALO_LEITURA_MS else INTERVALO_CALMO_MS
@@ -179,10 +181,15 @@ class LeitorCorridasService : AccessibilityService() {
             // + o texto que veio nos próprios eventos (às vezes a janela chega vazia, mas o
             // evento traz o texto do cartão).
             val textos = raizes.flatMap { textosDaJanela(it) } + textosDosEventos(pacote)
-            val hash = textos.hashCode()
-            if (hash == ultimoHash) return
-            ultimoHash = hash
             val app = Pacotes.plataforma(pacote)
+            // Uber com janela extra (o cartão da oferta, que ela esconde da acessibilidade)
+            // ou tela nova há pouco: vale tentar a imagem da tela, mesmo sem texto novo.
+            val agora = SystemClock.elapsedRealtime()
+            val talvezOferta = app == "uber" && (raizes.size >= 2 || agora - telaNovaEm < 3_000)
+            val hash = (textos + raizes.map { it.windowId.toString() }).hashCode()
+            if (hash == ultimoHash && !talvezOferta) return
+            val textoNovo = hash != ultimoHash
+            ultimoHash = hash
             if (app == "indrive" && Armazenamento.preferencias(this).economia) {
                 when (LeitorInDrive.conexao(textos)) {
                     LeitorInDrive.Conexao.OFFLINE -> {
@@ -201,7 +208,8 @@ class LeitorCorridasService : AccessibilityService() {
                 if (textos.any { "R$" in it }) Armazenamento.registrarLeitura(this, "$app (tela com R$)", "${nomeTela(tela)} · ${raizes.size} janela(s)", textos, textos.size)
             }
             telaRelevante = tela is TelaLida.ComOferta || tela is TelaLida.Contraproposta || tela == TelaLida.Lista
-            bolha.receberTela(app, tela)
+            if (textoNovo) bolha.receberTela(app, tela)
+            if (talvezOferta && tela !is TelaLida.ComOferta) lerImagemDaUber(raizes.size)
         } catch (e: RuntimeException) {
             // Nó que sumiu no meio da leitura etc.: ignora esta tela, a próxima vem em 700 ms.
         }
@@ -290,6 +298,66 @@ class LeitorCorridasService : AccessibilityService() {
      * vez por oferta). Sem travar: o Android tira o print em segundo plano, e a
      * compressão e o salvamento vão para a thread de fundo. Qualquer erro: sem print.
      */
+    /**
+     * Uber: lê a imagem da tela (no celular, só na memória) quando o texto da
+     * acessibilidade não traz a oferta. No máximo uma vez a cada 1,5 s.
+     */
+    private fun lerImagemDaUber(janelas: Int) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val agora = SystemClock.elapsedRealtime()
+        if (lendoImagem || agora - ultimaImagemEm < INTERVALO_IMAGEM_MS) return
+        lendoImagem = true
+        ultimaImagemEm = agora
+        try {
+            takeScreenshot(
+                Display.DEFAULT_DISPLAY,
+                fundo,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(resultado: ScreenshotResult) {
+                        val bmp = try {
+                            val hw = Bitmap.wrapHardwareBuffer(resultado.hardwareBuffer, resultado.colorSpace)
+                            val c = hw?.copy(Bitmap.Config.ARGB_8888, false)
+                            hw?.recycle()
+                            c
+                        } catch (e: RuntimeException) {
+                            null
+                        } finally {
+                            resultado.hardwareBuffer.close()
+                        }
+                        if (bmp == null) {
+                            lendoImagem = false
+                            return
+                        }
+                        LeitorImagem.ler(bmp) { linhas ->
+                            bmp.recycle()
+                            principal.post {
+                                lendoImagem = false
+                                if (!ativo() || linhas.isEmpty()) return@post
+                                val tela = LeitorUber.ler(linhas)
+                                Armazenamento.registrarLeitura(this@LeitorCorridasService, "uber (imagem da tela)", "${nomeTela(tela)} · $janelas janela(s)", linhas, linhas.size)
+                                if (tela is TelaLida.ComOferta) {
+                                    telaRelevante = true
+                                    BolhaService.instancia?.receberTela("uber", tela)
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onFailure(erro: Int) {
+                        lendoImagem = false
+                        Armazenamento.registrarErro(this@LeitorCorridasService, "Imagem da tela da Uber: erro $erro")
+                    }
+                },
+            )
+        } catch (e: RuntimeException) {
+            lendoImagem = false
+        }
+    }
+
+    private var lendoImagem = false
+    private var ultimaImagemEm = 0L
+    private var telaNovaEm = 0L
+
     fun printOferta(valor: Long?, app: String?) {
         if (!printDisponivel) return
         if (!Armazenamento.preferencias(this).printOfertas) return

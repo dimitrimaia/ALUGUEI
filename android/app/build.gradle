@@ -81,6 +81,10 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // Leitura da imagem da tela da Uber (que esconde o texto da oferta da acessibilidade).
+    // Modelo do Google Play Services (baixado na instalação, ver o manifesto): o app
+    // continua pequeno. Roda só no celular, sem mandar a imagem para lugar nenhum.
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
     testImplementation "junit:junit:$junitVersion"
     // org.json de verdade nos testes JUnit (o android.jar dos testes só tem os nomes).
     testImplementation "org.json:json:20240303"

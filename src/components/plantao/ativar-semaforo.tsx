@@ -69,7 +69,8 @@ function Termo({ aoAceitar }: { aoAceitar: () => void }) {
         <ul className="flex flex-col gap-2">
           <li className={item}><span aria-hidden>•</span><span>Os dados ficam no seu celular e na sua conta do Aluguei, com acesso cifrado, e só você vê. Você pode apagar em Conta → Privacidade.</span></li>
           <li className={item}><span aria-hidden>•</span><span><strong>Não vendemos nem compartilhamos com terceiros.</strong> Só os lugares que você marcar como "evitar" entram, sem o seu nome, nos alertas da comunidade.</span></li>
-          <li className={item}><span aria-hidden>•</span><span>O Copiloto não lê outros apps nem senhas, não grava a imagem da tela e <strong>nunca toca, aceita ou recusa corridas por você</strong>.</span></li>
+          <li className={item}><span aria-hidden>•</span><span><strong>Na Uber</strong>, que esconde o texto da oferta, o Copiloto lê a <strong>imagem da tela</strong> para achar esses mesmos dados. A leitura é feita no próprio celular e a imagem fica só na memória: <strong>não é guardada nem enviada</strong>.</span></li>
+          <li className={item}><span aria-hidden>•</span><span>O Copiloto não lê outros apps nem senhas e <strong>nunca toca, aceita ou recusa corridas por você</strong>.</span></li>
         </ul>
       </div>
 
