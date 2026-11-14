@@ -305,9 +305,13 @@ class LeitorCorridasService : AccessibilityService() {
     private fun lerImagemDaUber(janelas: Int) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         val agora = SystemClock.elapsedRealtime()
+        // Leitura anterior sem resposta há mais de 6 s (ex.: o leitor travou): libera.
+        if (lendoImagem && agora - ultimaImagemEm > 6_000) lendoImagem = false
         if (lendoImagem || agora - ultimaImagemEm < INTERVALO_IMAGEM_MS) return
         lendoImagem = true
         ultimaImagemEm = agora
+        // Áreas do próprio Aluguei (bolha e cartão): apagadas da imagem antes de ler.
+        val proprias = BolhaService.instancia?.areasProprias().orEmpty()
         try {
             takeScreenshot(
                 Display.DEFAULT_DISPLAY,
@@ -316,7 +320,7 @@ class LeitorCorridasService : AccessibilityService() {
                     override fun onSuccess(resultado: ScreenshotResult) {
                         val bmp = try {
                             val hw = Bitmap.wrapHardwareBuffer(resultado.hardwareBuffer, resultado.colorSpace)
-                            val c = hw?.copy(Bitmap.Config.ARGB_8888, false)
+                            val c = hw?.copy(Bitmap.Config.ARGB_8888, true)
                             hw?.recycle()
                             c
                         } catch (e: RuntimeException) {
@@ -327,6 +331,11 @@ class LeitorCorridasService : AccessibilityService() {
                         if (bmp == null) {
                             lendoImagem = false
                             return
+                        }
+                        if (proprias.isNotEmpty()) {
+                            val tela = android.graphics.Canvas(bmp)
+                            val tinta = android.graphics.Paint().apply { color = android.graphics.Color.BLACK }
+                            proprias.forEach { tela.drawRect(it, tinta) }
                         }
                         LeitorImagem.ler(bmp) { linhas ->
                             bmp.recycle()

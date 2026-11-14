@@ -190,6 +190,19 @@ class BolhaService : Service() {
     /** Para o leitor ler rápido enquanto há cartão na tela. */
     fun temCartaoAberto(): Boolean = cartao != null
 
+    /**
+     * Onde estão as janelas do próprio Aluguei na tela (bolha, cartão e caixinhas).
+     * A leitura pela imagem da tela apaga essas áreas: senão o nosso cartão, por cima
+     * da Uber, era lido como a oferta e escondia as ofertas seguintes.
+     */
+    fun areasProprias(): List<android.graphics.Rect> = (janelasCartao + listOfNotNull(bolha))
+        .filter { it.isAttachedToWindow && it.isShown && it.width > 0 }
+        .map { v ->
+            val p = IntArray(2)
+            v.getLocationOnScreen(p)
+            android.graphics.Rect(p[0], p[1], p[0] + v.width, p[1] + v.height)
+        }
+
     /** Toda janela de cartão posta na tela: nenhuma fica órfã (erro no meio do redesenho, animação). */
     private val janelasCartao = mutableSetOf<View>()
 
