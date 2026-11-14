@@ -116,7 +116,11 @@ class LeitorCorridasService : AccessibilityService() {
 
     override fun onAccessibilityEvent(evento: AccessibilityEvent?) {
         val e = evento ?: return
-        val pacote = e.packageName?.toString() ?: return
+        // "Janelas mudaram" (ex.: a Uber abriu a janela da oferta) não traz o pacote:
+        // procura entre as janelas da tela a de um app de corrida.
+        val pacote: String = e.packageName?.toString()
+            ?: (if (e.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) pacoteNasJanelas() else null)
+            ?: return
         if (pacote !in pacotes) return
         // Tela apagada: nada para ler (a oferta acende a tela, e aí volta a ler).
         if (!energia.isInteractive) return
@@ -153,6 +157,7 @@ class LeitorCorridasService : AccessibilityService() {
         // Janela de onde veio o evento: a oferta flutuante da Uber (por cima de outro app)
         // nem sempre aparece na lista de janelas; com o id dela dá para achar a raiz.
         janelaDoEvento = e.windowId
+        guardarTextoDoEvento(pacote, e)
         fonteDoEvento = try { e.source } catch (x: RuntimeException) { null }
         val intervalo = if (telaRelevante || BolhaService.instancia?.temCartaoAberto() == true) INTERVALO_LEITURA_MS else INTERVALO_CALMO_MS
         val espera = intervalo - (SystemClock.elapsedRealtime() - ultimaLeituraEm)
@@ -170,8 +175,10 @@ class LeitorCorridasService : AccessibilityService() {
             // oferta numa janela própria por cima do mapa (do mesmo app); lendo só a ativa,
             // o leitor via o mapa e dizia "sem oferta".
             val raizes = raizesDo(pacote)
-            if (raizes.isEmpty()) return
-            val textos = raizes.flatMap { juntarTextos(it) }
+            if (raizes.isEmpty() && textosDosEventos(pacote).isEmpty()) return
+            // + o texto que veio nos próprios eventos (às vezes a janela chega vazia, mas o
+            // evento traz o texto do cartão).
+            val textos = raizes.flatMap { textosDaJanela(it) } + textosDosEventos(pacote)
             val hash = textos.hashCode()
             if (hash == ultimoHash) return
             ultimoHash = hash
@@ -190,8 +197,8 @@ class LeitorCorridasService : AccessibilityService() {
             // Diagnóstico (Ajuda do Copiloto): guarda o que leu da Uber/99/37 City quando
             // a tela tem "R$" mas não virou oferta, e quando virou (para comparar).
             if (app != "indrive") {
-                Armazenamento.registrarLeitura(this, "$app (última tela)", tela.toString().take(200), textos, textos.size)
-                if (textos.any { "R$" in it }) Armazenamento.registrarLeitura(this, "$app (tela com R$)", tela.toString().take(200), textos, textos.size)
+                Armazenamento.registrarLeitura(this, "$app (última tela)", "${nomeTela(tela)} · ${raizes.size} janela(s)", textos, textos.size)
+                if (textos.any { "R$" in it }) Armazenamento.registrarLeitura(this, "$app (tela com R$)", "${nomeTela(tela)} · ${raizes.size} janela(s)", textos, textos.size)
             }
             telaRelevante = tela is TelaLida.ComOferta || tela is TelaLida.Contraproposta || tela == TelaLida.Lista
             bolha.receberTela(app, tela)
@@ -219,6 +226,33 @@ class LeitorCorridasService : AccessibilityService() {
         } catch (e: RuntimeException) {
             null
         }
+    }
+
+    private fun pacoteNasJanelas(): String? = try {
+        windows.asSequence().mapNotNull { it.root?.packageName?.toString() }.firstOrNull { it in pacotes }
+    } catch (e: RuntimeException) {
+        null
+    }
+
+    /** Texto que os próprios eventos trazem (últimos 2 s, por app). */
+    private val textosEventos = HashMap<String, ArrayDeque<Pair<Long, String>>>()
+
+    private fun guardarTextoDoEvento(pacote: String, e: AccessibilityEvent) {
+        val agora = SystemClock.elapsedRealtime()
+        val fila = textosEventos.getOrPut(pacote) { ArrayDeque() }
+        e.text?.forEach { t -> t?.toString()?.takeIf { it.isNotBlank() }?.let { fila.addLast(agora to it.take(300)) } }
+        e.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { fila.addLast(agora to it.take(300)) }
+        while (fila.isNotEmpty() && (agora - fila.first().first > 2_000 || fila.size > 80)) fila.removeFirst()
+    }
+
+    private fun textosDosEventos(pacote: String): List<String> {
+        val agora = SystemClock.elapsedRealtime()
+        return textosEventos[pacote]?.filter { agora - it.first <= 2_000 }?.map { it.second }?.distinct() ?: emptyList()
+    }
+
+    private fun nomeTela(t: TelaLida): String = when (t) {
+        is TelaLida.ComOferta -> "oferta R$ ${t.oferta.valor / 100.0}"
+        else -> t.javaClass.simpleName
     }
 
     private fun raizesDo(pacote: String): List<AccessibilityNodeInfo> {
@@ -333,7 +367,14 @@ class LeitorCorridasService : AccessibilityService() {
     }
 
     /** Textos dos nós visíveis, na ordem da tela, com limite de nós, profundidade e tamanho. */
-    private fun juntarTextos(raiz: AccessibilityNodeInfo): List<String> {
+    /**
+     * Textos de uma janela. Se nada vier "visível" (a Uber marca o cartão da oferta,
+     * numa janela própria, como não visível para o leitor), lê de novo sem esse filtro.
+     */
+    private fun textosDaJanela(raiz: AccessibilityNodeInfo): List<String> =
+        juntarTextos(raiz, exigirVisivel = true).ifEmpty { juntarTextos(raiz, exigirVisivel = false) }
+
+    private fun juntarTextos(raiz: AccessibilityNodeInfo, exigirVisivel: Boolean = true): List<String> {
         val saida = ArrayList<String>()
         var caracteres = 0
         val pilha = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
@@ -344,7 +385,7 @@ class LeitorCorridasService : AccessibilityService() {
             visitados++
             // Nó invisível: não lê o texto dele, mas continua nos filhos (a Uber anima o
             // cartão dentro de um contêiner marcado como invisível).
-            val t = if (!no.isVisibleToUser) null else no.text?.takeIf { it.isNotBlank() } ?: no.contentDescription?.takeIf { it.isNotBlank() }
+            val t = if (exigirVisivel && !no.isVisibleToUser) null else no.text?.takeIf { it.isNotBlank() } ?: no.contentDescription?.takeIf { it.isNotBlank() }
             if (t != null) {
                 val s = t.toString().take(300)
                 saida.add(s)
