@@ -41,6 +41,11 @@ object Aceite {
         "o passageiro foi notificado",
         "passageiro esta esperando",
         "embarque",
+        // Uber
+        "indo buscar",
+        "deslize para iniciar",
+        "confirmar embarque",
+        "voce chegou",
     )
 
     /**

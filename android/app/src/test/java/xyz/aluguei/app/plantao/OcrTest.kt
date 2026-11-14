@@ -54,3 +54,24 @@ class UberEnderecosTest {
         assertEquals(33, o.corridasPassageiro)
     }
 }
+
+/** Telas da Uber depois da oferta: corrida em andamento e concluída (pílula e "Fiz" automático). */
+class UberAndamentoTest {
+    @Test
+    fun indoBuscar() {
+        val t = LeitorUber.ler(listOf("Indo buscar Maria", "Rua Sergipe, 120", "Ligar", "Mensagem"))
+        assertTrue("leu: $t", t is TelaLida.EmAndamento)
+    }
+
+    @Test
+    fun concluir() {
+        assertTrue(LeitorUber.ler(listOf("Concluir viagem", "R. Jesus De Souza, 431")) is TelaLida.EmAndamento)
+        assertTrue(LeitorUber.ler(listOf("Como foi a viagem?", "Avalie o passageiro")) is TelaLida.Concluida)
+    }
+
+    @Test
+    fun telaInicialNaoEhCorrida() {
+        val t = LeitorUber.ler(listOf("Página inicial", "R$ 86,78", "Pesquisar locais", "Recursos de segurança", "Tendências de ganhos", "Você está online", "1-6 min"))
+        assertTrue("leu: $t", t == TelaLida.Nada)
+    }
+}

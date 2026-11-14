@@ -123,6 +123,8 @@ class BolhaService : Service() {
         private const val SUMICO_MS = 1_500L
         /** Cronômetro esquecido aberto: fecha sozinho. */
         private const val DURACAO_MAXIMA_CORRIDA_MS = 2 * 60 * 60_000L
+        /** Apps em que a tela de corrida em andamento / concluída marca a oferta sozinha. */
+        private val APPS_ACEITE_AUTOMATICO = setOf("indrive", "uber", "99")
         private const val FUSO = "America/Sao_Paulo"
         /** Posição (y) salva das peças do estilo "bordas". */
         private const val CHAVE_BORDAS = "bordas"
@@ -1623,7 +1625,7 @@ class BolhaService : Service() {
                     principal.postDelayed(conferirSumico, SUMICO_MS)
                 }
             }
-            is TelaLida.Concluida -> if (app == "indrive") {
+            is TelaLida.Concluida -> if (app in APPS_ACEITE_AUTOMATICO) {
                 fecharCronometro()
                 concluirAutomatico(app, tela.gatilho)
             }
@@ -1660,7 +1662,7 @@ class BolhaService : Service() {
      */
     private fun aceitarAutomatico(app: String, gatilho: String): Boolean {
         val p = aceitePendente ?: return false
-        if (app != "indrive" || p.oferta.app != app) return false
+        if (p.oferta.app != app) return false
         aceitePendente = null
         if (!Aceite.dentroDaJanela(p.vistaEm, SystemClock.elapsedRealtime())) return false
         val corrida = Armazenamento.corridas(this).firstOrNull { it.id == p.id } ?: return false
@@ -1670,7 +1672,7 @@ class BolhaService : Service() {
         if (campoValor != null) fecharCampoValor()
         limparLeitura()
         decidir(corrida, CorridaAvaliada.ACEITEI, o, origem = Aceite.ORIGEM_AUTOMATICA)
-        rotuloDiag?.text = "inDrive: aceita automaticamente · \"$gatilho\" · ${Copiloto.reais(Aceite.valorFinal(o))}"
+        rotuloDiag?.text = "${nomeDoApp(app)}: aceita automaticamente · \"$gatilho\" · ${Copiloto.reais(Aceite.valorFinal(o))}"
         return true
     }
 
@@ -1694,7 +1696,7 @@ class BolhaService : Service() {
 
     /** Guarda (ou renova) a oferta do inDrive para o aceite automático. */
     private fun lembrarParaAceite(id: String?, o: OfertaDetalhada) {
-        if (id == null || o.app != "indrive") return
+        if (id == null || o.app !in APPS_ACEITE_AUTOMATICO) return
         aceitePendente = AceitePendente(id, o, SystemClock.elapsedRealtime())
     }
 

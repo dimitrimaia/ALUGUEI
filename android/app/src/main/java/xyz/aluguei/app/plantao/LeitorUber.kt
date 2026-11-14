@@ -58,7 +58,12 @@ object LeitorGenerico {
         if (t.isEmpty()) return TelaLida.Nada
         val junto = t.joinToString(" ")
         val semPorKm = aPartirDoValor(junto.replace(POR_KM, " "))
-        val lida = LeitorOferta.lerOferta(semPorKm) ?: return TelaLida.Nada
+        // Sem oferta na tela: corrida terminando (avaliar) ou em andamento (indo buscar,
+        // iniciar/concluir viagem). Com isso a pílula e o "Fiz" automático valem na Uber.
+        val lida = LeitorOferta.lerOferta(semPorKm)
+            ?: return Aceite.gatilhoConcluida(t)?.let { TelaLida.Concluida(it) }
+                ?: Aceite.gatilho(t)?.let { TelaLida.EmAndamento(it) }
+                ?: TelaLida.Nada
         val notaLinha = t.firstNotNullOfOrNull { NOTA_LINHA.matchEntire(it.trim()) }
         val nota = NOTA.find(junto)?.let { m -> Textos.numero(m.groupValues[1].ifEmpty { m.groupValues[2] }) }
             ?: notaLinha?.let { Textos.numero(it.groupValues[1]) }
