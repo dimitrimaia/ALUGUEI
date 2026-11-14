@@ -219,6 +219,9 @@ class BolhaService : Service() {
     private var corridaEmbarque: String? = null
     private var corridaDestino: String? = null
     private var pilulaCorrida: View? = null
+    /** Valor, lucro e km da corrida aceita, para os detalhes da pílula. */
+    private var corridaResumo: String? = null
+    private var pilulaAberta = false
     private var textoCorrida: TextView? = null
     private val tiqueCorrida = object : Runnable {
         override fun run() {
@@ -2015,16 +2018,26 @@ class BolhaService : Service() {
         textoCorrida?.text = "● " + if (min >= 60) "${min / 60}h${(min % 60).toString().padStart(2, '0')}" else "$min min"
     }
 
-    /** Pílula pequena no topo: "● 12 min", embarque, destino e ✕. */
+    /**
+     * Pílula da corrida em andamento: "● 12 min", embarque, destino e ✕. Arraste
+     * para mudar de lugar; puxe a barrinha (ou toque nela) para ver valor, lucro,
+     * km e o destino.
+     */
+    @SuppressLint("ClickableViewAccessibility")
     private fun mostrarPilulaCorrida() {
         val pal = paleta()
         val txt = texto("", 12f, pal.texto, true).apply { maxLines = 1 }
-        val v = LinearLayout(ui).apply {
+        val detalhes = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(2))
+            corridaResumo?.let { addView(texto(it, 12.5f, pal.texto, true).apply { maxLines = 1 }) }
+            corridaEmbarque?.let { addView(texto("Embarque: $it", 11.5f, pal.secundario).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END }, margem(3)) }
+            corridaDestino?.let { addView(texto("Destino: $it", 11.5f, pal.secundario).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END }, margem(2)) }
+            visibility = if (pilulaAberta) View.VISIBLE else View.GONE
+        }
+        val linha = LinearLayout(ui).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = fundoArredondado(pal.fundo, 99, pal.borda)
-            elevation = dp(3).toFloat()
-            setPadding(dp(12), dp(4), dp(4), dp(4))
             addView(txt)
             listOfNotNull(
                 corridaEmbarque?.let { Triple(R.drawable.ic_traco_pin, it, "Ir ao embarque") },
@@ -2051,10 +2064,67 @@ class BolhaService : Service() {
                 LinearLayout.LayoutParams(dp(30), dp(26)).apply { marginStart = dp(4) },
             )
         }
+        val barra = View(ui).apply { background = fundoArredondado(comAlfa(pal.secundario, 0x88), 99) }
+        val alca = FrameLayout(ui).apply {
+            contentDescription = "Puxe para ver os detalhes da corrida"
+            addView(barra, FrameLayout.LayoutParams(dp(28), dp(3), Gravity.CENTER))
+        }
+        val v = LinearLayout(ui).apply {
+            orientation = LinearLayout.VERTICAL
+            background = fundoArredondado(pal.fundo, 18, pal.borda)
+            elevation = dp(3).toFloat()
+            setPadding(dp(12), dp(4), dp(4), 0)
+            addView(linha)
+            addView(detalhes, LinearLayout.LayoutParams(dp(250), ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(alca, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(14)))
+        }
         val p = parametros(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             y = alturaBarraStatus() + dp(2)
         }
+        fun abrir(sim: Boolean) {
+            pilulaAberta = sim
+            detalhes.visibility = if (sim) View.VISIBLE else View.GONE
+        }
+        // Barrinha: puxar para baixo abre, para cima fecha; tocar alterna.
+        var ya = 0f
+        var puxou = false
+        alca.setOnTouchListener { a, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { ya = e.rawY; puxou = false; true }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = e.rawY - ya
+                    if (!puxou && dy > dp(12)) { puxou = true; abrir(true) }
+                    if (!puxou && dy < -dp(12)) { puxou = true; abrir(false) }
+                    true
+                }
+                MotionEvent.ACTION_UP -> { if (!puxou) { a.performClick(); abrir(!pilulaAberta) }; true }
+                else -> false
+            }
+        }
+        // O cronômetro (texto) arrasta a pílula pela tela.
+        var x0 = 0f
+        var y0 = 0f
+        var px = 0
+        var py = 0
+        txt.setOnTouchListener { _, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { x0 = e.rawX; y0 = e.rawY; px = p.x; py = p.y; true }
+                MotionEvent.ACTION_MOVE -> {
+                    p.x = px + (e.rawX - x0).toInt()
+                    p.y = (py + (e.rawY - y0).toInt()).coerceAtLeast(0)
+                    try { wm.updateViewLayout(v, p) } catch (x: RuntimeException) {}
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    // Toque sem arrastar: abre ou fecha os detalhes.
+                    if (kotlin.math.abs(e.rawX - x0) < dp(6) && kotlin.math.abs(e.rawY - y0) < dp(6)) abrir(!pilulaAberta)
+                    true
+                }
+                else -> false
+            }
+        }
+        txt.setPadding(0, dp(6), dp(4), dp(6))
         if (!adicionar(v, p)) return
         pilulaCorrida = v
         textoCorrida = txt
@@ -2281,19 +2351,48 @@ class BolhaService : Service() {
         val barra = View(ui).apply { background = fundoArredondado(comAlfa(pal.secundario, 0x88), 99) }
         addView(barra, FrameLayout.LayoutParams(dp(38), dp(4), Gravity.CENTER))
         var y0 = 0f
+        var alturaInicial = 0
+        var alturaCheia = 0
         var arrastou = false
         setOnTouchListener { v, e ->
+            val bloco = blocoDetalhes
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { y0 = e.rawY; arrastou = false; barra.animate().scaleX(1.25f).setDuration(120).start(); true }
+                MotionEvent.ACTION_DOWN -> {
+                    y0 = e.rawY
+                    arrastou = false
+                    alturaInicial = bloco?.height ?: 0
+                    alturaCheia = bloco?.let { b ->
+                        b.measure(View.MeasureSpec.makeMeasureSpec((b.parent as View).width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+                        b.measuredHeight
+                    } ?: 0
+                    barra.animate().scaleX(1.3f).setDuration(120).start()
+                    true
+                }
                 MotionEvent.ACTION_MOVE -> {
-                    val dy = e.rawY - y0
-                    if (!arrastou && dy > dp(18)) { arrastou = true; alternarDetalhes(true) }
-                    if (!arrastou && dy < -dp(18)) { arrastou = true; alternarDetalhes(false) }
+                    val dy = (e.rawY - y0).toInt()
+                    if (!arrastou && kotlin.math.abs(dy) > dp(6)) arrastou = true
+                    if (arrastou && bloco != null && alturaCheia > 0) {
+                        // O bloco acompanha o dedo: desce abrindo, sobe fechando.
+                        val h = (alturaInicial + dy).coerceIn(0, alturaCheia)
+                        bloco.layoutParams = bloco.layoutParams.apply { height = h }
+                        bloco.alpha = h.toFloat() / alturaCheia
+                        bloco.requestLayout()
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     barra.animate().scaleX(1f).setDuration(120).start()
-                    if (!arrastou && e.actionMasked == MotionEvent.ACTION_UP) { v.performClick(); alternarDetalhes(!cartaoDetalhes) }
+                    if (!arrastou) {
+                        if (e.actionMasked == MotionEvent.ACTION_UP) { v.performClick(); alternarDetalhes(!cartaoDetalhes) }
+                    } else if (bloco != null && alturaCheia > 0) {
+                        // Solta: termina de abrir (passou da metade) ou volta a fechar.
+                        val abrir = bloco.height > alturaCheia / 2
+                        val ate = if (abrir) alturaCheia else 0
+                        animarAltura(bloco, bloco.height, ate, bloco.alpha, if (abrir) 1f else 0f) {
+                            bloco.layoutParams = bloco.layoutParams.apply { height = if (abrir) ViewGroup.LayoutParams.WRAP_CONTENT else 0 }
+                            cartaoDetalhes = abrir
+                        }
+                    }
                     true
                 }
                 else -> false
@@ -2489,6 +2588,25 @@ class BolhaService : Service() {
         // Tela bloqueada: o cartão fica por baixo do bloqueio (aparece ao desbloquear) e o
         // resultado vai na notificação heads-up. Redesenho da mesma oferta: só atualiza.
         if (origem == "leitura" && (telaBloqueada() || notificadaId == corrida.id)) notificarOferta(o, r, corrida.id)
+        // A Uber redesenha a janela da oferta dela e pode cobrir o nosso cartão (que
+        // então só aparecia na notificação): recoloca o cartão por cima, duas vezes.
+        if (animar && origem == "leitura" && o.app != "indrive") {
+            principal.removeCallbacks(trazerCartaoParaFrente)
+            principal.postDelayed(trazerCartaoParaFrente, 700)
+            principal.postDelayed(trazerCartaoParaFrente, 1_800)
+        }
+    }
+
+    private val trazerCartaoParaFrente = Runnable {
+        val v = cartao ?: return@Runnable
+        val p = cartaoParams ?: return@Runnable
+        if (!v.isAttachedToWindow) return@Runnable
+        try {
+            wm.removeViewImmediate(v)
+            wm.addView(v, p)
+        } catch (e: RuntimeException) {
+            // a janela saiu no meio do caminho: fica como estava
+        }
     }
 
     private fun montarCartao(
@@ -2814,7 +2932,11 @@ class BolhaService : Service() {
             recusada = (ofertaAberta?.takeIf { it.app == o.app } ?: o).chaveOriginal()
         }
         PlantaoPlugin.emitirDecisao(corrida.id, decisao, origem, valorFinal)
-        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) iniciarCronometro(o.embarque, o.destino)
+        if (decisao == CorridaAvaliada.ACEITEI && antes != CorridaAvaliada.ACEITEI) {
+            val av = avaliar(o).avaliacao
+            corridaResumo = "${Copiloto.reais(Aceite.valorFinal(o))} · lucro ${Copiloto.reais(av.lucro)} · ${String.format(Locale.US, "%.1f", o.kmCorrida).replace('.', ',')} km"
+            iniciarCronometro(o.embarque, o.destino)
+        }
         if (cartaoCorrida?.id == corrida.id) fecharCartao()
         if (decisao == CorridaAvaliada.ACEITEI && mostrarMensagem) mostrarCopiarMensagem(o)
     }
