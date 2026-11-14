@@ -354,6 +354,26 @@ object Armazenamento {
 
     fun ultimoErro(ctx: Context): String? = prefs(ctx).getString(ULTIMO_ERRO, null)
 
+    private const val ULTIMA_LEITURA = "ultima_leitura"
+
+    /**
+     * Diagnóstico: o texto da última tela lida de cada app (só na memória do celular,
+     * para o motorista copiar e mandar ao suporte quando a leitura falha).
+     */
+    fun registrarLeitura(ctx: Context, app: String, resultado: String, textos: List<String>, nos: Int) {
+        val todos = prefs(ctx).getString(ULTIMA_LEITURA, null)?.let { runCatching { JSONObject(it) }.getOrNull() } ?: JSONObject()
+        var tamanho = 0
+        val arr = JSONArray()
+        for (t in textos) {
+            if (tamanho > 3000) break
+            arr.put(t.take(120)); tamanho += t.length
+        }
+        todos.put(app, JSONObject().put("em", isoDe(System.currentTimeMillis())).put("resultado", resultado).put("nos", nos).put("textos", arr))
+        prefs(ctx).edit().putString(ULTIMA_LEITURA, todos.toString()).apply()
+    }
+
+    fun ultimaLeitura(ctx: Context): JSONObject? = prefs(ctx).getString(ULTIMA_LEITURA, null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+
     // ---------- lugares que outros motoristas evitam ----------
 
     fun salvarComunidade(ctx: Context, arr: JSONArray) =

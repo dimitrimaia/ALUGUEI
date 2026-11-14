@@ -12,7 +12,8 @@ import type { PreferenciasCopiloto } from "@/dominio/ganhos/copiloto";
 /** Aceite da declaração do Copiloto (localStorage). v2: texto da revisão da Play. */
 export const ACEITE_COPILOTO = "aluguei_semaforo_aceite_v2";
 
-export type EstadoNativo = { versaoApp?: number; atualizavel?: boolean; ultimoErro?: string | null; localizacao?: boolean; dormindo?: boolean; android: boolean; sobreposicao: boolean; acessibilidade: boolean; notificacoes: boolean; semOtimizacaoBateria: boolean; ligado: boolean; configurado: boolean; corridasPendentes: number };
+export type LeituraDiagnostico = { em: string; resultado: string; nos: number; textos: string[] };
+export type EstadoNativo = { ultimaLeitura?: Record<string, LeituraDiagnostico> | null; versaoApp?: number; atualizavel?: boolean; ultimoErro?: string | null; localizacao?: boolean; dormindo?: boolean; android: boolean; sobreposicao: boolean; acessibilidade: boolean; notificacoes: boolean; semOtimizacaoBateria: boolean; ligado: boolean; configurado: boolean; corridasPendentes: number };
 export type CorridaNativa = {
   /** UUID gerado no celular: chave de idempotência do envio. */
   id: string;

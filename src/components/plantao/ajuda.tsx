@@ -45,6 +45,19 @@ export function Ajuda() {
             {estado.dormindo && <li className="text-xs text-suave">O leitor está dormindo porque o app de corrida está offline (modo economia).</li>}
             <li className="text-xs text-suave">{estado.corridasPendentes} ofertas esperando para subir para a conta.</li>
             {estado.versaoApp ? <li className="text-xs font-semibold">Versão do app: 1.0.{estado.versaoApp}</li> : null}
+            {estado.ultimaLeitura && Object.keys(estado.ultimaLeitura).length > 0 && (
+              <li className="flex flex-col gap-2 rounded-lg bg-cartao-2 p-2">
+                <span className="text-xs font-semibold">O que o Copiloto leu da tela (para o suporte)</span>
+                {Object.entries(estado.ultimaLeitura).map(([chave, l]) => (
+                  <div key={chave} className="flex flex-col gap-1">
+                    <span className="text-[0.7rem] font-semibold">{chave} · {new Date(l.em).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })} · {l.textos.length} textos</span>
+                    <span className="text-[0.7rem] text-suave">Resultado: {l.resultado}</span>
+                    <pre className="max-h-40 overflow-auto rounded bg-cartao p-1.5 font-mono text-[0.65rem] whitespace-pre-wrap">{l.textos.join(" | ")}</pre>
+                  </div>
+                ))}
+                <button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify({ versao: estado.versaoApp, leitura: estado.ultimaLeitura }, null, 1)).then(() => alert("Copiado: cole no WhatsApp ou aqui no suporte."))} className="h-9 rounded-lg bg-marca text-xs font-semibold text-white">Copiar para mandar ao suporte</button>
+              </li>
+            )}
             {estado.ultimoErro && <li className="rounded-lg bg-cartao-2 p-2 font-mono text-[0.7rem] break-words text-suave">Último erro: {estado.ultimoErro}</li>}
           </ul>
         ) : (

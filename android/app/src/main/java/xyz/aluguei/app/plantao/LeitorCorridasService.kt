@@ -183,6 +183,12 @@ class LeitorCorridasService : AccessibilityService() {
                 }
             }
             val tela = Leitores.ler(app, textos)
+            // Diagnóstico (Ajuda do Copiloto): guarda o que leu da Uber/99/37 City quando
+            // a tela tem "R$" mas não virou oferta, e quando virou (para comparar).
+            if (app != "indrive") {
+                Armazenamento.registrarLeitura(this, "$app (última tela)", tela.toString().take(200), textos, textos.size)
+                if (textos.any { "R$" in it }) Armazenamento.registrarLeitura(this, "$app (tela com R$)", tela.toString().take(200), textos, textos.size)
+            }
             telaRelevante = tela is TelaLida.ComOferta || tela is TelaLida.Contraproposta || tela == TelaLida.Lista
             bolha.receberTela(app, tela)
         } catch (e: RuntimeException) {

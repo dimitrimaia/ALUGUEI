@@ -149,6 +149,7 @@ class PlantaoPlugin : Plugin() {
         put("printDisponivel", LeitorCorridasService.printDisponivel)
         put("perfilAtivo", Armazenamento.perfilAtivo(c) ?: JSONObject.NULL)
         put("ultimoErro", Armazenamento.ultimoErro(c) ?: JSONObject.NULL)
+        put("ultimaLeitura", Armazenamento.ultimaLeitura(c) ?: JSONObject.NULL)
         put("versaoApp", Atualizacao.versaoInstalada(c))
         put("atualizavel", Atualizacao.disponivel(c))
     }
