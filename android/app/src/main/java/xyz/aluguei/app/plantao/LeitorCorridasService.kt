@@ -166,8 +166,12 @@ class LeitorCorridasService : AccessibilityService() {
         val bolha = BolhaService.instancia ?: return
         if (!ativo()) return
         try {
-            val raiz = raizDo(pacote) ?: return
-            val textos = juntarTextos(raiz)
+            // Todas as janelas do app de corrida, da de cima para a de baixo: a Uber mostra a
+            // oferta numa janela própria por cima do mapa (do mesmo app); lendo só a ativa,
+            // o leitor via o mapa e dizia "sem oferta".
+            val raizes = raizesDo(pacote)
+            if (raizes.isEmpty()) return
+            val textos = raizes.flatMap { juntarTextos(it) }
             val hash = textos.hashCode()
             if (hash == ultimoHash) return
             ultimoHash = hash
@@ -215,6 +219,19 @@ class LeitorCorridasService : AccessibilityService() {
         } catch (e: RuntimeException) {
             null
         }
+    }
+
+    private fun raizesDo(pacote: String): List<AccessibilityNodeInfo> {
+        val raizes = ArrayList<AccessibilityNodeInfo>()
+        try {
+            // getWindows vem em ordem de camada: a de cima primeiro (o cartão da oferta).
+            windows.forEach { j -> j.root?.takeIf { it.packageName?.toString() == pacote }?.let { raizes.add(it) } }
+        } catch (e: RuntimeException) {
+            // segue com o que tiver
+        }
+        if (raizes.isEmpty()) raizDo(pacote)?.let { raizes.add(it) }
+        else rootInActiveWindow?.takeIf { it.packageName?.toString() == pacote && raizes.none { r -> r.windowId == it.windowId } }?.let { raizes.add(it) }
+        return raizes
     }
 
     private fun raizSubindo(no: AccessibilityNodeInfo): AccessibilityNodeInfo {
@@ -325,8 +342,9 @@ class LeitorCorridasService : AccessibilityService() {
         while (pilha.isNotEmpty() && visitados < MAXIMO_NOS && caracteres < MAXIMO_CARACTERES && saida.size < MAXIMO_TEXTOS) {
             val (no, profundidade) = pilha.removeLast()
             visitados++
-            if (!no.isVisibleToUser) continue
-            val t = no.text?.takeIf { it.isNotBlank() } ?: no.contentDescription?.takeIf { it.isNotBlank() }
+            // Nó invisível: não lê o texto dele, mas continua nos filhos (a Uber anima o
+            // cartão dentro de um contêiner marcado como invisível).
+            val t = if (!no.isVisibleToUser) null else no.text?.takeIf { it.isNotBlank() } ?: no.contentDescription?.takeIf { it.isNotBlank() }
             if (t != null) {
                 val s = t.toString().take(300)
                 saida.add(s)
