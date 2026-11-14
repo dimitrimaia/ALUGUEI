@@ -44,6 +44,7 @@ export function Ajuda() {
             ))}
             {estado.dormindo && <li className="text-xs text-suave">O leitor está dormindo porque o app de corrida está offline (modo economia).</li>}
             <li className="text-xs text-suave">{estado.corridasPendentes} ofertas esperando para subir para a conta.</li>
+            {estado.versaoApp ? <li className="text-xs font-semibold">Versão do app: 1.0.{estado.versaoApp}</li> : null}
             {estado.ultimoErro && <li className="rounded-lg bg-cartao-2 p-2 font-mono text-[0.7rem] break-words text-suave">Último erro: {estado.ultimoErro}</li>}
           </ul>
         ) : (
