@@ -24,13 +24,44 @@ object LeitorGenerico {
         return junto.substring(antes.range.first)
     }
 
+    // "4,94 (33)" ou "★ 4,94 (33)": nota e nº de corridas do passageiro (Uber).
+    private val NOTA_LINHA = Regex("^[*★]?\\s*([1-5][.,][0-9]{1,2})\\s*\\(([0-9]{1,5})\\)$")
+    // Linha de tempo e distância: "8 min (2,6 km)", "19 minutos (8.5 km)".
+    private val TEMPO_KM = Regex("[0-9]{1,3}\\s*[mM][iI][nN].*[0-9]\\s*[kK][mM]")
+    private val FIM = listOf("aceitar", "tenho interesse", "recusar", "corresponder", "ver detalhes")
+    private val PARADA = Regex("^[0-9]+\\s+paradas?$", RegexOption.IGNORE_CASE)
+
+    /**
+     * Endereços da oferta (Uber e 99): o texto logo depois de cada "tempo (km)" é o
+     * embarque e depois o destino. Pode vir em 2 linhas (leitura pela imagem).
+     */
+    fun enderecos(linhas: List<String>): List<String> {
+        val idx = linhas.indices.filter { TEMPO_KM.containsMatchIn(linhas[it]) }
+        if (idx.size < 2) return emptyList()
+        return idx.take(2).mapIndexedNotNull { n, i ->
+            val ate = if (n == 0) idx[1] else linhas.size
+            val partes = ArrayList<String>()
+            for (j in i + 1 until ate) {
+                val l = linhas[j].trim()
+                val baixo = l.lowercase()
+                if (FIM.any { baixo.startsWith(it) } || TEMPO_KM.containsMatchIn(l)) break
+                if (PARADA.matches(l) || l.none { it.isLetter() }) continue
+                partes.add(l.trimEnd(','))
+                if (partes.size == 2) break
+            }
+            partes.joinToString(", ").takeIf { it.length >= 4 }
+        }.takeIf { it.size == 2 } ?: emptyList()
+    }
+
     fun ler(brutos: List<String>, app: String): TelaLida {
         val t = Textos.limpar(brutos)
         if (t.isEmpty()) return TelaLida.Nada
         val junto = t.joinToString(" ")
         val semPorKm = aPartirDoValor(junto.replace(POR_KM, " "))
         val lida = LeitorOferta.lerOferta(semPorKm) ?: return TelaLida.Nada
+        val notaLinha = t.firstNotNullOfOrNull { NOTA_LINHA.matchEntire(it.trim()) }
         val nota = NOTA.find(junto)?.let { m -> Textos.numero(m.groupValues[1].ifEmpty { m.groupValues[2] }) }
+            ?: notaLinha?.let { Textos.numero(it.groupValues[1]) }
         return TelaLida.ComOferta(
             OfertaDetalhada(
                 app = app,
@@ -41,6 +72,8 @@ object LeitorGenerico {
                 minutosBusca = lida.minutosBusca,
                 porKmApp = Textos.porKm(junto),
                 nota = nota,
+                corridasPassageiro = notaLinha?.groupValues?.get(2)?.toIntOrNull(),
+                enderecos = enderecos(t),
             ),
         )
     }
