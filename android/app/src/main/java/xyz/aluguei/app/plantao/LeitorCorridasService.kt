@@ -59,7 +59,10 @@ class LeitorCorridasService : AccessibilityService() {
 
         // A tela da Uber tem o mapa (ruas, bairros, botões) antes do cartão da oferta:
         // com 500 nós a leitura parava no mapa e não chegava à oferta.
-        private const val INTERVALO_IMAGEM_MS = 1_500L
+        private const val INTERVALO_IMAGEM_MS = 800L
+        private const val ESPERA_ANIMACAO_MS = 450L
+        private const val MAXIMO_TENTATIVAS_IMAGEM = 8
+        private val MARCAS_INDRIVE = listOf("indrive", "oferecer sua tarifa", "aceitar por", "sua tarifa")
         private const val MAXIMO_NOS = 3000
         private const val MAXIMO_PROFUNDIDADE = 80
         private const val MAXIMO_CARACTERES = 20000
@@ -185,7 +188,7 @@ class LeitorCorridasService : AccessibilityService() {
             // Uber com janela extra (o cartão da oferta, que ela esconde da acessibilidade)
             // ou tela nova há pouco: vale tentar a imagem da tela, mesmo sem texto novo.
             val agora = SystemClock.elapsedRealtime()
-            val talvezOferta = app == "uber" && (raizes.size >= 2 || agora - telaNovaEm < 3_000)
+            val talvezOferta = app == "uber" && (raizes.size >= 2 || agora - telaNovaEm < 3_000) && !outroAppDeCorridaNaTela("uber")
             val hash = (textos + raizes.map { it.windowId.toString() }).hashCode()
             if (hash == ultimoHash && !talvezOferta) return
             val textoNovo = hash != ultimoHash
@@ -234,6 +237,16 @@ class LeitorCorridasService : AccessibilityService() {
         } catch (e: RuntimeException) {
             null
         }
+    }
+
+    /**
+     * Há janela de outro app de corrida na tela (ex.: oferta do inDrive com a bolinha
+     * "Uber →" por cima)? Aí a imagem da tela não é da Uber: não lê pela imagem.
+     */
+    private fun outroAppDeCorridaNaTela(app: String): Boolean = try {
+        windows.any { j -> j.root?.packageName?.toString()?.let { it in pacotes && Pacotes.plataforma(it) != app } == true }
+    } catch (e: RuntimeException) {
+        false
     }
 
     private fun pacoteNasJanelas(): String? = try {
@@ -308,6 +321,17 @@ class LeitorCorridasService : AccessibilityService() {
         // Leitura anterior sem resposta há mais de 6 s (ex.: o leitor travou): libera.
         if (lendoImagem && agora - ultimaImagemEm > 6_000) lendoImagem = false
         if (lendoImagem || agora - ultimaImagemEm < INTERVALO_IMAGEM_MS) return
+        // Janela da Uber acabou de abrir: o cartão ainda está subindo (animação). Espera.
+        if (agora - telaNovaEm < ESPERA_ANIMACAO_MS) {
+            principal.removeCallbacks(imagemAdiada)
+            principal.postDelayed(imagemAdiada, ESPERA_ANIMACAO_MS - (agora - telaNovaEm))
+            return
+        }
+        if (telaNovaEm != tentativasDesde) {
+            tentativasDesde = telaNovaEm
+            tentativasImagem = 0
+        }
+        tentativasImagem++
         lendoImagem = true
         ultimaImagemEm = agora
         // Áreas do próprio Aluguei (bolha e cartão): apagadas da imagem antes de ler.
@@ -342,11 +366,17 @@ class LeitorCorridasService : AccessibilityService() {
                             principal.post {
                                 lendoImagem = false
                                 if (!ativo() || linhas.isEmpty()) return@post
+                                // Texto do inDrive (a imagem pegou outro app): não é da Uber.
+                                if (linhas.any { l -> MARCAS_INDRIVE.any { it in l.lowercase() } }) return@post
                                 val tela = LeitorUber.ler(linhas)
                                 Armazenamento.registrarLeitura(this@LeitorCorridasService, "uber (imagem da tela)", "${nomeTela(tela)} · $janelas janela(s)", linhas, linhas.size)
                                 if (tela is TelaLida.ComOferta) {
                                     telaRelevante = true
                                     BolhaService.instancia?.receberTela("uber", tela)
+                                } else if (janelas >= 2 && tentativasImagem < MAXIMO_TENTATIVAS_IMAGEM) {
+                                    // Janela da Uber ainda aberta e nada lido: tenta de novo em seguida.
+                                    principal.removeCallbacks(imagemAdiada)
+                                    principal.postDelayed(imagemAdiada, INTERVALO_IMAGEM_MS)
                                 }
                             }
                         }
@@ -362,6 +392,12 @@ class LeitorCorridasService : AccessibilityService() {
             lendoImagem = false
         }
     }
+
+    private val imagemAdiada = Runnable { if (!outroAppDeCorridaNaTela("uber")) lerImagemDaUber(2) }
+
+    /** Tentativas de leitura pela imagem desde a última janela nova da Uber (limite contra gasto de bateria). */
+    private var tentativasImagem = 0
+    private var tentativasDesde = 0L
 
     private var lendoImagem = false
     private var ultimaImagemEm = 0L
